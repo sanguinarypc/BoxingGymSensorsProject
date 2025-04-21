@@ -53,35 +53,21 @@ String FSRPunchDetector::getPunchDetails(unsigned long elapsedMilliseconds) {
   return details;
 }
 
-// void FSRPunchDetector::calculateResults(int fsrSensorValue, float R_FSR, unsigned long punchTimestamp, String &outputMessage) {
-//   // Convert time to minutes:seconds:hundredths of a second
-//   unsigned long minutes = punchTimestamp / 60000;
-//   unsigned long seconds = (punchTimestamp % 60000) / 1000;
-//   unsigned long hundredths = (punchTimestamp % 1000) / 10;
+void FSRPunchDetector::calculateResults(int fsrSensorValue, float R_FSR, unsigned long punchTimestamp, String &outputMessage) {
+  // Convert time to minutes:seconds:hundredths of a second
+  unsigned long minutes = punchTimestamp / 60000;
+  unsigned long seconds = (punchTimestamp % 60000) / 1000;
+  unsigned long hundredths = (punchTimestamp % 1000) / 10;
 
-//   // Format the timestamp
-//   char timestampFormatted[12];
-//   sprintf(timestampFormatted, "%02lu:%02lu:%02lu", minutes, seconds, hundredths);
+  // Format the timestamp
+  char timestampFormatted[12];
+  sprintf(timestampFormatted, "%02lu:%02lu:%02lu", minutes, seconds, hundredths);
 
-//   // Append the details to the output message
-//   // outputMessage += "Timestamp: " + String(timestampFormatted) + " | Sensor millivolts: " + String(fsrSensorValue);
-//   outputMessage += "Timestamp: " + String(timestampFormatted) + " Device: " + String(DEVICE_NAME) + " | Sensor millivolts: " + String(fsrSensorValue);
-// }
-
-void FSRPunchDetector::calculateResults(int fsrSensorValue, float R_FSR,
-                                        unsigned long punchTimestamp,
-                                        String &outputMessage) {
-  // Get RTC absolute time
-  struct tm timeinfo;
-  if (getLocalTime(&timeinfo)) {
-    char buf[32];
-    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
-    outputMessage += "Timestamp:" + String(buf);
-  }
-  // Append device and sensor info
-  outputMessage += " | Device:" + String(DEVICE_NAME)
-                 + " | Sensor millivolts:" + String(fsrSensorValue);
+  // Append the details to the output message
+  // outputMessage += "Timestamp: " + String(timestampFormatted) + " | Sensor millivolts: " + String(fsrSensorValue);
+  outputMessage += "Timestamp: " + String(timestampFormatted) + " Device: " + String(DEVICE_NAME) + " | Sensor millivolts: " + String(fsrSensorValue);
 }
+
 
 float FSRPunchDetector::getSensorVoltage() {
   return sensorVoltage;

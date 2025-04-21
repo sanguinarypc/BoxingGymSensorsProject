@@ -125,147 +125,147 @@ void BoxingApp::loop() {
   }
 }
 
-// void BoxingApp::handleCommands() {
-//   String incomingMessage = bluetoothHandler->readMessage();
-//   if (incomingMessage.length() > 0) {
-
-//     StaticJsonDocument<256> jsonDoc;
-//     DeserializationError error = deserializeJson(jsonDoc, incomingMessage);
-//     if (error) {
-//       Serial.print("JSON Parsing Failed: ");
-//       Serial.println(error.c_str());
-//       return;
-//     }
-
-//     // Handle sensor settings update
-//     if (jsonDoc.containsKey("SensorSettings")) {
-//       JsonObject settings = jsonDoc["SensorSettings"];
-//       fsrSensitivity = settings["FsrSensitivity"];
-//       fsrThreshold = settings["FsrThreshold"];
-//       roundTime = settings["RoundTime"];
-//       breakTime = settings["BreakTime"];
-//       fsrHandler->setSensitivity(fsrSensitivity);
-//       fsrHandler->setThreshold(fsrThreshold);
-//       // Serial.println("Sensor settings updated.");
-//       // Serial.println(fsrHandler->getSensitivity());
-//       // Serial.println(fsrHandler->getThreshold());
-//       bluetoothHandler->sendMessage("{\"RoundState\":\"Settings Updated\"}");
-//       bluetoothHandler->clearMessage();
-//     }
-
-//     // Handle round commands
-//     if (jsonDoc.containsKey("RoundStatusCommand")) {
-//       int commandValue = jsonDoc["RoundStatusCommand"]["Command"];
-//       unsigned long elapsedSeconds = timeHandler->getElapsedSeconds();
-
-//       switch (commandValue) {
-//         case 1:  // Start round
-//           Serial.println("Starting the round at " + String(elapsedSeconds) + "s...");
-//           fsrHandler->resetPunchCount();
-//           timeHandler->reset();
-//           timeHandler->start();
-//           roundActive = true;
-//           isPaused = false;
-//           bluetoothHandler->sendMessage("{\"RoundState\":\"Started\",\"Time\":\"" + String(elapsedSeconds) + "...s\"}");
-//           bluetoothHandler->clearMessage();
-//           break;
-//         case 2:  // Pause round
-//           Serial.println("Pausing the round at " + String(elapsedSeconds) + "s...");
-//           timeHandler->pause();
-//           isPaused = true;
-//           bluetoothHandler->sendMessage("{\"RoundState\":\"Paused\",\"Time\":\"" + String(elapsedSeconds) + "...s\"}");
-//           bluetoothHandler->clearMessage();
-//           break;
-//         case 3:  // Resume round
-//           Serial.println("Resuming the round at " + String(elapsedSeconds) + "s...");
-//           timeHandler->resume();
-//           isPaused = false;
-//           bluetoothHandler->sendMessage("{\"RoundState\":\"Resumed\",\"Time\":\"" + String(elapsedSeconds) + "...s\"}");
-//           bluetoothHandler->clearMessage();
-//           break;
-//         case 4:  // Reset round
-//           Serial.println("Resetting the round at " + String(elapsedSeconds) + "s...");
-//           fsrHandler->resetPunchCount();
-//           timeHandler->reset();
-//           timeHandler->start();
-//           roundActive = true;
-//           isPaused = false;
-//           bluetoothHandler->sendMessage("{\"RoundState\":\"Reset\",\"Time\":\"0s\"}");
-//           bluetoothHandler->clearMessage();
-//           break;
-//         case 5:  // End round
-//           Serial.println("Ending the round at " + String(elapsedSeconds) + "s...");
-//           roundActive = false;
-//           bluetoothHandler->sendMessage("{\"RoundState\":\"Ended\",\"FinalTime\":\"" + String(elapsedSeconds) + "s\"}");
-//           timeHandler->reset();
-//           fsrHandler->resetPunchCount();
-//           bluetoothHandler->clearMessage();
-//           break;
-//         default:
-//           Serial.println("Unknown Command Received.");
-//           bluetoothHandler->sendMessage("{\"Error\":\"Unknown Command\"}");
-//           bluetoothHandler->clearMessage();
-//           break;
-//       }
-//     }
-//   }
-// }
-
-// == Modify BoxingApp::handleCommands(), replacing elapsed-relative with RTC ==
 void BoxingApp::handleCommands() {
-  String msg = bluetoothHandler->readMessage();
-  if (msg.length() == 0) return;
-  StaticJsonDocument<256> jsonDoc;
-  if (deserializeJson(jsonDoc, msg)) return;
+  String incomingMessage = bluetoothHandler->readMessage();
+  if (incomingMessage.length() > 0) {
 
-  if (jsonDoc.containsKey("RoundStatusCommand")) {
-    int cmd = jsonDoc["RoundStatusCommand"]["Command"];
-    String ts = getFormattedTime();
-    switch (cmd) {
-      case 1: // Start
-        Serial.println("Starting the round at " + ts);
-        fsrHandler->resetPunchCount();
-        timeHandler->reset();
-        timeHandler->start();
-        roundActive = true; isPaused = false;
-        bluetoothHandler->sendMessage(
-          String("{\"RoundState\":\"Started\",\"Timestamp\":\"") + ts + "\"}");
-        break;
-      case 2: // Pause
-        Serial.println("Pausing the round at " + ts);
-        timeHandler->pause(); isPaused = true;
-        bluetoothHandler->sendMessage(
-          String("{\"RoundState\":\"Paused\",\"Timestamp\":\"") + ts + "\"}");
-        break;
-      case 3: // Resume
-        Serial.println("Resuming the round at " + ts);
-        timeHandler->resume(); isPaused = false;
-        bluetoothHandler->sendMessage(
-          String("{\"RoundState\":\"Resumed\",\"Timestamp\":\"") + ts + "\"}");
-        break;
-      case 4: // Reset
-        Serial.println("Resetting the round at " + ts);
-        fsrHandler->resetPunchCount();
-        timeHandler->reset(); timeHandler->start();
-        roundActive = true; isPaused = false;
-        bluetoothHandler->sendMessage(
-          String("{\"RoundState\":\"Reset\",\"Timestamp\":\"") + ts + "\"}");
-        break;
-      case 5: // End
-        Serial.println("Ending the round at " + ts);
-        roundActive = false;
-        bluetoothHandler->sendMessage(
-          String("{\"RoundState\":\"Ended\",\"Timestamp\":\"") + ts + "\"}");
-        timeHandler->reset(); fsrHandler->resetPunchCount();
-        break;
-      default:
-        Serial.println("Unknown Command");
-        bluetoothHandler->sendMessage("{\"Error\":\"Unknown Command\"}");
-        break;
+    StaticJsonDocument<256> jsonDoc;
+    DeserializationError error = deserializeJson(jsonDoc, incomingMessage);
+    if (error) {
+      Serial.print("JSON Parsing Failed: ");
+      Serial.println(error.c_str());
+      return;
     }
-    bluetoothHandler->clearMessage();
+
+    // Handle sensor settings update
+    if (jsonDoc.containsKey("SensorSettings")) {
+      JsonObject settings = jsonDoc["SensorSettings"];
+      fsrSensitivity = settings["FsrSensitivity"];
+      fsrThreshold = settings["FsrThreshold"];
+      roundTime = settings["RoundTime"];
+      breakTime = settings["BreakTime"];
+      fsrHandler->setSensitivity(fsrSensitivity);
+      fsrHandler->setThreshold(fsrThreshold);
+      // Serial.println("Sensor settings updated.");
+      // Serial.println(fsrHandler->getSensitivity());
+      // Serial.println(fsrHandler->getThreshold());
+      bluetoothHandler->sendMessage("{\"RoundState\":\"Settings Updated\"}");
+      bluetoothHandler->clearMessage();
+    }
+
+    // Handle round commands
+    if (jsonDoc.containsKey("RoundStatusCommand")) {
+      int commandValue = jsonDoc["RoundStatusCommand"]["Command"];
+      unsigned long elapsedSeconds = timeHandler->getElapsedSeconds();
+
+      switch (commandValue) {
+        case 1:  // Start round
+          Serial.println("Starting the round at " + String(elapsedSeconds) + "s...");
+          fsrHandler->resetPunchCount();
+          timeHandler->reset();
+          timeHandler->start();
+          roundActive = true;
+          isPaused = false;
+          bluetoothHandler->sendMessage("{\"RoundState\":\"Started\",\"Time\":\"" + String(elapsedSeconds) + "...s\"}");
+          bluetoothHandler->clearMessage();
+          break;
+        case 2:  // Pause round
+          Serial.println("Pausing the round at " + String(elapsedSeconds) + "s...");
+          timeHandler->pause();
+          isPaused = true;
+          bluetoothHandler->sendMessage("{\"RoundState\":\"Paused\",\"Time\":\"" + String(elapsedSeconds) + "...s\"}");
+          bluetoothHandler->clearMessage();
+          break;
+        case 3:  // Resume round
+          Serial.println("Resuming the round at " + String(elapsedSeconds) + "s...");
+          timeHandler->resume();
+          isPaused = false;
+          bluetoothHandler->sendMessage("{\"RoundState\":\"Resumed\",\"Time\":\"" + String(elapsedSeconds) + "...s\"}");
+          bluetoothHandler->clearMessage();
+          break;
+        case 4:  // Reset round
+          Serial.println("Resetting the round at " + String(elapsedSeconds) + "s...");
+          fsrHandler->resetPunchCount();
+          timeHandler->reset();
+          timeHandler->start();
+          roundActive = true;
+          isPaused = false;
+          bluetoothHandler->sendMessage("{\"RoundState\":\"Reset\",\"Time\":\"0s\"}");
+          bluetoothHandler->clearMessage();
+          break;
+        case 5:  // End round
+          Serial.println("Ending the round at " + String(elapsedSeconds) + "s...");
+          roundActive = false;
+          bluetoothHandler->sendMessage("{\"RoundState\":\"Ended\",\"FinalTime\":\"" + String(elapsedSeconds) + "s\"}");
+          timeHandler->reset();
+          fsrHandler->resetPunchCount();
+          bluetoothHandler->clearMessage();
+          break;
+        default:
+          Serial.println("Unknown Command Received.");
+          bluetoothHandler->sendMessage("{\"Error\":\"Unknown Command\"}");
+          bluetoothHandler->clearMessage();
+          break;
+      }
+    }
   }
 }
+
+// == Modify BoxingApp::handleCommands(), replacing elapsed-relative with RTC ==
+// void BoxingApp::handleCommands() {
+//   String msg = bluetoothHandler->readMessage();
+//   if (msg.length() == 0) return;
+//   StaticJsonDocument<256> jsonDoc;
+//   if (deserializeJson(jsonDoc, msg)) return;
+
+//   if (jsonDoc.containsKey("RoundStatusCommand")) {
+//     int cmd = jsonDoc["RoundStatusCommand"]["Command"];
+//     String ts = getFormattedTime();
+//     switch (cmd) {
+//       case 1: // Start
+//         Serial.println("Starting the round at " + ts);
+//         fsrHandler->resetPunchCount();
+//         timeHandler->reset();
+//         timeHandler->start();
+//         roundActive = true; isPaused = false;
+//         bluetoothHandler->sendMessage(
+//           String("{\"RoundState\":\"Started\",\"Timestamp\":\"") + ts + "\"}");
+//         break;
+//       case 2: // Pause
+//         Serial.println("Pausing the round at " + ts);
+//         timeHandler->pause(); isPaused = true;
+//         bluetoothHandler->sendMessage(
+//           String("{\"RoundState\":\"Paused\",\"Timestamp\":\"") + ts + "\"}");
+//         break;
+//       case 3: // Resume
+//         Serial.println("Resuming the round at " + ts);
+//         timeHandler->resume(); isPaused = false;
+//         bluetoothHandler->sendMessage(
+//           String("{\"RoundState\":\"Resumed\",\"Timestamp\":\"") + ts + "\"}");
+//         break;
+//       case 4: // Reset
+//         Serial.println("Resetting the round at " + ts);
+//         fsrHandler->resetPunchCount();
+//         timeHandler->reset(); timeHandler->start();
+//         roundActive = true; isPaused = false;
+//         bluetoothHandler->sendMessage(
+//           String("{\"RoundState\":\"Reset\",\"Timestamp\":\"") + ts + "\"}");
+//         break;
+//       case 5: // End
+//         Serial.println("Ending the round at " + ts);
+//         roundActive = false;
+//         bluetoothHandler->sendMessage(
+//           String("{\"RoundState\":\"Ended\",\"Timestamp\":\"") + ts + "\"}");
+//         timeHandler->reset(); fsrHandler->resetPunchCount();
+//         break;
+//       default:
+//         Serial.println("Unknown Command");
+//         bluetoothHandler->sendMessage("{\"Error\":\"Unknown Command\"}");
+//         break;
+//     }
+//     bluetoothHandler->clearMessage();
+//   }
+// }
 
 void BoxingApp::sendPunchData() {
   unsigned long elapsedMilliseconds = timeHandler->getElapsedMilliseconds();
