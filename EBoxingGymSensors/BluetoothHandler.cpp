@@ -44,56 +44,57 @@ void BluetoothHandler::sendMessage(const String& message) {
   pTxCharacteristic->setValue(message.c_str());
   pTxCharacteristic->notify();                 // Using notify without connection id.
   Serial.println("Sent Message: " + message);  // Print the message that is sending in terminal
+}
 
-  String BluetoothHandler::readMessage() {
-    return receivedMessage;
-  }
+String BluetoothHandler::readMessage() {
+  return receivedMessage;
+}
 
-  void BluetoothHandler::clearMessage() {
-    receivedMessage = "";
-  }
+void BluetoothHandler::clearMessage() {
+  receivedMessage = "";
+}
 
-  bool BluetoothHandler::isDeviceConnected() {
-    return !connectedClients.empty();
-  }
+bool BluetoothHandler::isDeviceConnected() {
+  return !connectedClients.empty();
+}
 
-  void BluetoothHandler::cleanDisconnectedClients() {
-    connectedClients.erase(
-      std::remove_if(connectedClients.begin(), connectedClients.end(),
-                     [&](uint16_t handle) {
-                       return pServer->getConnectedCount() == 0;
-                     }),
-      connectedClients.end());
-  }
+void BluetoothHandler::cleanDisconnectedClients() {
+  connectedClients.erase(
+    std::remove_if(connectedClients.begin(), connectedClients.end(),
+                   [&](uint16_t handle) {
+                     return pServer->getConnectedCount() == 0;
+                   }),
+    connectedClients.end());
+}
 
-  // ----------------------- Server Callbacks -----------------------
+// ----------------------- Server Callbacks -----------------------
 
-  BluetoothHandler::ServerCallbacks::ServerCallbacks(BluetoothHandler * parentInstance)
-    : parent(parentInstance) {}
+BluetoothHandler::ServerCallbacks::ServerCallbacks(BluetoothHandler* parentInstance)
+  : parent(parentInstance) {}
 
-  void BluetoothHandler::ServerCallbacks::onConnect(BLEServer * pServer) {
-    // You may not have direct access to a connection ID with this signature.
-    // For now, we simply note a connection has been made.
-    parent->connectedClients.push_back(1);  // Dummy ID; adjust as needed.
-    Serial.println("Device connected. Total connections: " + String(parent->connectedClients.size()));
-    parent->pTxCharacteristic->setValue("");
-    parent->pTxCharacteristic->notify();
-  }
+void BluetoothHandler::ServerCallbacks::onConnect(BLEServer* pServer) {
+  // You may not have direct access to a connection ID with this signature.
+  // For now, we simply note a connection has been made.
+  parent->connectedClients.push_back(1);  // Dummy ID; adjust as needed.
+  Serial.println("Device connected. Total connections: " + String(parent->connectedClients.size()));
+  parent->pTxCharacteristic->setValue("");
+  parent->pTxCharacteristic->notify();
+}
 
-  void BluetoothHandler::ServerCallbacks::onDisconnect(BLEServer * pServer) {
-    parent->connectedClients.clear();
-    delay(150);
-    Serial.println("Device disconnected. Remaining connections: " + String(parent->connectedClients.size()));
-    pServer->startAdvertising();
-  }
+void BluetoothHandler::ServerCallbacks::onDisconnect(BLEServer* pServer) {
+  parent->connectedClients.clear();
+  delay(150);
+  Serial.println("Device disconnected. Remaining connections: " + String(parent->connectedClients.size()));
+  pServer->startAdvertising();
+}
 
-  // ----------------------- RX Callbacks -----------------------
+// ----------------------- RX Callbacks -----------------------
 
-  BluetoothHandler::RxCallbacks::RxCallbacks(BluetoothHandler * parentInstance)
-    : parent(parentInstance) {}
+BluetoothHandler::RxCallbacks::RxCallbacks(BluetoothHandler* parentInstance)
+  : parent(parentInstance) {}
 
-  void BluetoothHandler::RxCallbacks::onWrite(BLECharacteristic * pCharacteristic) {
-    parent->receivedMessage = pCharacteristic->getValue().c_str();
-    parent->receivedMessage.trim();
-    Serial.println("Received message: " + parent->receivedMessage);
-  }
+void BluetoothHandler::RxCallbacks::onWrite(BLECharacteristic* pCharacteristic) {
+  parent->receivedMessage = pCharacteristic->getValue().c_str();
+  parent->receivedMessage.trim();
+  Serial.println("Received message: " + parent->receivedMessage);
+}
