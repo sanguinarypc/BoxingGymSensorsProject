@@ -7,13 +7,12 @@
 
 class SleepHandler {
 public:
-    SleepHandler();
-    // void enterLightSleep();
-    void enterLightSleep(bool enableBluetoothWake);
-    void enableTimerWakeUp(uint64_t timeInSeconds);
-    void enableExtWakeUp(uint64_t gpioPinMask, esp_sleep_ext1_wakeup_mode_t mode);
-    void enterDeepSleep();
-    void wakeUpHandler(); // Handles actions after waking up
+  SleepHandler();
+  void enterLightSleep(bool enableBluetoothWake);  // void enterLightSleep();
+  void enableTimerWakeUp(uint64_t timeInSeconds);
+  void enableExtWakeUp(uint64_t gpioPinMask, esp_sleep_ext1_wakeup_mode_t mode);
+  void enterDeepSleep();
+  void wakeUpHandler();  // Handles actions after waking up
 };
 
-#endif // SLEEP_HANDLER_H
+#endif  // SLEEP_HANDLER_H

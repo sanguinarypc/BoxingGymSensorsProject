@@ -31,7 +31,7 @@ bool FSRPunchDetector::checkPunch() {
       return true;  // Punch detected
     }
   } else if (fsrValue < fsrThreshold) {
-  // }else if (fsrValue < (fsrSensitivity - 200)) {  // For fsrSensitivity of 800, reset below 600 mV  (fsrValue < (fsrSensitivity * 0.75))
+    // }else if (fsrValue < (fsrSensitivity - 200)) {  // For fsrSensitivity of 800, reset below 600 mV  (fsrValue < (fsrSensitivity * 0.75))
     // Reset flag when the sensor value drops below a low threshold
     isPressed = false;
   }
