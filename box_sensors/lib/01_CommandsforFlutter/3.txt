@@ -1,0 +1,1191 @@
+
+            Expanded(
+              child: ElevatedButton(
+                onPressed: onAdd,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  elevation: 6,
+                  shadowColor: theme.shadowColor,
+                  surfaceTintColor: theme.colorScheme.primaryContainer,
+                ),
+                child: const Text('Add New Game', textAlign: TextAlign.center),
+              ),
+            ),
+
+
+            Expanded(
+              child: ElevatedButton(
+                onPressed: onAdd,
+
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  elevation: 6,
+                  shadowColor: theme.shadowColor,
+                  surfaceTintColor: theme.colorScheme.primaryContainer,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    'Add New Game',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: theme.colorScheme.onPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+
+
+
+
+
+
+
+
+
+
+
+// Good code state 
+// import 'dart:async';
+// import 'dart:convert';
+// import 'package:flutter/material.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:box_sensors/services/providers.dart';
+// import 'package:box_sensors/services/bluetooth_manager.dart';
+// import 'package:box_sensors/services/database_helper.dart';
+// import 'package:box_sensors/widgets/display_row.dart';
+// import 'package:box_sensors/widgets/common_buttons.dart';
+// import 'package:sentry_flutter/sentry_flutter.dart';
+
+// class StartMatchScreen extends ConsumerStatefulWidget {
+//   final Stream<List<DataRow>> dataTableStream;
+//   final Function(String) sendMessage;
+//   final Map<String, dynamic>? match;
+
+//   const StartMatchScreen({
+//     super.key,
+//     required this.dataTableStream,
+//     required this.sendMessage,
+//     this.match,
+//   });
+
+//   @override
+//   ConsumerState<StartMatchScreen> createState() => _StartMatchScreenState();
+// }
+
+// class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
+//   final List<DataRow> tableRows = [];
+//   late final DatabaseHelper dbHelper;
+//   Map<String, dynamic>? settings;
+//   late Map<String, dynamic>? matchData;
+//   String matchTimeCounter = "";
+
+//   static const int start = 1, pause = 2, resume = 3, end = 5;
+//   static const List<String> tableHeaders = [
+//     'Device', 'PunchBy', 'PunchCount', 'Timestamp', 'Sensor',
+//   ];
+
+//   Timer? _dialogCountdownTimer;
+//   final ValueNotifier<int> _countdownNotifier = ValueNotifier<int>(0);
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     dbHelper = ref.read(databaseHelperProvider);
+//     matchData = widget.match;
+//     _loadSettings();
+//     _loadMessagesFromDatabase();
+//   }
+
+//   @override
+//   void dispose() {
+//     _dialogCountdownTimer?.cancel();
+//     _countdownNotifier.dispose();
+//     super.dispose();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final screenWidth = MediaQuery.of(context).size.width;
+//     double tableWidth = screenWidth * 0.95;
+//     if (tableWidth < 350) tableWidth = 350;
+
+//     final bluetoothManager = ref.watch(bluetoothManagerProvider);
+//     final timerState = ref.watch(timerStateProvider);
+//     final theme = Theme.of(context);
+
+//     return PopScope(
+//       canPop: !timerState.isStartButtonDisabled || timerState.isEndMatch,
+//       onPopInvokedWithResult: (didPop, result) {},
+//       child: Scaffold(
+//         body: SafeArea(
+//           child: Column(
+//             children: [
+//               // AppBar replacement with back button
+//               DisplayRow(
+//                 fontSize: 14,
+//                 title: 'Start Game: ${matchData?['matchName']}',
+//                 actions: [
+//                   IconButton(
+//                     icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
+//                     onPressed: timerState.isEndMatch || !timerState.isStartButtonDisabled
+//                         ? () => Navigator.pop(context)
+//                         : null,
+//                   ),
+//                 ],
+//               ),
+//               const SizedBox(height: 2),
+
+//               // Round / Break / Ended display
+//               Padding(
+//                 //padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+//                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
+//                 child: Center(
+//                   child: Text(
+//                     timerState.isEndMatch
+//                         ? 'Match Ended – Total rounds: ${timerState.totalRounds}'
+//                         : timerState.isBreak
+//                             ? 'Break time: ${timerState.countdown}s left'
+//                             : 'Round ${timerState.round}: ${timerState.countdown}s left',
+//                     style: TextStyle(
+//                       fontSize: 16,
+//                       fontWeight: FontWeight.bold,
+//                       color: theme.colorScheme.primary,
+//                     ),
+//                   ),
+//                 ),
+//               ),
+
+//               // Controls card
+//               Card(
+//                 elevation: 4,
+//                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+//                 margin: const EdgeInsets.all(8),
+//                 child: Padding(
+//                   padding: const EdgeInsets.all(4.0),
+//                   child: Row(
+//                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+//                     children: [
+//                       Column(
+//                         children: [
+//                           CommonButtons.buildRoundControlButton(
+//                             context,
+//                             'Start Match',
+//                             timerState.isStartButtonDisabled
+//                                 ? null
+//                                 : () async {
+//                                     try {
+//                                       setState(() => timerState.isStartButtonDisabled = true);
+//                                       bluetoothManager.clearTable();
+//                                       setState(() => tableRows.clear());
+//                                       await _loadSettings();
+//                                       await loadMatchSettingsAndStartGame(bluetoothManager);
+//                                     } catch (e, st) {
+//                                       Sentry.captureException(e, stackTrace: st);
+//                                     }
+//                                   },
+//                             theme,
+//                           ),
+//                           const SizedBox(height: 4),
+//                           CommonButtons.buildRoundControlButton(
+//                             context,
+//                             'Pause Match',
+//                             timerState.isPauseButtonDisabled
+//                                 ? null
+//                                 : () {
+//                                     final json = _genRoundJson(pause);
+//                                     bluetoothManager.sendMessageToAllConnectedDevices(json);
+//                                     timerState.pauseTimer();
+//                                   },
+//                             theme,
+//                           ),
+//                         ],
+//                       ),
+//                       Column(
+//                         children: [
+//                           CommonButtons.buildRoundControlButton(
+//                             context,
+//                             'End Match',
+//                             timerState.isEndButtonDisabled
+//                                 ? null
+//                                 : () {
+//                                     final json = _genRoundJson(end);
+//                                     bluetoothManager.sendMessageToAllConnectedDevices(json);
+//                                     timerState.endMatchManually();
+//                                   },
+//                             theme,
+//                           ),
+//                           const SizedBox(height: 4),
+//                           CommonButtons.buildRoundControlButton(
+//                             context,
+//                             'Resume Match',
+//                             timerState.isResumeButtonDisabled
+//                                 ? null
+//                                 : () {
+//                                     final json = _genRoundJson(resume);
+//                                     bluetoothManager.sendMessageToAllConnectedDevices(json);
+//                                     timerState.resumeTimer();
+//                                   },
+//                             theme,
+//                           ),
+//                         ],
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+//               ),
+
+//               // Data table
+//               Expanded(
+//                 child: SingleChildScrollView(
+//                   scrollDirection: Axis.horizontal,
+//                   child: ConstrainedBox(
+//                     constraints: BoxConstraints(minWidth: tableWidth),
+//                     child: Column(
+//                       children: [
+//                         _buildTableHeader(theme, tableWidth),
+//                         const Divider(height: 1, thickness: 1),
+//                         Expanded(
+//                           child: SingleChildScrollView(
+//                             child: _buildTableBody(bluetoothManager, tableWidth),
+//                           ),
+//                         ),
+//                       ],
+//                     ),
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+
+//    Widget _buildTableHeader(ThemeData theme, double tableWidth) {
+//     return Container(
+//       width: tableWidth,
+//       color: theme.colorScheme.surfaceTint,
+//       child: Row(
+//         children: tableHeaders.map((header) => _buildHeaderCell(header, theme)).toList(),
+//       ),
+//     );
+//   }
+  
+//    Widget _buildHeaderCell(String text, ThemeData theme) {
+//     return Expanded(
+//       flex: 1,
+//       child: Container(
+//         color: theme.colorScheme.primary,
+//         child: Center(
+//           child: Text(text, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.0, color: theme.colorScheme.onPrimary)),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _buildTableBody(BluetoothManager mgr, double width) {
+//     return StreamBuilder<List<DataRow>>(
+//       //stream: bluetoothManager.messageStream,
+//       stream: mgr.messageStream,
+//       builder: (context, snapshot) {
+//         final rowsToDisplay =
+//             snapshot.hasData && snapshot.data!.isNotEmpty ? snapshot.data! : tableRows;
+//         if (rowsToDisplay.isEmpty) {
+//           return const Center(child: Text('No sensor(s) data yet.'));
+//         }
+//         return Scrollbar(
+//           child: SingleChildScrollView(
+//             child: Column(
+//               children: rowsToDisplay.reversed.map((dataRow) {
+//                 return IntrinsicHeight(
+//                   child: Row(
+//                     children: dataRow.cells.map((dataCell) {
+//                       return Container(
+//                         width: width / tableHeaders.length,
+//                         padding: const EdgeInsets.all(1),
+//                         alignment: Alignment.center,
+//                         child: dataCell.child,
+//                       );
+//                     }).toList(),
+//                   ),
+//                 );
+//               }).toList(),
+//             ),
+//           ),
+//         );
+//       },
+//     );
+//   }
+
+//   Future<void> loadMatchSettingsAndStartGame(BluetoothManager mgr) async {
+//     final timerState = ref.read(timerStateProvider);
+//     final current = widget.match;
+//     timerState.rounds = current?['rounds'] ?? 1;
+//     timerState.totalRounds = timerState.rounds;
+//     timerState.roundTime = ((current?['roundTime'] ?? 3) * 60);
+//     timerState.breakTime = current?['breakTime'] ?? 60;
+
+//     try {
+//       final eventId = await dbHelper.insertEvent(matchId: current?['id'] ?? 0);
+//       timerState.initialize(dbHelper, mgr, current?['id'], eventId);
+//     } catch (e, st) {
+//       Sentry.captureException(e, stackTrace: st);
+//     }
+
+//     if (!mounted) return;
+//     _showCountdown(mgr);
+//   }
+
+//   Future<void> _loadSettings() async {
+//     try {
+//       settings = await dbHelper.fetchSettings();
+//       setState(() {});
+//     } catch (e, st) {
+//       Sentry.captureException(e, stackTrace: st);
+//     }
+//   }
+
+//   Future<void> _loadMessagesFromDatabase() async {
+//     try {
+//       await ref
+//           .read(bluetoothManagerProvider)
+//           .loadHistory(matchId: widget.match?['id']);
+//     } catch (_) {}
+//   }
+
+//   String _genRoundJson(int cmd) => jsonEncode({
+//         'RoundStatusCommand': {'Command': cmd},
+//       });
+
+//   void _showCountdown(BluetoothManager mgr) {
+//     if (!mounted || settings == null) return;
+//     final dialogContext = context;
+//     final secs = settings!['secondsBeforeRoundBegins'] ?? 5;
+//     _countdownNotifier.value = secs;
+//     _dialogCountdownTimer?.cancel();
+
+//     showDialog(
+//       context: dialogContext,
+//       barrierDismissible: false,
+//       builder: (ctx) {
+//         _dialogCountdownTimer = Timer.periodic(
+//           const Duration(seconds: 1),
+//           (t) {
+//             if (_countdownNotifier.value > 0) {
+//               _countdownNotifier.value--;
+//             } else {
+//               t.cancel();
+//               Navigator.of(ctx, rootNavigator: true).pop();
+//               ref.read(timerStateProvider).startCountdown(() async {
+//                 final jsonSettings = await _genSettingsJson();
+//                 mgr.sendMessageToAllConnectedDevices(jsonSettings);
+//                 mgr.sendMessageToAllConnectedDevices(_genRoundJson(start));
+//               });
+//             }
+//           },
+//         );
+
+//         return AlertDialog(
+//           shape:
+//               RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+//           title: Row(
+//             children: [
+//               Icon(Icons.hourglass_top,
+//                   color: Theme.of(ctx).colorScheme.primary),
+//               const SizedBox(width: 8),
+//               const Text('Get Ready!',
+//                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+//             ],
+//           ),
+//           content: Column(
+//             mainAxisSize: MainAxisSize.min,
+//             children: [
+//               Text('Starting in…',
+//                   style: TextStyle(fontSize: 16,
+//                       fontWeight: FontWeight.w500,
+//                       //color: Colors.grey
+//                       color: Theme.of(dialogContext).colorScheme.primary,
+//                       )),
+//               const SizedBox(height: 16),
+//               ValueListenableBuilder<int>(
+//                 valueListenable: _countdownNotifier,
+//                 builder: (_, value, __) => Text('$value',
+//                     style: TextStyle(
+//                         fontSize: 48, fontWeight: FontWeight.bold,
+//                         color: Theme.of(dialogContext).colorScheme.primary)),
+//               ),
+//               const SizedBox(height: 16),
+//               ValueListenableBuilder<int>(
+//                 valueListenable: _countdownNotifier,
+//                 builder: (_, value, __) {
+//                   final progress = (secs - value) / secs;
+//                   return LinearProgressIndicator(
+//                     value: progress,
+//                     backgroundColor: Colors.grey[300],
+//                     valueColor: AlwaysStoppedAnimation<Color>(
+//                         Theme.of(ctx).colorScheme.primary),
+//                   );
+//                 },
+//               ),
+//             ],
+//           ),
+//         );
+//       },
+//     ).then((_) => _dialogCountdownTimer?.cancel());
+//   }
+
+//   Future<String> _genSettingsJson() async {
+//     final s = await dbHelper.fetchSettings();
+//     return jsonEncode({
+//       'SensorSettings': {
+//         'FsrSensitivity': s!['fsrSensitivity'].toString(),
+//         'FsrThreshold': s['fsrThreshold'].toString(),
+//         'RoundTime':
+//             ((widget.match?['roundTime'] ?? s['roundTime']) * 60000).toString(),
+//         'BreakTime':
+//             ((widget.match?['breakTime'] ?? s['breakTime']) * 1000).toString(),
+//       },
+//     });
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import 'dart:async';
+// import 'dart:convert';
+// import 'package:flutter/material.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:sentry_flutter/sentry_flutter.dart';
+// import 'package:box_sensors/services/providers.dart';
+// import 'package:box_sensors/services/bluetooth_manager.dart';
+// import 'package:box_sensors/services/database_helper.dart';
+// import 'package:box_sensors/screens/start_match_header.dart';
+// import 'package:box_sensors/screens/round_controls_card.dart';
+// import 'package:box_sensors/screens/match_data_table.dart';
+
+// class StartMatchScreen extends ConsumerStatefulWidget {
+//   final Stream<List<DataRow>> dataTableStream;
+//   final Map<String, dynamic>? match;
+//   const StartMatchScreen({
+//     super.key,
+//     required this.dataTableStream,
+//     this.match,
+//   });
+
+//   @override
+//   ConsumerState<StartMatchScreen> createState() => _StartMatchScreenState();
+// }
+
+// class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
+//   late final DatabaseHelper dbHelper;
+//   Map<String, dynamic>? settings;
+//   Timer? _dialogCountdownTimer;
+//   final ValueNotifier<int> _countdownNotifier = ValueNotifier<int>(0);
+
+//   static const int start = 1, pause = 2, resume = 3, end = 5;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     dbHelper = ref.read(databaseHelperProvider);
+//     _loadSettings();
+//     _loadHistory();
+//   }
+
+//   @override
+//   void dispose() {
+//     _dialogCountdownTimer?.cancel();
+//     _countdownNotifier.dispose();
+//     super.dispose();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final bluetoothManager = ref.watch(bluetoothManagerProvider);
+//     final timerState = ref.watch(timerStateProvider);
+//     final theme = Theme.of(context);
+
+//     return PopScope(
+//       canPop: !timerState.isStartButtonDisabled || timerState.isEndMatch,
+//       onPopInvokedWithResult: (_, __) {},
+//       child: Scaffold(
+//         body: SafeArea(
+//           child: Column(
+//             children: [
+//               // HEADER + BACK BUTTON
+//               StartMatchHeader(
+//                 matchName: widget.match?['matchName'],
+//                 timerState: timerState,
+//                 theme: theme,
+//               ),
+
+//               // ROUND / BREAK / ENDED COUNTER
+//               Padding(
+//                 padding: const EdgeInsets.symmetric(vertical: 8.0),
+//                 child: Text(
+//                   timerState.isEndMatch
+//                       ? 'Match Ended – Total Rounds: ${timerState.totalRounds}'
+//                       : timerState.isBreak
+//                           ? 'Break time: ${timerState.countdown}s left'
+//                           : 'Round ${timerState.round}: ${timerState.countdown}s left',
+//                   style: TextStyle(
+//                     fontSize: 16,
+//                     fontWeight: FontWeight.bold,
+//                     color: theme.colorScheme.primary,
+//                   ),
+//                 ),
+//               ),
+
+//               // CONTROLS
+//               RoundControlsCard(
+//                 theme: theme,
+//                 isStartDisabled: timerState.isStartButtonDisabled,
+//                 isEndDisabled: timerState.isEndButtonDisabled,
+//                 isPauseDisabled: timerState.isPauseButtonDisabled,
+//                 isResumeDisabled: timerState.isResumeButtonDisabled,
+//                 onStart: () async {
+//                   try {
+//                     bluetoothManager.clearTable();
+//                     await _loadSettings();
+//                     final eventId =
+//                         await dbHelper.insertEvent(matchId: widget.match?['id']);
+//                     ref.read(timerStateProvider).initialize(
+//                           dbHelper,
+//                           bluetoothManager,
+//                           widget.match?['id'],
+//                           eventId,   /// <----------------------eventId!-----------------------------------------
+//                         );
+//                   } catch (e, st) {
+//                     Sentry.captureException(e, stackTrace: st);
+//                   }
+//                 },
+//                 onPause: () {
+//                   final json = _genRoundJson(pause);
+//                   bluetoothManager.sendMessageToAllConnectedDevices(json);
+//                   ref.read(timerStateProvider).pauseTimer();
+//                 },
+//                 onResume: () {
+//                   final json = _genRoundJson(resume);
+//                   bluetoothManager.sendMessageToAllConnectedDevices(json);
+//                   ref.read(timerStateProvider).resumeTimer();
+//                 },
+//                 onEnd: () {
+//                   final json = _genRoundJson(end);
+//                   bluetoothManager.sendMessageToAllConnectedDevices(json);
+//                   ref.read(timerStateProvider).endMatchManually();
+//                 },
+//                 // only show the dialog after Start’s async work is done
+//                 showCountdownDialog: () {
+//                   if (!mounted || settings == null) return;
+//                   _showCountdown(bluetoothManager);
+//                 },
+//               ),
+
+//               // DATA TABLE
+//               const SizedBox(height: 8),
+//               Expanded(
+//                 child: MatchDataTable(
+//                   tableStream: widget.dataTableStream,
+//                   tableWidthProvider: () {
+//                     final w = MediaQuery.of(context).size.width * 0.95;
+//                     return w < 350 ? 350 : w;
+//                   },
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Future<void> _loadSettings() async {
+//     try {
+//       settings = await dbHelper.fetchSettings();
+//     } catch (e, st) {
+//       Sentry.captureException(e, stackTrace: st);
+//     }
+//   }
+
+//   Future<void> _loadHistory() async {
+//     try {
+//       await ref
+//           .read(bluetoothManagerProvider)
+//           .loadHistory(matchId: widget.match?['id']);
+//     } catch (_) {}
+//   }
+
+//   String _genRoundJson(int cmd) => jsonEncode({
+//         'RoundStatusCommand': {'Command': cmd},
+//       });
+
+//   void _showCountdown(BluetoothManager mgr) {
+//     if (!mounted) return;
+//     final dialogContext = context;
+//     final secs = settings!['secondsBeforeRoundBegins'] ?? 5;
+//     _countdownNotifier.value = secs;
+//     _dialogCountdownTimer?.cancel();
+
+//     showDialog(
+//       context: dialogContext,
+//       barrierDismissible: false,
+//       builder: (dialogContext) {
+//         // kick off the timer *inside* the builder so we get a fresh dialogContext
+//         _dialogCountdownTimer = Timer.periodic(
+//           const Duration(seconds: 1),
+//           (timer) {
+//             if (_countdownNotifier.value > 0) {
+//               _countdownNotifier.value--;
+//             } else {
+//               timer.cancel();
+//               Navigator.of(dialogContext, rootNavigator: true).pop();
+//               ref.read(timerStateProvider).startCountdown(() async {
+//                 final settingsJson = await _genSettingsJson();
+//                 mgr.sendMessageToAllConnectedDevices(settingsJson);
+//                 mgr.sendMessageToAllConnectedDevices(_genRoundJson(start));
+//               });
+//             }
+//           },
+//         );
+
+//         return AlertDialog(
+//           shape:
+//               RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+//           title: Row(
+//             children: [
+//               Icon(Icons.hourglass_top,
+//                   color: Theme.of(dialogContext).colorScheme.primary),
+//               const SizedBox(width: 8),
+//               const Text('Get Ready!',
+//                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+//             ],
+//           ),
+//           content: Column(
+//             mainAxisSize: MainAxisSize.min,
+//             children: [
+//               const Text('Starting in…',
+//                   style: TextStyle(
+//                       fontSize: 16,
+//                       fontWeight: FontWeight.w500,
+//                       color: Colors.grey)),
+//               const SizedBox(height: 16),
+//               ValueListenableBuilder<int>(
+//                 valueListenable: _countdownNotifier,
+//                 builder: (_, value, __) => Text('$value',
+//                     style:
+//                         const TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
+//               ),
+//               const SizedBox(height: 16),
+//               ValueListenableBuilder<int>(
+//                 valueListenable: _countdownNotifier,
+//                 builder: (_, value, __) {
+//                   final progress = (secs - value) / secs;
+//                   return LinearProgressIndicator(
+//                     value: progress,
+//                     backgroundColor: Colors.grey[300],
+//                     valueColor: AlwaysStoppedAnimation<Color>(
+//                         Theme.of(dialogContext).colorScheme.primary),
+//                   );
+//                 },
+//               ),
+//             ],
+//           ),
+//         );
+//       },
+//     ).then((_) => _dialogCountdownTimer?.cancel());
+//   }
+
+//   Future<String> _genSettingsJson() async {
+//     final s = await dbHelper.fetchSettings();
+//     return jsonEncode({
+//       'SensorSettings': {
+//         'FsrSensitivity': s!['fsrSensitivity'].toString(),
+//         'FsrThreshold': s['fsrThreshold'].toString(),
+//         'RoundTime':
+//             ((widget.match?['roundTime'] ?? s['roundTime']) * 60000).toString(),
+//         'BreakTime':
+//             ((widget.match?['breakTime'] ?? s['breakTime']) * 1000).toString(),
+//       },
+//     });
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // lib/screens/start_match_screen.dart
+// import 'dart:async';
+// import 'dart:convert';
+// import 'package:flutter/material.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:sentry_flutter/sentry_flutter.dart';
+// import 'package:box_sensors/services/providers.dart';
+// import 'package:box_sensors/services/bluetooth_manager.dart';
+// import 'package:box_sensors/services/database_helper.dart';
+// import 'package:box_sensors/screens/start_match_header.dart';
+// import 'package:box_sensors/screens/round_controls_card.dart';
+// import 'package:box_sensors/screens/match_data_table.dart';
+
+// class StartMatchScreen extends ConsumerStatefulWidget {
+//   final Stream<List<DataRow>> dataTableStream;
+//   final Function(String) sendMessage;
+//   final Map<String, dynamic>? match;
+
+//   const StartMatchScreen({
+//     super.key,
+//     required this.dataTableStream,
+//     required this.sendMessage,
+//     this.match,
+//   });
+
+//   @override
+//   ConsumerState<StartMatchScreen> createState() => _StartMatchScreenState();
+// }
+
+// class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
+//   late final DatabaseHelper dbHelper;
+//   Map<String, dynamic>? settings;
+//   Map<String, dynamic>? matchData;
+
+//   Timer? _dialogCountdownTimer;
+//   final ValueNotifier<int> _countdownNotifier = ValueNotifier<int>(0);
+
+//   static const int start = 1;
+//   static const int pause = 2;
+//   static const int resume = 3;
+//   static const int end = 5;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     dbHelper = ref.read(databaseHelperProvider);
+//     matchData = widget.match;
+//     _loadSettings();
+//     _loadHistory();
+//   }
+
+//   @override
+//   void dispose() {
+//     _dialogCountdownTimer?.cancel();
+//     _countdownNotifier.dispose();
+//     super.dispose();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final bluetoothManager = ref.watch(bluetoothManagerProvider);
+//     final timerState = ref.watch(timerStateProvider);
+//     final theme = Theme.of(context);
+
+//     return PopScope(
+//       canPop: !timerState.isStartButtonDisabled || timerState.isEndMatch,
+//       onPopInvokedWithResult: (_, __) {},
+//       child: Scaffold(
+//         body: SafeArea(
+//           child: Column(
+//             children: [
+//               StartMatchHeader(
+//                 matchName: matchData?['matchName'],
+//                 timerState: timerState,
+//                 theme: theme,
+//               ),
+//               const SizedBox(height: 8),
+
+//               RoundControlsCard(
+//                 theme: theme,
+//                 isStartDisabled: timerState.isStartButtonDisabled,
+//                 isEndDisabled: timerState.isEndButtonDisabled,
+//                 isPauseDisabled: timerState.isPauseButtonDisabled,
+//                 isResumeDisabled: timerState.isResumeButtonDisabled,
+//                 onStart: () async {
+//                   try {
+//                     bluetoothManager.clearTable();
+//                     await _loadSettings();
+//                     await _startMatch(bluetoothManager);
+//                     if (!mounted) return;
+//                     _showCountdown(bluetoothManager);
+//                   } catch (e, st) {
+//                     Sentry.captureException(e, stackTrace: st);
+//                   }
+//                 },
+//                 onEnd: () async {
+//                   try {
+//                     final json = _genRoundJson(end);
+//                     bluetoothManager.sendMessageToAllConnectedDevices(json);
+//                     timerState.endMatchManually();
+//                   } catch (e, st) {
+//                     Sentry.captureException(e, stackTrace: st);
+//                   }
+//                 },
+//                 onPause: () async {
+//                   try {
+//                     final json = _genRoundJson(pause);
+//                     bluetoothManager.sendMessageToAllConnectedDevices(json);
+//                     timerState.pauseTimer();
+//                   } catch (e, st) {
+//                     Sentry.captureException(e, stackTrace: st);
+//                   }
+//                 },
+//                 onResume: () async {
+//                   try {
+//                     final json = _genRoundJson(resume);
+//                     bluetoothManager.sendMessageToAllConnectedDevices(json);
+//                     timerState.resumeTimer();
+//                   } catch (e, st) {
+//                     Sentry.captureException(e, stackTrace: st);
+//                   }
+//                 },
+//                 showCountdownDialog: () {
+//                   if (!mounted) return;
+//                   _showCountdown(bluetoothManager);
+//                 },
+//               ),
+
+//               const SizedBox(height: 8),
+
+//               Expanded(
+//                 child: MatchDataTable(
+//                   tableStream: widget.dataTableStream,
+//                   tableWidthProvider: () {
+//                     final w = MediaQuery.of(context).size.width * 0.95;
+//                     return w < 350 ? 350 : w;
+//                   },
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Future<void> _loadSettings() async {
+//     try {
+//       settings = await dbHelper.fetchSettings();
+//     } catch (e, st) {
+//       Sentry.captureException(e, stackTrace: st);
+//     }
+//   }
+
+//   Future<void> _loadHistory() async {
+//     try {
+//       final mgr = ref.read(bluetoothManagerProvider);
+//       await mgr.loadHistory(matchId: widget.match?['id']);
+//     } catch (_) {}
+//   }
+
+//   Future<void> _startMatch(BluetoothManager mgr) async {
+//     final timerState = ref.read(timerStateProvider);
+//     final eventId = await dbHelper.insertEvent(matchId: matchData?['id'] ?? 0);
+//     timerState.initialize(dbHelper, mgr, matchData?['id'], eventId);
+//   }
+
+//   String _genRoundJson(int cmd) => jsonEncode({
+//     "RoundStatusCommand": {"Command": cmd},
+//   });
+
+//   void _showCountdown(BluetoothManager mgr) {
+//     if (!mounted) return;
+
+//     final dialogContext = context; // grab it fresh, synchronously
+//     final secs = settings?['secondsBeforeRoundBegins'] ?? 5;
+//     _countdownNotifier.value = secs;
+//     _dialogCountdownTimer?.cancel();
+
+//     showDialog(
+//       context: dialogContext,
+//       barrierDismissible: false,
+//       builder:
+//           (_) => AlertDialog(
+//             shape: RoundedRectangleBorder(
+//               borderRadius: BorderRadius.circular(15),
+//             ),
+//             title: Row(
+//               children: [
+//                 Icon(
+//                   Icons.hourglass_top,
+//                   color: Theme.of(dialogContext).colorScheme.primary,
+//                 ),
+//                 const SizedBox(width: 8),
+//                 const Text(
+//                   'Get Ready!',
+//                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+//                 ),
+//               ],
+//             ),
+//             content: Column(
+//               mainAxisSize: MainAxisSize.min,
+//               children: [
+//                 const Text(
+//                   'Starting in...',
+//                   style: TextStyle(
+//                     fontSize: 16,
+//                     fontWeight: FontWeight.w500,
+//                     color: Colors.grey,
+//                   ),
+//                 ),
+//                 ValueListenableBuilder<int>(
+//                   valueListenable: _countdownNotifier,
+//                   builder:
+//                       (_, v, __) => Text(
+//                         '$v',
+//                         style: const TextStyle(
+//                           fontSize: 48,
+//                           fontWeight: FontWeight.bold,
+//                         ),
+//                       ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//     );
+
+//     _dialogCountdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+//       if (_countdownNotifier.value > 0) {
+//         _countdownNotifier.value--;
+//       } else {
+//         t.cancel();
+//         Navigator.of(dialogContext, rootNavigator: true).pop();
+//         final ts = ref.read(timerStateProvider);
+//         ts.startCountdown(() async {
+//           final settingsJson = await _genSettingsJson();
+//           mgr.sendMessageToAllConnectedDevices(settingsJson);
+//           mgr.sendMessageToAllConnectedDevices(_genRoundJson(start));
+//         });
+//       }
+//     });
+//   }
+
+//   Future<String> _genSettingsJson() async {
+//     final s = await dbHelper.fetchSettings();
+//     return jsonEncode({
+//       "SensorSettings": {
+//         "FsrSensitivity": s!['fsrSensitivity'].toString(),
+//         "FsrThreshold": s['fsrThreshold'].toString(),
+//         "RoundTime":
+//             ((matchData?['roundTime'] ?? s['roundTime']) * 60000).toString(),
+//         "BreakTime":
+//             ((matchData?['breakTime'] ?? s['breakTime']) * 1000).toString(),
+//       },
+//     });
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // to test it still have not been test it
+    Future<void> updateRSSIForConnectedDevices() async {
+    // Start with the connected devices that have a Bluetooth device instance.
+    final deviceNames = connectedBluetoothDevices.entries
+        .where((entry) => entry.value != null)
+        .map((entry) => entry.key)
+        .toSet();
+
+    // Also include the target device names if marked as connected.
+    const targetDevices = ['BlueBoxer', 'RedBoxer', 'BoxerServer'];
+    for (final name in targetDevices) {
+      if (connectedDevices[name] == true) {
+        deviceNames.add(name);
+      }
+    }
+
+    for (final deviceName in deviceNames) {
+      final connectedDevice = connectedBluetoothDevices[deviceName];
+      if (connectedDevice != null) {
+        try {
+          final rssi = await connectedDevice.readRssi();
+          rssiValues[deviceName] = rssi;
+          debugPrint("Updated RSSI for $deviceName: $rssi");
+        } catch (e) {
+          debugPrint("Error reading RSSI for $deviceName: $e");
+          Sentry.captureException(e);
+        }
+      }
+    }
+    _scheduleUIUpdate(); // final UI update
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Final Note on AudioPlayer
+For your audio player usage in TimerState, you have two choices:
+
+Keep Instantiation in TimerState:
+You already create an instance with final AudioPlayer _audioPlayer = AudioPlayer(); inside TimerState. This is acceptable if you don’t need to override or share the AudioPlayer instance.
+
+Create an audioPlayerProvider (Optional):
+If you want to make it available for dependency injection (for example, if you need to override for tests), then add in your providers file:
+
+dart
+Copy
+final audioPlayerProvider = Provider<AudioPlayer>((ref) => AudioPlayer());
+and then in your TimerState (or any other class), read it via:
+
+dart
+Copy
+final AudioPlayer _audioPlayer = ref.read(audioPlayerProvider);
+This is optional based on your project needs.
+
+
+
+
+
+
+
+
+
+
+
+    // If the filter is empty, start a timer that periodically scans extra devices.
+    // if (filterKeyword.trim().isEmpty) {
+    //   _periodicExtraScanTimer =
+    //       Timer.periodic(const Duration(seconds: 2), (timer) async {
+    //     await widget.bluetoothManager.startScan(
+    //       timeout: const Duration(seconds: 2),
+    //       filterKeyword: '',
+    //     );
+    //   });
+    // } 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  Future<void> disconnectAllDevicesold() async {
+    for (final deviceName in connectedBluetoothDevices.keys) {
+      if (connectedBluetoothDevices[deviceName] != null) {
+        await handleDisconnectDevice(deviceName);
+      }
+    }
+  }
+
+  Future<void> disconnectAllDevices2() async {
+    for (var deviceName in availableDevices) {
+      _deviceConnectionNotifiers[deviceName]?.value = false;
+      debugPrint('Disconnected $deviceName (notifier set to false)');
+    }
+    notifyListeners();
+  }
+
+
+
+  // Column(
+                                      //   mainAxisSize: MainAxisSize.min,
+                                      //   mainAxisAlignment:
+                                      //       MainAxisAlignment.center,
+                                      //   children: [
+                                      //     ElevatedButton.icon(
+                                      //       onPressed:
+                                      //           widget.bluetoothManager
+                                      //                   .isDeviceConnected(
+                                      //                     deviceName,
+                                      //                   )
+                                      //               ? () => widget
+                                      //                   .bluetoothManager
+                                      //                   .handleDisconnectDevice(
+                                      //                     deviceName,
+                                      //                   )
+                                      //               : null,
+                                      //       icon: Icon(
+                                      //         Icons.bluetooth_disabled,
+                                      //         color:
+                                      //             theme.colorScheme.onPrimary,
+                                      //         size: 12,
+                                      //       ),
+                                      //       label: const Text('Disconnect'),
+                                      //       style: ElevatedButton.styleFrom(
+                                      //         backgroundColor:
+                                      //             theme.colorScheme.primary,
+                                      //         foregroundColor:
+                                      //             theme.colorScheme.onPrimary,
+                                      //         elevation: 6,
+                                      //         shadowColor: theme.shadowColor,
+                                      //         surfaceTintColor:
+                                      //             theme
+                                      //                 .colorScheme
+                                      //                 .primaryContainer,
+                                      //         fixedSize: const Size(138, 48),
+                                      //       ),
+                                      //     ),
+                                      //   ],
+                                      // ),
+
+
+
+
+                                       // ElevatedButton.icon(
+              //   // onPressed: () => widget.bluetoothManager.disconnectFromDevice(),  // disconnectAllDevices
+              //   onPressed: () => widget.bluetoothManager.disconnectAllDevices(),
+              //   icon: Icon(
+              //     Icons.bluetooth_disabled,
+              //     color: theme.colorScheme.onPrimary,
+              //   ),
+              //   label: const Text('Disconnect All Devices'),
+              //   style: ElevatedButton.styleFrom(
+              //     backgroundColor: theme.colorScheme.primary,
+              //     foregroundColor: theme.colorScheme.onPrimary,
+              //     elevation: 6,
+              //     shadowColor: theme.shadowColor,
+              //     surfaceTintColor: theme.colorScheme.primaryContainer,
+              //     fixedSize: const Size(300, 40),
+              //   ),
+              // ),

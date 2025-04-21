@@ -1,0 +1,170 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"   
+    package="com.sanguinarypc.box_sensors"> 
+    <!-- xmlns:tools="http://schemas.android.com/tools" -->
+    <!-- Ensure the app supports all screen densities -->
+    <supports-screens 
+        android:anyDensity="true"
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:resizeable="true" />
+
+    <!-- Permissions for Bluetooth functionality -->
+    <!-- <uses-permission android:name="android.permission.BLUETOOTH"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/> -->
+    
+    <!-- Add permissions for Android (No Location) ############################################################
+    In the android/app/src/main/AndroidManifest.xml add:
+    Tell Google Play Store that your app uses Bluetooth LE
+     Set android:required="true" if bluetooth is necessary -->
+    <!-- 
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    -->
+    <!-- New Bluetooth permissions in Android 12
+    https://developer.android.com/about/versions/12/features/bluetooth-permissions -->
+    <!-- 
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+     -->
+    <!-- legacy for Android 11 or lower -->
+    <!--
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/>
+    -->
+
+    <!-- legacy for Android 9 or lower -->
+    <!--
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="28" />
+    -->
+
+
+    <!-- Add permissions for Android (With Fine Location) ######################################################
+    if you want to use Bluetooth to determine location, or support iBeacons.
+    In the android/app/src/main/AndroidManifest.xml add:
+    Tell Google Play Store that your app uses Bluetooth LE
+     Set android:required="true" if bluetooth is necessary -->
+
+     <!-- <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />  -->
+
+    <uses-permission android:name="android.permission.INTERNET" /> 
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- New Bluetooth permissions in Android 12
+    https://developer.android.com/about/versions/12/features/bluetooth-permissions -->
+    
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
+      
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+     <!-- <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" /> -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />  
+    <!-- legacy for Android 11 or lower -->
+   
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />  
+    <!-- legacy for Android 9 or lower -->
+ 
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="28" />
+
+    <!-- 🔥 Force High-Resolution Rendering 
+        <meta-data
+            android:name="flutter_highres_mode"
+            android:value="true"/>  -->
+     <!-- required -->
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- foregroundServiceType: dataSync -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- foregroundServiceType: remoteMessaging -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
+
+    <!-- Microphone permission for speech recognition -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <application
+        android:name="${applicationName}"
+        android:label="BoxSensors"
+        android:icon="@mipmap/ic_launcher">
+
+    <activity
+        android:name=".MainActivity"  
+        android:exported="true"
+        android:launchMode="singleTop"
+        android:taskAffinity=""
+        android:theme="@style/LaunchTheme"
+        android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|screenLayout|density|uiMode" 
+        android:hardwareAccelerated="true"
+        android:windowSoftInputMode="adjustResize"
+        android:screenOrientation="portrait"
+        android:lockTaskMode="always">     <!-- "if_whitelisted" or "never" or "always" -->
+        <!-- com.sanguinarypc.box_sensors -->   
+        <!-- Add this line --> <!-- Locks the orientation to portrait,  |fontScale| -->
+
+        <!-- Specifies an Android theme to apply to this Activity as soon as the Android process has started -->
+        <meta-data
+            android:name="io.flutter.embedding.android.NormalTheme"
+            android:resource="@style/NormalTheme"/>
+
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN"/>
+            <category android:name="android.intent.category.LAUNCHER"/>
+        </intent-filter>
+    </activity>
+
+    <!-- Device Admin Receiver declaration -->  
+      <!--         
+    <receiver
+        android:name=".MyDeviceAdminReceiver"
+        android:exported="true"
+        android:label="@string/app_name"
+        android:permission="android.permission.BIND_DEVICE_ADMIN">
+        <meta-data
+            android:name="android.app.device_admin"
+            android:resource="@xml/device_admin_sample" />
+        <intent-filter>
+            <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+        </intent-filter>
+    </receiver> -->                                            
+
+    <!-- Warning: Do not change service name.  Foreground service provided by flutter_foreground_task 
+    <service 
+        android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+        android:foregroundServiceType="dataSync|remoteMessaging|connectedDevice|shortService|systemExempted"
+        android:permission="android.permission.FOREGROUND_SERVICE"
+        android:stopWithTask="false"
+        android:exported="true" />          -->  <!--  android:stopWithTask="true" false  -->
+
+    <!-- Your custom Bluetooth service
+    <service
+        android:name=".MyBluetoothService"
+        android:foregroundServiceType="dataSync|remoteMessaging|connectedDevice|shortService|systemExempted"
+        android:permission="android.permission.FOREGROUND_SERVICE"
+        android:stopWithTask="true"
+        android:exported="false" />     -->
+                   
+    <!-- Don't delete the meta-data below. This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2"/>
+    </application>
+
+    <!-- Required to query activities that can process text -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+</manifest>

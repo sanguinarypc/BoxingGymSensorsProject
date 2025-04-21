@@ -1,0 +1,905 @@
+Newer than known valid Java version (22.0.0), gradle (7.6.3).
+ Treating as valid configuration.
+The configured version of Java detected may conflict with the Gradle version in your new Flutter app.
+
+[RECOMMENDED] If so, to keep the default Gradle version 7.6.3, make
+sure to download a compatible Java version
+(Java 11 <= compatible Java version < Java 20).
+You may configure this compatible Java version by running:
+`flutter config --jdk-dir=<JDK_DIRECTORY>`
+Note that this is a global configuration for Flutter.
+
+
+Alternatively, to continue using your configured Java version, update the Gradle
+version specified in the following file to a compatible Gradle version:
+/home/iceleaper/Documents/dev/apps/evilfeed/evilfeed/android/gradle/wrapper/gradle-wrapper.properties
+
+You may also update the Gradle version used by running
+`./gradlew wrapper --gradle-version=<COMPATIBLE_GRADLE_VERSION>`.
+
+See
+https://docs.gradle.org/current/userguide/compatibility.html#java for details
+on compatible Java/Gradle versions, and see
+https://docs.gradle.org/current/userguide/gradle_wrapper.html#sec:upgrading_wrapper
+for more details on using the Gradle Wrapper command to update the Gradle version
+used.
+-------------------------------------------------------------------------------------------------------------
+
+
+flutter config --jdk-dir "<path of jdk 19 root>"
+--------------------------------------------------------------------------------------------------------------
+C:\Program Files\Java\jdk1.8.0_111\bin  old java
+
+--------------------------------------------------------------------------------------------------------------
+flutter create --org com.sanguinarypc sensors_box
+flutter create --org com.sanguinarypc box_sensors
+---------------------------------------------------------------------------------------------------------------
+MultiDex is an Android feature that allows your app to use more than one DEX (Dalvik Executable) file. Normally, Android apps are limited to 65,536 methods in a single DEX file. When your app (or its dependencies) grows too large and exceeds this limit, you need to enable MultiDex to split your code across multiple DEX files.
+
+Why and Where to Use MultiDex
+Why:
+
+Method Limit: If your app's method count exceeds 65K, you'll run into build or runtime errors.
+
+Large Apps: Many libraries or dependencies (common in Flutter apps with many plugins)
+can quickly add up to a high method count.
+
+Stability: Enabling MultiDex ensures that your app can compile and run
+properly even if it has a large codebase or many third-party libraries.
+
+Where:
+
+Android Configuration: You enable MultiDex in your Android project by setting multiDexEnabled true
+in the defaultConfig block of your android/app/build.gradle file.
+
+Dependencies: You also add the MultiDex library dependency(e.g., androidx.multidex:multidex:2.0.1)
+in the dependencies block of the same file.
+
+What It Does for a Flutter App
+Build Stability: It prevents errors that arise from hitting the 65K method limit,
+ensuring your app can build and run smoothly.
+
+Integration with Flutter: Since Flutter apps are compiled into Android apps and might include many plugins,
+enabling MultiDex allows the inclusion of all necessary code without manual refactoring.
+
+No Direct Performance Boost: While it doesn't inherently improve performance,
+it is crucial for large apps so that you can include all the functionality you need.
+
+In summary, MultiDex is essential for ensuring that large Flutter apps (or any Android apps)
+that use numerous libraries can compile and run without hitting the method limit imposed by the Android runtime.
+
+    defaultConfig {
+        applicationId = "com.sanguinarypc.box_sensors"
+        minSdk = 29
+        targetSdk = 35
+        versionCode = flutter.versionCode.toInteger()
+        versionName = flutter.versionName
+        multiDexEnabled true
+    }
+
+
+// Add your dependencies block below
+dependencies {
+    implementation 'androidx.multidex:multidex:2.0.1'
+    // Add any other dependencies here
+}
+
+--------------------------------------------------------------------------------------------------------------------
+How to Fix It
+Locate (or Create) Your strings.xml File:
+
+In your Flutter project, navigate to:
+
+swift
+Copy
+android/app/src/main/res/values/strings.xml
+If the file doesn't exist, create it.
+
+Define the app_name Resource:
+
+Inside strings.xml, add the following XML if it's not already there:
+
+xml
+Copy
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BoxSensors</string>
+    <!-- You can add other string resources here -->
+</resources>
+Make sure that the name attribute exactly matches what's referenced in your AndroidManifest.xml.
+
+Rebuild Your App:
+
+After saving the changes, run your build command again (e.g., flutter build apk --release). The error should be resolved.
+
+-----------------------------------------------------------------------------------------------------------------------
+2. Modify the MainActivity to Start Lock Task Mode
+In your android/app/src/main/kotlin/com/sanguinarypc/box_sensors/MainActivity.kt file
+(make sure the package declaration matches your manifest), call startLockTask()
+in your onCreate() method. Here is the full code for MainActivity.kt without changing any of your Flutter code:
+
+kotlin
+-----------------------------------------------------------------------------------------------------------------------
+package com.sanguinarypc.box_sensors
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity: FlutterActivity()
+----------------------------------------------------------------------------------------------------------------------
+package com.sanguinarypc.box_sensors
+
+import android.os.Bundle
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity: FlutterActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Your initialization code here
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+package com.sanguinarypc.box_sensors
+
+import android.os.Bundle
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity() {
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    // Start lock task mode so that the app stays in the foreground.
+    // Note: The app must be whitelisted to use lock task mode.
+    startLockTask()
+  }
+}
+
+-----------------------------------------------------------------------------------------------------------------------
+Capture Crash Logs with adb logcat:
+Connect your device via USB and run:
+
+bash
+Copy
+adb logcat -s flutter
+
+adb logcat | findstr com.sanguinarypc.box_sensors
+
+To capture (redirect) the filtered output into a file on Windows,
+just add a redirection operator (> for overwrite, >> for append)
+followed by the file path you want.
+
+adb logcat | findstr com.sanguinarypc.box_sensors > log_output.txt
+
+adb logcat | findstr com.sanguinarypc.box_sensors >> log_output.txt
+
+adb logcat | findstr com.sanguinarypc.box_sensors > C:\logs\log_output.txt
+
+adb logcat | Select-String com.sanguinarypc.box_sensors | Out-File -FilePath log_output.txt
+adb logcat -d | Select-String com.sanguinarypc.box_sensors | Out-File -FilePath log_output.txt
+The command should create a file named log_output.txt in your current working directory, but here are a few reasons why it might not be appearing:
+
+No Matching Logs: If no log entries contain com.sanguinarypc.box_sensors, then nothing gets written.
+
+Continuous Output: By default, adb logcat runs continuously. The file might not be finalized until you stop the command. Consider using the -d flag (i.e. adb logcat -d) to dump the current logs and then exit.
+
+Working Directory: The file is created in the directory from which you run the command. Double-check that location.
+
+Shell Differences: If you're using a shell like PowerShell, the redirection syntax might behave differently. In PowerShell, you might try:
+
+
+-----------------------------------------------------------------------------------------------------------------------
+C:\NickProject\box_sensors\android\app\src\main\kotlin\com\example\box_sensors\MainActivity.kt
+
+package com.sanguinarypc.box_sensors             # com.example.box_sensors
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity: FlutterActivity()
+
+-----------------------------------------------------------------------------------------------------------------------
+How to fix it:
+C:\Users\nick\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_foreground_plugin-0.8.0\android\build.gradle
+
+Upgrade the Plugin (if available):
+Check if a newer version of flutter_foreground_plugin is available that adds the required namespace field. This is usually the best solution because the plugin’s author will update it for compatibility.
+
+Patch the Plugin Locally (Not ideal for long term):
+You could go into your local pub cache (under something like C:\Users\<your_user>\.pub-cache\hosted\pub.dev\flutter_foreground_plugin-<version>\android\build.gradle) and add the missing namespace line inside the android { } block. For example:
+
+gradle
+Copy
+android {
+    namespace = "changjoopark.com.flutter_foreground_plugin"
+    // ... other configuration ...
+}
+Note: This change is local and will be overwritten if you update the plugin.
+----------------------------------------------------------------------------------------------------------------------
+// static final RegExp _timestampRegex = RegExp(r'Timestamp:\s*([\d\-\:T\.Z]+)');
+
+/data/user/0/com.sanguinarypc.box_sensors/cache/sentry/a3535fb276303a155e7e2a040bb9f51e1419b25f/f42b5012-7651-46cc-8c7f-d3792c75d894.envelope
+
+------------------------------------------------------------------------------------------------------------------------
+
+C:\NickProject\box_sensors\build\app\outputs\bundle\release\app-release.aab
+C:\NickProject\box_sensors\build\app\outputs\flutter-apk\app-release.apk
+
+
+------------------------------------------------------------------------------------------------------------------------
+used to be in USERPROFILE\upload-keystore.jks
+keytool -genkey -v -keystore $env:USERPROFILE\upload-keystore.jks `
+>>         -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 `
+>>         -alias upload
+
+used to be in same folder as the project
+keytool -genkey -v -keystore upload-keystore.jks `
+>>         -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 `
+>>         -alias upload
+
+flutter build apk    to build the ,apk for Android Phones
+flutter install      to install int in the android mobile Phone
+
+flutter doctor --android-licenses
+flutter doctor
+flutter pub deps
+flutter pub get 
+flutter upgrade
+flutter pub upgrade
+flutter clean
+flutter build appbundle
+
+-----------------------------------------------------------------------------------------------------------------
+C:\NickProject\box_sensors\android\key.properties
+-----------------------------------------------------------------------------------------------------------------
+storePassword=Trelokotsidou14##
+keyPassword=Trelokotsidou14##
+keyAlias=upload
+storeFile=C:\\NickProject\\box_sensors\\upload-keystore.jks
+
+
+-----------------------------------------------------------------------------------------------------------------
+C:\NickProject\box_sensors\android\app\build.gradle       the Release Version           android\app\build.gradle
+-----------------------------------------------------------------------------------------------------------------
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+
+android {
+    namespace = "com.example.box_sensors"
+    compileSdk = 35
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17" // Set compatibility to Java 17
+    }
+
+    defaultConfig {
+        applicationId = "com.sanguinarypc.box_sensors"
+        minSdk = 29
+        targetSdk = 35
+        versionCode = flutter.versionCode.toInteger()
+        versionName = flutter.versionName
+    }
+
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = keystoreProperties["storeFile"] ? file(keystoreProperties["storeFile"]) : null
+            storePassword = keystoreProperties["storePassword"] as String
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.release
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+--------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+C:\NickProject\box_sensors\android\app\build.gradle                      android\app\build.gradle
+------------------------------------------------------------------------------------------------------------------
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace = "com.example.box_app_nick"
+    compileSdk = 35
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17" // Set compatibility to Java 17
+    }
+
+    defaultConfig {
+        applicationId = "com.example.box_app_nick"
+        minSdk = 28
+        targetSdk = 35
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+
+------------------------------------------------------------------------------------------------------------------
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace = "com.example.box_sensors"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId = "com.example.box_sensors"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig = signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+
+------------------------------------------------------------------------------------------------------------------
+Prompt for Code Extension with Backward Compatibility:
+
+When reviewing or extending my code, please adhere to the following guidelines:
+
+Preserve Naming Conventions: Do not change the names of variables, functions, classes, or any identifiers already in the code. Maintain the current naming conventions throughout.
+
+Backward Compatibility: Ensure all changes or extensions are fully backward compatible. Any existing functionality should remain intact and work as expected.
+
+Extend Functionality: Introduce new features or enhancements without altering the existing structure unnecessarily. Where possible, use wrappers, overloads, or new methods to add functionality.
+
+Maintain Code Integrity: Avoid introducing breaking changes or modifying core logic unless explicitly instructed.
+
+Documentation: Provide comments or explanations for any new additions to clarify their purpose and usage.
+
+Test Cases: Suggest or include test cases to verify both new functionality and backward compatibility with the existing code.
+
+Clear Differentiation: Clearly distinguish between existing code and newly added code, either through comments or a structured format.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+path of C:\flutter_projects\box_app_nick\android\app\  build.gradle   
+------------------------------------------------------------------------------------------------------------------------------------------------------
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace = "com.example.box_sensors"
+    compileSdk = 34
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17" // Set compatibility to Java 17
+    }
+
+    defaultConfig {
+        applicationId = "com.example.box_sensors"
+        minSdk = 21
+        targetSdk = 34
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace = "com.example.box_sensors"
+    compileSdk = 34
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17" // Set compatibility to Java 17
+    }
+
+    defaultConfig {
+        applicationId = "com.example.box_sensors"
+        minSdk = 29
+        targetSdk = 35
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+C:\flutter_projects\box_app_nick\android\   local.properties
+
+
+sdk.dir=C:\\Users\\nick\\AppData\\Local\\Android\\sdk
+flutter.sdk=C:\\src\\flutter
+flutter.buildMode=debug
+flutter.versionName=1.0.0
+flutter.versionCode=1
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+C:\flutter_projects\box_app_nick\android\   gradle.properties
+
+
+org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=2G -XX:+HeapDumpOnOutOfMemoryError --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED
+org.gradle.java.home=C:/Program Files/Java/jdk-17
+android.useAndroidX=true
+android.enableJetifier=true
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+C:\flutter_projects\box_app_nick\android        settings.gradle
+
+
+pluginManagement {
+    def flutterSdkPath = {
+        def properties = new Properties()
+        file("local.properties").withInputStream { properties.load(it) }
+        def flutterSdkPath = properties.getProperty("flutter.sdk")
+        assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+        return flutterSdkPath
+    }()
+
+    includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+    id "com.android.application" version "8.1.0" apply false
+    id "org.jetbrains.kotlin.android" version "1.8.22" apply false
+}
+
+include ":app"
+
+
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+The error you encountered seems to be related to incompatible versions of the Android SDK, Gradle, and Java Development Kit (JDK). Here's a systematic approach to resolve these issues:
+
+1. Update Android Studio
+Ensure you're using the latest version of Android Studio. The warning about "SDK XML versions up to 3 but version 4 was encountered" suggests you may be using an older version of Android Studio or mismatched tools.
+
+Open Android Studio.
+Go to Help > Check for Updates (on macOS: Android Studio > Check for Updates).
+Install any available updates.
+2. Update the Android SDK
+The error mentions a mismatch with platforms/android-34. Ensure the correct SDK tools and platform versions are installed.
+
+Open Android Studio.
+Navigate to Tools > SDK Manager.
+Under SDK Platforms, ensure the correct API level (e.g., Android 34) is installed.
+Under SDK Tools, check that the following are updated:
+Android SDK Build-Tools
+Android SDK Platform-Tools
+Android SDK Tools
+3. Update Gradle
+The warning indicates Gradle might be using obsolete settings. Update the Gradle version.
+
+Open the file android/build.gradle and update the classpath under dependencies:
+
+gradle
+Copy code
+dependencies {
+    classpath 'com.android.tools.build:gradle:8.1.1' // Use the latest version
+}
+Open android/gradle/wrapper/gradle-wrapper.properties and update the Gradle distribution URL:
+
+properties
+Copy code
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.2.1-all.zip
+Sync the project in Android Studio.
+
+4. Update Java Development Kit (JDK)
+The error references jlink.exe and java.base, which indicates an issue with the JDK version.
+
+Ensure you’re using JDK 17, as JDK 8 or older versions are no longer supported in recent Android Gradle versions.
+You can download JDK 17 from the Oracle or OpenJDK website.
+Update the JDK path in Android Studio:
+Go to File > Settings > Build, Execution, Deployment > Build Tools > Gradle.
+Under Gradle JDK, select JDK 17.
+
+---------------------------------------------------------------------------------------------------------------
+file -->  gradle.properties  in folder android
+---------------------------------------------------------------------------------------------------------------------------------
+org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=2G -XX:+HeapDumpOnOutOfMemoryError --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED
+org.gradle.java.home=C:/Program Files/Java/jdk-17
+android.useAndroidX=true
+android.enableJetifier=true
+---------------------------------------------------------------------------------------------
+
+rd /s /q "C:\Users\nick\.gradle"
+
+flutter clean
+flutter pub get
+flutter run
+-------------------------------------------------------------------
+CD C:\Users\nick\AppData\Local\Android\Sdk\platform-tools
+
+platform-tools    
+
+adb devices
+
+adb shell
+
+cd /data/data/<your-app-package-name>/files/
+ls
+
+run-as com.example.box_sensors
+
+cd app_flutter
+
+cp messages.db /sdcard/
+
+ls /sdcard/
+
+exit
+
+exit
+
+adb pull /sdcard/messages.db C:/flutter_projects/box_sensors/database
+
+-----------------------------------------------------------------------------------------------
+bluetooth.begin("RedBoxer"); // Initialize BLE with the name "BLENick" BlueBoxer RedBoxer
+
+
+Understanding the Error
+Solution 1: Changing the Write Method
+Solution 2: Updating Your ESP32 Code
+I/flutter (32113): Error sending message: PlatformException(writeCharacteristic, The WRITE_NO_RESPONSE property is not supported by this BLE characteristic, null, null)
+
+
+C:\Program Files\Android\Android Studio\bin
+
+C:\Users\nick\AppData\Local\Android\Sdk
+
+C:\Users\nick\Documents\Flutter\flutter\bin
+
+C:\src\flutter\bin
+
+
+flutter upgrade
+
+To update these dependencies to their latest versions, run:
+flutter pub upgrade
+
+If you want to ensure all dependencies are refreshed, you can use:
+flutter pub upgrade --major-versions
+
+After upgrading, always run:
+flutter clean
+flutter pub get
+
+flutter pub upgrade
+flutter pub get
+
+To see which packages are causing conflicts, run:
+flutter pub outdated --mode=constraint
+
+
+
+flutter doctor
+
+flutter doctor --android-licenses
+
+flutter doctor -v
+
+
+flutter create first_app
+
+
+flutter pub get
+
+
+flutter pub add google_fonts
+
+flutter pub outdated
+
+flutter pub upgrade --major-versions
+
+flutter pub upgrade --dry-run
+
+dart pub add transparent_image
+
+
+dependency_overrides:
+  material_color_utilities: ^0.12.0
+
+
+---------------------------------------------------------
+https://pub.dev/packages/flutter_launcher_icons
+
+run flutter_launcher_icons
+
+dart run flutter_launcher_icons    <---------------------------
+
+flutter pub run flutter_launcher_icons   <--------- to change icons for application
+
+where the icons is stored the path  android
+ 
+android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+iOS:
+The new icons are stored in the AppIcon asset catalog, typically found at:
+
+ios/Runner/Assets.xcassets/AppIcon.appiconset/
+
+-----------------------------------------------------------------
+For App name  Application name
+
+<application
+    android:label="box_sensors"
+    android:name="${applicationName}"
+    android:label="BoxSensors"
+    android:icon="@mipmap/ic_launcher">
+
+To fix this, remove one of the duplicate attributes. For example, if you want your app to be labeled "BoxSensors," update it to:
+
+<application
+    android:name="${applicationName}"
+    android:label="BoxSensors"
+    android:icon="@mipmap/ic_launcher">
+
+
+-----------------------------------------------------------------------------------
+/data/data/com.example.box_sensors
+
+package="com.example.box_app_nick">
+
+package="com.example.box_sensors">
+___________________________________________________________________________________
+
+Release Version 
+
+flutter build apk    to build the ,apk for Android Phones 
+
+flutter install      to Install it on Android Phone   
+
+
+<uses-permission android:name="android.permission.BLUETOOTH"/>
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+<uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/>
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+___________________________________________________________________________________
+
+    <uses-permission android:name="android.permission.BLUETOOTH"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+   
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30"/>
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" android:maxSdkVersion="30"/>
+
+---------------------------------------------------------------------------------------------------------------------------
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.quiz_students_updates">
+
+    <!-- Permissions for Bluetooth functionality -->
+    <uses-permission android:name="android.permission.BLUETOOTH"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+
+    <!-- Required to query activities that can process text -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+
+    <application
+        android:label="quiz_students_updates"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+
+            <!-- Theme used while Flutter UI initializes -->
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- Flutter plugin registration -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+</manifest>
+
+
+
+
+-------------------------------------------------------------
+Flutter warning How to fix
+
+1. Understand the Warning
+The error usually appears when there’s a mismatch between your Android Studio version and your command-line (CLI) tools or SDK tools.
+The SDK has an sdk.xml file that describes the SDK’s structure. If your current tools only recognize up to version 3 but the SDK’s sdk.xml is version 4, you get this warning.
+2. Update or Reinstall the Command-line Tools
+Open Android Studio and go to SDK Manager:
+In Android Studio:
+Click on File > Settings (or Android Studio > Preferences on macOS).
+Select Appearance & Behavior > System Settings > Android SDK.
+Install/Update Command-line Tools:
+In the SDK Tools tab, check if you have the latest version of Android SDK Tools or Android SDK Command-line Tools.
+If not, select the latest version and click Apply or OK to install/update.
+3. Update Other SDK Components
+Still in the SDK Manager:
+Under the SDK Platforms tab, make sure you have the right Android platform installed (the one your app targets).
+Under the SDK Tools tab, update SDK Build Tools, Platform Tools, and Google Play services if needed.
+Click Apply/OK and let the updates finish.
+4. Sync Flutter and Android Studio
+Close and reopen Android Studio after installing or updating.
+In your Flutter project directory, run:
+
+flutter clean
+flutter pub get
+flutter doctor --android-licenses
+flutter doctor
+
+This ensures Flutter sees the updated SDK and licenses are accepted.
+5. Verify Everything Works
+Run flutter doctor again to ensure there are no red (X) indicators.
+Rebuild your app:
+
+
+flutter run
+The warning about the SDK XML version should no longer appear.
+Why This Works:
+Keeping the command-line tools in sync with the version of Android Studio ensures that you don’t have mismatched
+or older tool versions attempting to parse newer SDK files.
+Updating everything from within Android Studio’s SDK Manager is usually
+the simplest way to fix these kinds of warnings.
+
+-------------------------------------------------------------
+DATABASE path
+/data/data/com.example.box_sensors/app_flutter/messages.db
+

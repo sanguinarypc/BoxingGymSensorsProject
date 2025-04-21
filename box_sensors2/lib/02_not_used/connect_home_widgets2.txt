@@ -1,0 +1,1886 @@
+// // Code 0 from other project
+// // ---------------------------------------------------------------------------------
+// // ---------------------------------------------------------------------------------
+// //           flutter_reactive_ble: ^5.4.0
+// // ---------------------------------------------------------------------------------
+// // ---------------------------------------------------------------------------------
+// // Code using the other bluetooth BLE module flutter_reactive_ble: ^5.4.0
+// // https://pub.dev/packages/flutter_reactive_ble
+// // //ignore_for_file: deprecated_member_use, discoverServices
+// import 'dart:async';
+// import 'dart:math';
+// import 'package:flutter/material.dart';
+// import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+// import 'package:box_sensors/services/bluetooth_manager2.dart';
+// import 'package:box_sensors/widgets/display_row.dart';
+// import 'package:sentry_flutter/sentry_flutter.dart';
+
+// class ConnectHomeWidgets extends StatefulWidget {
+//   final BluetoothManager bluetoothManager;
+//   final String? selectedDevice;
+//   final List<String> deviceOptions; // Dynamically updated
+//   final bool isConnectedDevice1;
+//   final bool isConnectedDevice2;
+//   final bool isConnectedDevice3;
+//   final VoidCallback scanForDevices;
+//   final VoidCallback disconnectFromDevice;
+//   final ValueChanged<String?> onDeviceChanged;
+//   final Function(String) sendMessage;
+//   final Function(int) updateIndex;
+
+//   const ConnectHomeWidgets({
+//     super.key,
+//     required this.bluetoothManager,
+//     required this.selectedDevice,
+//     required this.deviceOptions,
+//     required this.isConnectedDevice1,
+//     required this.isConnectedDevice2,
+//     required this.isConnectedDevice3,
+//     required this.scanForDevices,
+//     required this.disconnectFromDevice,
+//     required this.onDeviceChanged,
+//     required this.sendMessage,
+//     required this.updateIndex,
+//   });
+
+//   @override
+//   State<ConnectHomeWidgets> createState() => _ConnectHomeWidgetsState();
+// }
+
+// class _ConnectHomeWidgetsState extends State<ConnectHomeWidgets> {
+//   List<String> availableDevices = [];
+//   // Map from device name to a ValueNotifier for RSSI.
+//   final Map<String, ValueNotifier<int>> _deviceRSSINotifiers = {};
+//   // NEW: Map to record the last time (DateTime) we updated the RSSI for each device.
+//   final Map<String, DateTime> _lastRssiUpdate = {};
+
+//   bool isScanning = false;
+//   String filterKeyword = 'Boxer'; // Default filter keyword
+//   final TextEditingController _filterController = TextEditingController(
+//     text: 'Boxer',
+//   );
+//   String? currentSelectedDevice; // Track current selection
+
+//   // Debounce for filtering.
+//   Timer? _debounce;
+//   Timer? _periodicScanTimer; // Timer for periodic updates
+//   bool _didScan = false;
+
+//   // Reference to the scan subscription.
+//   StreamSubscription<DiscoveredDevice>? _scanSubscription;
+
+//   bool _disposed = false; // Widget disposal flag
+
+//   // Local reactive BLE instance for scanning.
+//   final FlutterReactiveBle _ble = FlutterReactiveBle();
+
+//   /// Safely update state.
+//   void _safeSetState(VoidCallback fn) {
+//     if (!_disposed && mounted) setState(fn);
+//   }
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     currentSelectedDevice = widget.selectedDevice;
+//     _startBluetoothScan(); // Initial scan
+//     _periodicScanTimer = Timer.periodic(
+//       const Duration(seconds: 2),
+//       (timer) => _startBluetoothScan(clearDevices: false),
+//     );
+//     //widget.bluetoothManager.startPeriodicRssiUpdate(); // Start updating RSSI periodically
+//   }
+
+//   @override
+//   void didChangeDependencies() {
+//     super.didChangeDependencies();
+//     if (!_didScan) {
+//       _startBluetoothScan();
+//       _didScan = true;
+//     } else {
+//       _startBluetoothScan(clearDevices: false);
+//     }
+//   }
+
+//   /// Calculate distance from RSSI using the log-distance path loss model.
+//   double calculateDistance(int rssi, {int txPower = -59, double n = 2.0}) {
+//     return pow(10, ((txPower - rssi) / (10 * n))).toDouble();
+//   }
+
+//   /// Start scanning using flutter_reactive_ble.
+//   /// This method runs for the specified scan duration (default 4 sec)
+//   /// and updates each device's RSSI at most once every 2 seconds.
+//   Future<void> _startBluetoothScan({
+//     Duration? scanDuration,
+//     bool clearDevices = true,
+//   }) async {
+//     if (isScanning) return;
+//     if (clearDevices) {
+//       _safeSetState(() {
+//         isScanning = true;
+//         availableDevices.clear();
+//         _deviceRSSINotifiers.clear();
+//         _lastRssiUpdate.clear();
+//       });
+//     } else {
+//       isScanning = true;
+//     }
+
+//     try {
+//       // Cancel any previous scan subscription.
+//       await _scanSubscription?.cancel();
+//       _scanSubscription = _ble
+//           .scanForDevices(
+//             withServices: [], // Provide service UUIDs if needed.
+//             scanMode: ScanMode.lowLatency,
+//           )
+//           .listen(
+//             (DiscoveredDevice device) {
+//               // Use device.name if available; otherwise, use device.id.
+//               final displayName =
+//                   device.name.isNotEmpty ? device.name : device.id;
+//               bool matchesFilter =
+//                   filterKeyword.isEmpty ||
+//                   displayName.toLowerCase().contains(
+//                     filterKeyword.toLowerCase(),
+//                   );
+//               if (matchesFilter) {
+//                 DateTime now = DateTime.now();
+//                 // Only update if at least 2 seconds have passed since the last update for this device.
+//                 if (!_lastRssiUpdate.containsKey(displayName) ||
+//                     now.difference(_lastRssiUpdate[displayName]!) >=
+//                         Duration(seconds: 2)) {
+//                   _lastRssiUpdate[displayName] = now;
+//                   if (!availableDevices.contains(displayName)) {
+//                     _safeSetState(() {
+//                       availableDevices.add(displayName);
+//                     });
+//                     _deviceRSSINotifiers[displayName] = ValueNotifier<int>(
+//                       device.rssi,
+//                     );
+//                   } else {
+//                     _deviceRSSINotifiers[displayName]?.value = device.rssi;
+//                   }
+//                 }
+//               }
+//             },
+//             onError: (error) {
+//               debugPrint("Error during scan: $error");
+//               Sentry.captureException(error);
+//             },
+//           );
+
+//       // Wait for the scan duration.
+//       await Future.delayed(scanDuration ?? const Duration(seconds: 4));
+//     } catch (e) {
+//       debugPrint("Error scanning for devices: $e");
+//     } finally {
+//       // Add already-connected devices from BluetoothManager.
+//       widget.bluetoothManager.connectedDeviceIds.forEach((name, id) {
+//         if (id.isNotEmpty && !availableDevices.contains(name)) {
+//           availableDevices.add(name);
+//           _deviceRSSINotifiers[name] ??= ValueNotifier<int>(-60);
+//         }
+//       });
+//       _safeSetState(() {
+//         isScanning = false;
+//       });
+//     }
+//   }
+
+//   Color getRSSIColor(int rssi) {
+//     if (rssi >= -30) return Theme.of(context).colorScheme.primary;
+//     if (rssi >= -55) return Colors.green;
+//     if (rssi >= -67) return Colors.lightGreen;
+//     if (rssi >= -80) return Colors.yellow;
+//     if (rssi >= -90) return Colors.orange;
+//     return Colors.red;
+//   }
+
+//   String? getValidatedSelectedDevice() {
+//     if (currentSelectedDevice != null &&
+//         widget.bluetoothManager.connectedDevices[currentSelectedDevice!] ==
+//             true) {
+//       return currentSelectedDevice;
+//     }
+//     return null;
+//   }
+
+//   /// Connect to a device by name.
+//   /// This method scans briefly and connects when a matching device is found.
+//   Future<void> _connectToDeviceByName(String deviceName) async {
+//     late StreamSubscription<DiscoveredDevice> subscription;
+//     subscription = _ble
+//         .scanForDevices(withServices: [], scanMode: ScanMode.lowLatency)
+//         .listen((DiscoveredDevice device) async {
+//           final currentName = device.name.isNotEmpty ? device.name : device.id;
+//           if (currentName == deviceName) {
+//             try {
+//               await widget.bluetoothManager.connectToDevice(device);
+//               _safeSetState(() {});
+//               debugPrint('Connected to $deviceName successfully.');
+//             } catch (e) {
+//               debugPrint('Failed to connect to $deviceName: $e');
+//             }
+//             await subscription.cancel();
+//           }
+//         });
+//   }
+
+//   /// Connect to all target devices.
+//   Future<void> _connectBothDevices() async {
+//     final Set<String> targetDevices = {'BlueBoxer', 'RedBoxer', 'BoxerServer'};
+//     final Set<String> attemptedDevices = {};
+//     bool firstConnectionMade = false;
+//     Timer? postConnectionTimer;
+//     Timer? maxTimeoutTimer;
+
+//     late StreamSubscription<DiscoveredDevice> subscription;
+//     subscription = _ble
+//         .scanForDevices(withServices: [], scanMode: ScanMode.lowLatency)
+//         .listen(
+//           (DiscoveredDevice device) {
+//             final deviceName = device.name.isNotEmpty ? device.name : device.id;
+//             if (targetDevices.contains(deviceName) &&
+//                 widget.bluetoothManager.connectedDevices[deviceName] != true &&
+//                 !attemptedDevices.contains(deviceName)) {
+//               attemptedDevices.add(deviceName);
+//               widget.bluetoothManager
+//                   .connectToDevice(device)
+//                   .then((_) {
+//                     _safeSetState(() {});
+//                     debugPrint('Connected to $deviceName successfully.');
+//                     if (!firstConnectionMade) {
+//                       firstConnectionMade = true;
+//                       postConnectionTimer = Timer(
+//                         const Duration(seconds: 4),
+//                         () {
+//                           subscription.cancel();
+//                           debugPrint(
+//                             "Post-connection timer expired. Stopping scan.",
+//                           );
+//                         },
+//                       );
+//                     }
+//                     if (widget.bluetoothManager.connectedDevices['BlueBoxer'] ==
+//                             true &&
+//                         widget.bluetoothManager.connectedDevices['RedBoxer'] ==
+//                             true &&
+//                         widget
+//                                 .bluetoothManager
+//                                 .connectedDevices['BoxerServer'] ==
+//                             true) {
+//                       postConnectionTimer?.cancel();
+//                       subscription.cancel();
+//                       debugPrint("All devices connected. Stopping scan.");
+//                       maxTimeoutTimer?.cancel();
+//                     }
+//                   })
+//                   .catchError((e, stackTrace) {
+//                     debugPrint('Failed to connect to $deviceName: $e');
+//                     Sentry.captureException(e, stackTrace: stackTrace);
+//                   });
+//             }
+//           },
+//           onError: (error, stackTrace) {
+//             debugPrint("Error in scanResults stream: $error");
+//             Sentry.captureException(error, stackTrace: stackTrace);
+//           },
+//         );
+
+//     maxTimeoutTimer = Timer(const Duration(seconds: 5), () {
+//       if (!subscription.isPaused) {
+//         subscription.cancel();
+//         debugPrint("Maximum scan timeout reached. Stopping scan.");
+//       }
+//     });
+
+//     subscription.onDone(() {
+//       maxTimeoutTimer?.cancel();
+//     });
+//   }
+
+//   @override
+//   void dispose() {
+//     _scanSubscription?.cancel();
+//     _periodicScanTimer?.cancel();
+//     _debounce?.cancel();
+//     for (var notifier in _deviceRSSINotifiers.values) {
+//       notifier.dispose();
+//     }
+//     _filterController.dispose();
+//     _disposed = true;
+//     super.dispose();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final theme = Theme.of(context);
+//     return Scaffold(
+//       body: Column(
+//         children: [
+//           DisplayRow(title: 'Device Scanner'),
+//           const SizedBox(height: 2.0),
+//           Card(
+//             margin: const EdgeInsets.symmetric(horizontal: 16.0),
+//             color: theme.cardColor,
+//             elevation: 6,
+//             shape: RoundedRectangleBorder(
+//               borderRadius: BorderRadius.circular(12.0),
+//             ),
+//             child: Padding(
+//               padding: const EdgeInsets.all(8.0),
+//               child: TextField(
+//                 controller: _filterController,
+//                 style: TextStyle(color: theme.colorScheme.primary),
+//                 decoration: InputDecoration(
+//                   filled: true,
+//                   fillColor: theme.cardColor,
+//                   isDense: true,
+//                   contentPadding: const EdgeInsets.symmetric(
+//                     vertical: 8.0,
+//                     horizontal: 12.0,
+//                   ),
+//                   labelText: 'Search / Filter Devices by Keyword',
+//                   labelStyle: TextStyle(color: theme.colorScheme.primary),
+//                   border: const OutlineInputBorder(),
+//                   prefixIcon: Icon(
+//                     Icons.search,
+//                     color: theme.colorScheme.primary,
+//                   ),
+//                 ),
+//                 onChanged: (value) {
+//                   if (_debounce?.isActive ?? false) _debounce!.cancel();
+//                   _debounce = Timer(const Duration(milliseconds: 500), () {
+//                     _safeSetState(() {
+//                       filterKeyword = value;
+//                     });
+//                     _startBluetoothScan();
+//                   });
+//                 },
+//               ),
+//             ),
+//           ),
+//           Padding(
+//             padding: const EdgeInsets.symmetric(horizontal: 16.0),
+//             child: Text(
+//               "Tap a Device to connect",
+//               style: TextStyle(
+//                 fontWeight: FontWeight.bold,
+//                 fontSize: 16.0,
+//                 color: theme.colorScheme.primary,
+//               ),
+//             ),
+//           ),
+//           Center(
+//             child: Text(
+//               availableDevices.isEmpty
+//                   ? "No devices available. Tap 'Scan' to search again."
+//                   : "Found ${availableDevices.length} device(s).",
+//               style: TextStyle(fontSize: 14, color: theme.colorScheme.primary),
+//             ),
+//           ),
+//           Expanded(
+//             child: ListView(
+//               padding: const EdgeInsets.symmetric(horizontal: 16.0),
+//               children:
+//                   availableDevices.map((deviceName) {
+//                     return Card(
+//                       margin: const EdgeInsets.symmetric(vertical: 4.0),
+//                       color: theme.cardColor,
+//                       elevation: 6,
+//                       shape: RoundedRectangleBorder(
+//                         borderRadius: BorderRadius.circular(12.0),
+//                       ),
+//                       child: Padding(
+//                         padding: const EdgeInsets.all(12.0),
+//                         child: Row(
+//                           crossAxisAlignment: CrossAxisAlignment.start,
+//                           children: [
+//                             Expanded(
+//                               child: InkWell(
+//                                 onTap: () => _connectToDeviceByName(deviceName),
+//                                 child: Column(
+//                                   crossAxisAlignment: CrossAxisAlignment.start,
+//                                   children: [
+//                                     Row(
+//                                       children: [
+//                                         Icon(
+//                                           Icons.bluetooth,
+//                                           color: theme.colorScheme.primary,
+//                                         ),
+//                                         const SizedBox(width: 8),
+//                                         Expanded(
+//                                           child: Text(
+//                                             deviceName,
+//                                             style: Theme.of(
+//                                               context,
+//                                             ).textTheme.bodyMedium?.copyWith(
+//                                               color:
+//                                                   deviceName == 'RedBoxer'
+//                                                       ? Colors.red
+//                                                       : deviceName ==
+//                                                           'BlueBoxer'
+//                                                       ? Colors.blue
+//                                                       : deviceName ==
+//                                                           'BoxerServer'
+//                                                       ? Colors.green
+//                                                       : Theme.of(context)
+//                                                           .textTheme
+//                                                           .bodyMedium
+//                                                           ?.color,
+//                                             ),
+//                                           ),
+//                                         ),
+//                                       ],
+//                                     ),
+//                                     const SizedBox(height: 8),
+//                                     ValueListenableBuilder<int>(
+//                                       valueListenable:
+//                                           _deviceRSSINotifiers[deviceName]!,
+//                                       builder: (context, rssi, child) {
+//                                         double distance = calculateDistance(
+//                                           rssi,
+//                                         );
+//                                         return Row(
+//                                           children: [
+//                                             CircleAvatar(
+//                                               backgroundColor: getRSSIColor(
+//                                                 rssi,
+//                                               ),
+//                                               radius: 16,
+//                                               child: Text(
+//                                                 '$rssi',
+//                                                 style: const TextStyle(
+//                                                   fontSize: 10,
+//                                                   fontWeight: FontWeight.bold,
+//                                                 ),
+//                                               ),
+//                                             ),
+//                                             const SizedBox(width: 2),
+//                                             Text.rich(
+//                                               TextSpan(
+//                                                 text: 'dBm\nDistance:',
+//                                                 style: DefaultTextStyle.of(
+//                                                   context,
+//                                                 ).style.copyWith(fontSize: 10),
+//                                                 children: [
+//                                                   TextSpan(
+//                                                     text:
+//                                                         ' ${distance.toStringAsFixed(2)} meter(s)',
+//                                                     style: DefaultTextStyle.of(
+//                                                       context,
+//                                                     ).style.copyWith(
+//                                                       fontSize: 10,
+//                                                     ),
+//                                                   ),
+//                                                 ],
+//                                               ),
+//                                             ),
+//                                           ],
+//                                         );
+//                                       },
+//                                     ),
+//                                   ],
+//                                 ),
+//                               ),
+//                             ),
+//                             Column(
+//                               mainAxisSize: MainAxisSize.min,
+//                               children: [
+//                                 ElevatedButton(
+//                                   onPressed:
+//                                       widget
+//                                                   .bluetoothManager
+//                                                   .connectedDevices[deviceName] ==
+//                                               true
+//                                           ? () async {
+//                                             await widget.bluetoothManager
+//                                                 .disconnectDeviceByName(
+//                                                   deviceName,
+//                                                 ); // deviceKey
+//                                           }
+//                                           : null,
+//                                   style: ElevatedButton.styleFrom(
+//                                     backgroundColor:
+//                                         widget
+//                                                     .bluetoothManager
+//                                                     .connectedDevices[deviceName] ==
+//                                                 true
+//                                             ? theme.colorScheme.primary
+//                                             : theme
+//                                                 .colorScheme
+//                                                 .surfaceContainerHighest,
+//                                     foregroundColor:
+//                                         widget
+//                                                     .bluetoothManager
+//                                                     .connectedDevices[deviceName] ==
+//                                                 true
+//                                             ? theme.colorScheme.onPrimary
+//                                             : theme.colorScheme.onSurface,
+//                                     elevation:
+//                                         widget
+//                                                     .bluetoothManager
+//                                                     .connectedDevices[deviceName] ==
+//                                                 true
+//                                             ? 8
+//                                             : 2,
+//                                     shape: RoundedRectangleBorder(
+//                                       borderRadius: BorderRadius.circular(16),
+//                                     ),
+//                                     minimumSize: const Size(120, 52),
+//                                   ),
+//                                   child: const Text(
+//                                     'Disconnect',
+//                                     style: TextStyle(
+//                                       fontSize: 16,
+//                                       fontWeight: FontWeight.bold,
+//                                     ),
+//                                   ),
+//                                 ),
+//                               ],
+//                             ),
+//                           ],
+//                         ),
+//                       ),
+//                     );
+//                   }).toList(),
+//             ),
+//           ),
+//           Row(
+//             mainAxisAlignment: MainAxisAlignment.center,
+//             children: [
+//               ElevatedButton.icon(
+//                 onPressed:
+//                     () => _startBluetoothScan(
+//                       scanDuration: const Duration(seconds: 2),
+//                     ),
+//                 icon: Icon(Icons.refresh, color: theme.colorScheme.onPrimary),
+//                 label: const Text('Scan for Devices'),
+//                 style: ElevatedButton.styleFrom(
+//                   backgroundColor: theme.colorScheme.primary,
+//                   foregroundColor: theme.colorScheme.onPrimary,
+//                   elevation: 6,
+//                   fixedSize: const Size(300, 40),
+//                 ),
+//               ),
+//             ],
+//           ),
+//           const SizedBox(height: 4.0),
+//           Row(
+//             mainAxisAlignment: MainAxisAlignment.center,
+//             children: [
+//               ElevatedButton.icon(
+//                 onPressed:
+//                     widget.bluetoothManager.connectedDevices.values
+//                                 .where((isConnected) => isConnected)
+//                                 .length >=
+//                             2
+//                         ? null
+//                         : () => _connectBothDevices(),
+//                 icon: SizedBox(
+//                   width: 40,
+//                   height: 40,
+//                   child: Stack(
+//                     alignment: Alignment.center,
+//                     children: [
+//                       Icon(
+//                         Icons.smartphone,
+//                         size: 28,
+//                         color: theme.colorScheme.onPrimary,
+//                       ),
+//                       Positioned(
+//                         top: 2,
+//                         right: -2,
+//                         child: Icon(
+//                           Icons.bluetooth_connected,
+//                           size: 16,
+//                           color: theme.colorScheme.onPrimary,
+//                         ),
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+//                 label: const Text('Connect all Boxer Devices'),
+//                 style: ElevatedButton.styleFrom(
+//                   backgroundColor: theme.colorScheme.primary,
+//                   foregroundColor: theme.colorScheme.onPrimary,
+//                   elevation: 6,
+//                   fixedSize: const Size(300, 40),
+//                 ),
+//               ),
+//             ],
+//           ),
+//           const SizedBox(height: 4.0),
+//           Row(
+//             mainAxisAlignment: MainAxisAlignment.center,
+//             children: [
+//               ElevatedButton.icon(
+//                 onPressed:
+//                     widget.bluetoothManager.connectedDevices.values.any(
+//                           (isConnected) => isConnected,
+//                         )
+//                         ? widget.disconnectFromDevice
+//                         : null,
+//                 icon: Icon(
+//                   Icons.bluetooth_disabled,
+//                   color: theme.colorScheme.onPrimary,
+//                 ),
+//                 label: const Text('Disconnect All Devices'),
+//                 style: ElevatedButton.styleFrom(
+//                   backgroundColor: theme.colorScheme.primary,
+//                   foregroundColor: theme.colorScheme.onPrimary,
+//                   elevation: 6,
+//                   fixedSize: const Size(300, 40),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // Code 1
+// // ---------------------------------------------------------------------------------
+// // ---------------------------------------------------------------------------------
+// //           flutter_reactive_ble: ^5.4.0
+// // ---------------------------------------------------------------------------------
+// // ---------------------------------------------------------------------------------
+// // Code using the other bluetooth BLE module flutter_reactive_ble: ^5.4.0
+// // https://pub.dev/packages/flutter_reactive_ble
+// // //ignore_for_file: deprecated_member_use, discoverServices
+// // import 'dart:async';
+// // import 'dart:math';
+// // import 'package:flutter/material.dart';
+// // import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+// // import 'package:box_sensors/services/bluetooth_manager2.dart';
+// // import 'package:box_sensors/widgets/display_row.dart';
+// // import 'package:sentry_flutter/sentry_flutter.dart';
+
+// // class ConnectHomeWidgets extends StatefulWidget {
+// //   final BluetoothManager bluetoothManager;
+// //   final String? selectedDevice;
+// //   final List<String> deviceOptions; // Dynamically updated
+// //   final bool isConnectedDevice1;
+// //   final bool isConnectedDevice2;
+// //   final bool isConnectedDevice3;
+// //   final VoidCallback scanForDevices;
+// //   final VoidCallback disconnectFromDevice;
+// //   final ValueChanged<String?> onDeviceChanged;
+// //   final Function(String) sendMessage;
+// //   final Function(int) updateIndex;
+
+// //   const ConnectHomeWidgets({
+// //     super.key,
+// //     required this.bluetoothManager,
+// //     required this.selectedDevice,
+// //     required this.deviceOptions,
+// //     required this.isConnectedDevice1,
+// //     required this.isConnectedDevice2,
+// //     required this.isConnectedDevice3,
+// //     required this.scanForDevices,
+// //     required this.disconnectFromDevice,
+// //     required this.onDeviceChanged,
+// //     required this.sendMessage,
+// //     required this.updateIndex,
+// //   });
+
+// //   @override
+// //   State<ConnectHomeWidgets> createState() => _ConnectHomeWidgetsState();
+// // }
+
+// // class _ConnectHomeWidgetsState extends State<ConnectHomeWidgets> {
+// //   List<String> availableDevices = [];
+// //   // Map from device name to a ValueNotifier for RSSI.
+// //   final Map<String, ValueNotifier<int>> _deviceRSSINotifiers = {};
+// //   // NEW: Map to record the last time (DateTime) we updated the RSSI for each device.
+// //   final Map<String, DateTime> _lastRssiUpdate = {};
+
+// //   bool isScanning = false;
+// //   String filterKeyword = 'Boxer'; // Default filter keyword
+// //   final TextEditingController _filterController = TextEditingController(
+// //     text: 'Boxer',
+// //   );
+// //   String? currentSelectedDevice; // Track current selection
+
+// //   // Debounce for filtering.
+// //   Timer? _debounce;
+// //   Timer? _periodicScanTimer; // Timer for periodic updates
+// //   bool _didScan = false;
+
+// //   // Reference to the scan subscription.
+// //   StreamSubscription<DiscoveredDevice>? _scanSubscription;
+
+// //   bool _disposed = false; // Widget disposal flag
+
+// //   // Local reactive BLE instance for scanning.
+// //   final FlutterReactiveBle _ble = FlutterReactiveBle();
+
+// //   /// Safely update state.
+// //   void _safeSetState(VoidCallback fn) {
+// //     if (!_disposed && mounted) setState(fn);
+// //   }
+
+// //   @override
+// //   void initState() {
+// //     super.initState();
+// //     currentSelectedDevice = widget.selectedDevice;
+// //     _startBluetoothScan(); // Initial scan
+// //     widget.bluetoothManager
+// //         .startPeriodicRssiUpdate(); // Start updating RSSI periodically
+
+// //     // Optionally, to trigger scans periodically every 2 seconds, uncomment:
+// //     // _periodicScanTimer = Timer.periodic(const Duration(seconds: 2), (timer) => _startBluetoothScan(clearDevices: false));
+// //   }
+
+// //   @override
+// //   void didChangeDependencies() {
+// //     super.didChangeDependencies();
+// //     if (!_didScan) {
+// //       _startBluetoothScan();
+// //       _didScan = true;
+// //     } else {
+// //       _startBluetoothScan(clearDevices: false);
+// //     }
+// //   }
+
+// //   /// Calculate distance from RSSI using the log-distance path loss model.
+// //   double calculateDistance(int rssi, {int txPower = -59, double n = 2.0}) {
+// //     return pow(10, ((txPower - rssi) / (10 * n))).toDouble();
+// //   }
+
+// //   /// Start scanning using flutter_reactive_ble.
+// //   /// This method runs for the specified scan duration (default 4 sec)
+// //   /// and updates each device's RSSI at most once every 2 seconds.
+// //   Future<void> _startBluetoothScan({
+// //     Duration? scanDuration,
+// //     bool clearDevices = true,
+// //   }) async {
+// //     if (isScanning) return;
+
+// //     // Set scan state and clear if needed.
+// //     _safeSetState(() {
+// //       isScanning = true;
+// //       if (clearDevices) {
+// //         availableDevices.clear();
+// //         _deviceRSSINotifiers.clear();
+// //         _lastRssiUpdate.clear();
+// //       }
+// //     });
+
+// //     try {
+// //       // Cancel any previous scan subscription.
+// //       await _scanSubscription?.cancel();
+
+// //       // Start scanning.
+// //       _scanSubscription = _ble
+// //           .scanForDevices(withServices: [], scanMode: ScanMode.lowLatency)
+// //           .listen(
+// //             (DiscoveredDevice device) {
+// //               final displayName =
+// //                   device.name.isNotEmpty ? device.name : device.id;
+// //               bool matchesFilter =
+// //                   filterKeyword.isEmpty ||
+// //                   displayName.toLowerCase().contains(
+// //                     filterKeyword.toLowerCase(),
+// //                   );
+// //               if (matchesFilter) {
+// //                 DateTime now = DateTime.now();
+// //                 if (!_lastRssiUpdate.containsKey(displayName) ||
+// //                     now.difference(_lastRssiUpdate[displayName]!) >=
+// //                         Duration(seconds: 2)) {
+// //                   _lastRssiUpdate[displayName] = now;
+// //                   if (!availableDevices.contains(displayName)) {
+// //                     _safeSetState(() {
+// //                       availableDevices.add(displayName);
+// //                     });
+// //                     _deviceRSSINotifiers[displayName] = ValueNotifier<int>(
+// //                       device.rssi,
+// //                     );
+// //                   } else {
+// //                     _deviceRSSINotifiers[displayName]?.value = device.rssi;
+// //                   }
+// //                 }
+// //               }
+// //             },
+// //             onError: (error) {
+// //               debugPrint("Error during scan: $error");
+// //               Sentry.captureException(error);
+// //             },
+// //           );
+
+// //       // Wait for the scan duration.
+// //       await Future.delayed(scanDuration ?? const Duration(seconds: 4));
+// //     } catch (e) {
+// //       debugPrint("Error scanning for devices: $e");
+// //     } finally {
+// //       // Ensure we cancel the subscription.
+// //       await _scanSubscription?.cancel();
+// //       _scanSubscription = null;
+// //       // Add already-connected devices from BluetoothManager.
+// //       widget.bluetoothManager.connectedDeviceIds.forEach((name, id) {
+// //         if (id.isNotEmpty && !availableDevices.contains(name)) {
+// //           _safeSetState(() {
+// //             availableDevices.add(name);
+// //           });
+// //           _deviceRSSINotifiers[name] ??= ValueNotifier<int>(-60);
+// //         }
+// //       });
+// //       _safeSetState(() {
+// //         isScanning = false;
+// //       });
+// //     }
+// //   }
+
+// //   Color getRSSIColor(int rssi) {
+// //     if (rssi >= -30) return Theme.of(context).colorScheme.primary;
+// //     if (rssi >= -55) return Colors.green;
+// //     if (rssi >= -67) return Colors.lightGreen;
+// //     if (rssi >= -80) return Colors.yellow;
+// //     if (rssi >= -90) return Colors.orange;
+// //     return Colors.red;
+// //   }
+
+// //   String? getValidatedSelectedDevice() {
+// //     if (currentSelectedDevice != null &&
+// //         widget.bluetoothManager.connectedDevices[currentSelectedDevice!] ==
+// //             true) {
+// //       return currentSelectedDevice;
+// //     }
+// //     return null;
+// //   }
+
+// //   /// Connect to a device by name.
+// //   /// This method scans briefly and connects when a matching device is found.
+// //   Future<void> _connectToDeviceByName(String deviceName) async {
+// //     late StreamSubscription<DiscoveredDevice> subscription;
+// //     subscription = _ble
+// //         .scanForDevices(withServices: [], scanMode: ScanMode.lowLatency)
+// //         .listen((DiscoveredDevice device) async {
+// //           final currentName = device.name.isNotEmpty ? device.name : device.id;
+// //           if (currentName == deviceName) {
+// //             try {
+// //               await widget.bluetoothManager.connectToDevice(device);
+// //               _safeSetState(() {});
+// //               debugPrint('Connected to $deviceName successfully.');
+// //             } catch (e) {
+// //               debugPrint('Failed to connect to $deviceName: $e');
+// //             } finally {
+// //               await subscription.cancel();
+// //             }
+// //           }
+// //         });
+// //   }
+
+// //   /// Connect to all target devices.
+// //   Future<void> _connectBothDevices() async {
+// //     final Set<String> targetDevices = {'BlueBoxer', 'RedBoxer', 'BoxerServer'};
+// //     final Set<String> attemptedDevices = {};
+// //     Timer? postConnectionTimer;
+// //     Timer? maxTimeoutTimer;
+// //     late StreamSubscription<DiscoveredDevice> subscription;
+
+// //     try {
+// //       subscription = _ble
+// //           .scanForDevices(withServices: [], scanMode: ScanMode.lowLatency)
+// //           .listen(
+// //             (DiscoveredDevice device) async {
+// //               try {
+// //                 final deviceName =
+// //                     device.name.isNotEmpty ? device.name : device.id;
+// //                 if (targetDevices.contains(deviceName) &&
+// //                     widget.bluetoothManager.connectedDevices[deviceName] !=
+// //                         true &&
+// //                     !attemptedDevices.contains(deviceName)) {
+// //                   attemptedDevices.add(deviceName);
+// //                   await widget.bluetoothManager.connectToDevice(device);
+// //                   _safeSetState(() {});
+// //                   debugPrint('Connected to $deviceName successfully.');
+
+// //                   // Set the post-connection timer only once.
+// //                   postConnectionTimer ??= Timer(const Duration(seconds: 4), () {
+// //                     subscription.cancel();
+// //                     debugPrint("Post-connection timer expired. Stopping scan.");
+// //                   });
+
+// //                   if (widget.bluetoothManager.connectedDevices['BlueBoxer'] ==
+// //                           true &&
+// //                       widget.bluetoothManager.connectedDevices['RedBoxer'] ==
+// //                           true &&
+// //                       widget.bluetoothManager.connectedDevices['BoxerServer'] ==
+// //                           true) {
+// //                     postConnectionTimer?.cancel();
+// //                     subscription.cancel();
+// //                     debugPrint("All devices connected. Stopping scan.");
+// //                     maxTimeoutTimer?.cancel();
+// //                   }
+// //                 }
+// //               } catch (e, st) {
+// //                 debugPrint("Error connecting to device: $e");
+// //                 Sentry.captureException(e, stackTrace: st);
+// //               }
+// //             },
+// //             onError: (error, stackTrace) {
+// //               debugPrint("Error in scanResults stream: $error");
+// //               Sentry.captureException(error, stackTrace: stackTrace);
+// //             },
+// //           );
+
+// //       maxTimeoutTimer = Timer(const Duration(seconds: 5), () {
+// //         subscription.cancel();
+// //         debugPrint("Maximum scan timeout reached. Stopping scan.");
+// //       });
+
+// //       await subscription.asFuture();
+// //     } catch (e, st) {
+// //       debugPrint("Exception in _connectBothDevices: $e");
+// //       Sentry.captureException(e, stackTrace: st);
+// //     } finally {
+// //       postConnectionTimer?.cancel();
+// //       maxTimeoutTimer?.cancel();
+// //     }
+// //   }
+
+// //   @override
+// //   void dispose() {
+// //     widget.bluetoothManager.stopPeriodicRssiUpdate();
+// //     _scanSubscription?.cancel();
+// //     _periodicScanTimer?.cancel();
+// //     _debounce?.cancel();
+// //     for (var notifier in _deviceRSSINotifiers.values) {
+// //       notifier.dispose();
+// //     }
+// //     _filterController.dispose();
+// //     _disposed = true;
+// //     super.dispose();
+// //   }
+
+// //   @override
+// //   Widget build(BuildContext context) {
+// //     final theme = Theme.of(context);
+// //     return Scaffold(
+// //       body: Column(
+// //         children: [
+// //           DisplayRow(title: 'Device Scanner'),
+// //           const SizedBox(height: 2.0),
+// //           Card(
+// //             margin: const EdgeInsets.symmetric(horizontal: 16.0),
+// //             color: theme.cardColor,
+// //             elevation: 6,
+// //             shape: RoundedRectangleBorder(
+// //               borderRadius: BorderRadius.circular(12.0),
+// //             ),
+// //             child: Padding(
+// //               padding: const EdgeInsets.all(8.0),
+// //               child: TextField(
+// //                 controller: _filterController,
+// //                 style: TextStyle(color: theme.colorScheme.primary),
+// //                 decoration: InputDecoration(
+// //                   filled: true,
+// //                   fillColor: theme.cardColor,
+// //                   isDense: true,
+// //                   contentPadding: const EdgeInsets.symmetric(
+// //                     vertical: 8.0,
+// //                     horizontal: 12.0,
+// //                   ),
+// //                   labelText: 'Search / Filter Devices by Keyword',
+// //                   labelStyle: TextStyle(color: theme.colorScheme.primary),
+// //                   border: const OutlineInputBorder(),
+// //                   prefixIcon: Icon(
+// //                     Icons.search,
+// //                     color: theme.colorScheme.primary,
+// //                   ),
+// //                 ),
+// //                 onChanged: (value) {
+// //                   if (_debounce?.isActive ?? false) _debounce!.cancel();
+// //                   _debounce = Timer(const Duration(milliseconds: 500), () {
+// //                     _safeSetState(() {
+// //                       filterKeyword = value;
+// //                     });
+// //                     _startBluetoothScan();
+// //                   });
+// //                 },
+// //               ),
+// //             ),
+// //           ),
+// //           Padding(
+// //             padding: const EdgeInsets.symmetric(horizontal: 16.0),
+// //             child: Text(
+// //               "Tap a Device to connect",
+// //               style: TextStyle(
+// //                 fontWeight: FontWeight.bold,
+// //                 fontSize: 16.0,
+// //                 color: theme.colorScheme.primary,
+// //               ),
+// //             ),
+// //           ),
+// //           Center(
+// //             child: Text(
+// //               availableDevices.isEmpty
+// //                   ? "No devices available. Tap 'Scan' to search again."
+// //                   : "Found ${availableDevices.length} device(s).",
+// //               style: TextStyle(fontSize: 14, color: theme.colorScheme.primary),
+// //             ),
+// //           ),
+// //           Expanded(
+// //             child: ListView(
+// //               padding: const EdgeInsets.symmetric(horizontal: 16.0),
+// //               children:
+// //                   availableDevices.map((deviceName) {
+// //                     return Card(
+// //                       margin: const EdgeInsets.symmetric(vertical: 4.0),
+// //                       color: theme.cardColor,
+// //                       elevation: 6,
+// //                       shape: RoundedRectangleBorder(
+// //                         borderRadius: BorderRadius.circular(12.0),
+// //                       ),
+// //                       child: Padding(
+// //                         padding: const EdgeInsets.all(12.0),
+// //                         child: Row(
+// //                           crossAxisAlignment: CrossAxisAlignment.start,
+// //                           children: [
+// //                             Expanded(
+// //                               child: InkWell(
+// //                                 onTap: () => _connectToDeviceByName(deviceName),
+// //                                 child: Column(
+// //                                   crossAxisAlignment: CrossAxisAlignment.start,
+// //                                   children: [
+// //                                     Row(
+// //                                       children: [
+// //                                         Icon(
+// //                                           Icons.bluetooth,
+// //                                           color: theme.colorScheme.primary,
+// //                                         ),
+// //                                         const SizedBox(width: 8),
+// //                                         Expanded(
+// //                                           child: Text(
+// //                                             deviceName,
+// //                                             style: Theme.of(
+// //                                               context,
+// //                                             ).textTheme.bodyMedium?.copyWith(
+// //                                               color:
+// //                                                   deviceName == 'RedBoxer'
+// //                                                       ? Colors.red
+// //                                                       : deviceName ==
+// //                                                           'BlueBoxer'
+// //                                                       ? Colors.blue
+// //                                                       : deviceName ==
+// //                                                           'BoxerServer'
+// //                                                       ? Colors.green
+// //                                                       : Theme.of(context)
+// //                                                           .textTheme
+// //                                                           .bodyMedium
+// //                                                           ?.color,
+// //                                             ),
+// //                                           ),
+// //                                         ),
+// //                                       ],
+// //                                     ),
+// //                                     const SizedBox(height: 8),
+// //                                     ValueListenableBuilder<int>(
+// //                                       valueListenable:
+// //                                           _deviceRSSINotifiers[deviceName]!,
+// //                                       builder: (context, rssi, child) {
+// //                                         double distance = calculateDistance(
+// //                                           rssi,
+// //                                         );
+// //                                         return Row(
+// //                                           children: [
+// //                                             CircleAvatar(
+// //                                               backgroundColor: getRSSIColor(
+// //                                                 rssi,
+// //                                               ),
+// //                                               radius: 16,
+// //                                               child: Text(
+// //                                                 '$rssi',
+// //                                                 style: const TextStyle(
+// //                                                   fontSize: 10,
+// //                                                   fontWeight: FontWeight.bold,
+// //                                                 ),
+// //                                               ),
+// //                                             ),
+// //                                             const SizedBox(width: 2),
+// //                                             Text.rich(
+// //                                               TextSpan(
+// //                                                 text: 'dBm\nDistance:',
+// //                                                 style: DefaultTextStyle.of(
+// //                                                   context,
+// //                                                 ).style.copyWith(fontSize: 10),
+// //                                                 children: [
+// //                                                   TextSpan(
+// //                                                     text:
+// //                                                         ' ${distance.toStringAsFixed(2)} meter(s)',
+// //                                                     style: DefaultTextStyle.of(
+// //                                                       context,
+// //                                                     ).style.copyWith(
+// //                                                       fontSize: 10,
+// //                                                     ),
+// //                                                   ),
+// //                                                 ],
+// //                                               ),
+// //                                             ),
+// //                                           ],
+// //                                         );
+// //                                       },
+// //                                     ),
+// //                                   ],
+// //                                 ),
+// //                               ),
+// //                             ),
+// //                             Column(
+// //                               mainAxisSize: MainAxisSize.min,
+// //                               children: [
+// //                                 ElevatedButton(
+// //                                   onPressed:
+// //                                       widget
+// //                                                   .bluetoothManager
+// //                                                   .connectedDevices[deviceName] ==
+// //                                               true
+// //                                           ? () async {
+// //                                             // Call disconnect callback.
+// //                                             widget.disconnectFromDevice();
+// //                                           }
+// //                                           : null,
+// //                                   style: ElevatedButton.styleFrom(
+// //                                     backgroundColor:
+// //                                         widget
+// //                                                     .bluetoothManager
+// //                                                     .connectedDevices[deviceName] ==
+// //                                                 true
+// //                                             ? theme.colorScheme.primary
+// //                                             : theme
+// //                                                 .colorScheme
+// //                                                 .surfaceContainerHighest,
+// //                                     foregroundColor:
+// //                                         widget
+// //                                                     .bluetoothManager
+// //                                                     .connectedDevices[deviceName] ==
+// //                                                 true
+// //                                             ? theme.colorScheme.onPrimary
+// //                                             : theme.colorScheme.onSurface,
+// //                                     elevation:
+// //                                         widget
+// //                                                     .bluetoothManager
+// //                                                     .connectedDevices[deviceName] ==
+// //                                                 true
+// //                                             ? 8
+// //                                             : 2,
+// //                                     shape: RoundedRectangleBorder(
+// //                                       borderRadius: BorderRadius.circular(16),
+// //                                     ),
+// //                                     minimumSize: const Size(120, 52),
+// //                                   ),
+// //                                   child: const Text(
+// //                                     'Disconnect',
+// //                                     style: TextStyle(
+// //                                       fontSize: 16,
+// //                                       fontWeight: FontWeight.bold,
+// //                                     ),
+// //                                   ),
+// //                                 ),
+// //                               ],
+// //                             ),
+// //                           ],
+// //                         ),
+// //                       ),
+// //                     );
+// //                   }).toList(),
+// //             ),
+// //           ),
+// //           Row(
+// //             mainAxisAlignment: MainAxisAlignment.center,
+// //             children: [
+// //               ElevatedButton.icon(
+// //                 onPressed:
+// //                     () => _startBluetoothScan(
+// //                       scanDuration: const Duration(seconds: 2),
+// //                     ),
+// //                 icon: Icon(Icons.refresh, color: theme.colorScheme.onPrimary),
+// //                 label: const Text('Scan for Devices'),
+// //                 style: ElevatedButton.styleFrom(
+// //                   backgroundColor: theme.colorScheme.primary,
+// //                   foregroundColor: theme.colorScheme.onPrimary,
+// //                   elevation: 6,
+// //                   fixedSize: const Size(300, 40),
+// //                 ),
+// //               ),
+// //             ],
+// //           ),
+// //           const SizedBox(height: 4.0),
+// //           Row(
+// //             mainAxisAlignment: MainAxisAlignment.center,
+// //             children: [
+// //               ElevatedButton.icon(
+// //                 onPressed:
+// //                     widget.bluetoothManager.connectedDevices.values
+// //                                 .where((isConnected) => isConnected)
+// //                                 .length >=
+// //                             2
+// //                         ? null
+// //                         : () => _connectBothDevices(),
+// //                 icon: SizedBox(
+// //                   width: 40,
+// //                   height: 40,
+// //                   child: Stack(
+// //                     alignment: Alignment.center,
+// //                     children: [
+// //                       Icon(
+// //                         Icons.smartphone,
+// //                         size: 28,
+// //                         color: theme.colorScheme.onPrimary,
+// //                       ),
+// //                       Positioned(
+// //                         top: 2,
+// //                         right: -2,
+// //                         child: Icon(
+// //                           Icons.bluetooth_connected,
+// //                           size: 16,
+// //                           color: theme.colorScheme.onPrimary,
+// //                         ),
+// //                       ),
+// //                     ],
+// //                   ),
+// //                 ),
+// //                 label: const Text('Connect all Boxer Devices'),
+// //                 style: ElevatedButton.styleFrom(
+// //                   backgroundColor: theme.colorScheme.primary,
+// //                   foregroundColor: theme.colorScheme.onPrimary,
+// //                   elevation: 6,
+// //                   fixedSize: const Size(300, 40),
+// //                 ),
+// //               ),
+// //             ],
+// //           ),
+// //           const SizedBox(height: 4.0),
+// //           Row(
+// //             mainAxisAlignment: MainAxisAlignment.center,
+// //             children: [
+// //               ElevatedButton.icon(
+// //                 onPressed:
+// //                     widget.bluetoothManager.connectedDevices.values.any(
+// //                           (isConnected) => isConnected,
+// //                         )
+// //                         ? widget.disconnectFromDevice
+// //                         : null,
+// //                 icon: Icon(
+// //                   Icons.bluetooth_disabled,
+// //                   color: theme.colorScheme.onPrimary,
+// //                 ),
+// //                 label: const Text('Disconnect All Devices'),
+// //                 style: ElevatedButton.styleFrom(
+// //                   backgroundColor: theme.colorScheme.primary,
+// //                   foregroundColor: theme.colorScheme.onPrimary,
+// //                   elevation: 6,
+// //                   fixedSize: const Size(300, 40),
+// //                 ),
+// //               ),
+// //             ],
+// //           ),
+// //         ],
+// //       ),
+// //     );
+// //   }
+// // }
+
+
+
+
+
+
+
+// // Code 2
+// // ---------------------------------------------------------------------------------
+// // ---------------------------------------------------------------------------------
+// //           flutter_reactive_ble: ^5.4.0
+// // ---------------------------------------------------------------------------------
+// // ---------------------------------------------------------------------------------
+// // Code using the other bluetooth BLE module flutter_reactive_ble: ^5.4.0
+// // https://pub.dev/packages/flutter_reactive_ble
+// // //ignore_for_file: deprecated_member_use, discoverServices
+// // import 'dart:async';
+// // import 'dart:math';
+// // import 'package:flutter/material.dart';
+// // import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+// // import 'package:box_sensors/services/bluetooth_manager2.dart';
+// // import 'package:box_sensors/widgets/display_row.dart';
+// // import 'package:sentry_flutter/sentry_flutter.dart';
+
+// // class ConnectHomeWidgets extends StatefulWidget {
+// //   final BluetoothManager bluetoothManager;
+// //   final String? selectedDevice;
+// //   final List<String> deviceOptions;
+// //   final bool isConnectedDevice1;
+// //   final bool isConnectedDevice2;
+// //   final bool isConnectedDevice3;
+// //   final VoidCallback scanForDevices;
+// //   final VoidCallback disconnectFromDevice;
+// //   final ValueChanged<String?> onDeviceChanged;
+// //   final Function(String) sendMessage;
+// //   final Function(int) updateIndex;
+
+// //   const ConnectHomeWidgets({
+// //     super.key,
+// //     required this.bluetoothManager,
+// //     required this.selectedDevice,
+// //     required this.deviceOptions,
+// //     required this.isConnectedDevice1,
+// //     required this.isConnectedDevice2,
+// //     required this.isConnectedDevice3,
+// //     required this.scanForDevices,
+// //     required this.disconnectFromDevice,
+// //     required this.onDeviceChanged,
+// //     required this.sendMessage,
+// //     required this.updateIndex,
+// //   });
+
+// //   @override
+// //   State<ConnectHomeWidgets> createState() => _ConnectHomeWidgetsState();
+// // }
+
+// // class _ConnectHomeWidgetsState extends State<ConnectHomeWidgets> {
+// //   List<String> availableDevices = [];
+// //   // Map from device name to a ValueNotifier for RSSI.
+// //   final Map<String, ValueNotifier<int>> _deviceRSSINotifiers = {};
+// //   // Record the last time we updated the RSSI for each device.
+// //   final Map<String, DateTime> _lastRssiUpdate = {};
+
+// //   bool isScanning = false;
+// //   String filterKeyword = 'Boxer'; // Default filter keyword
+// //   final TextEditingController _filterController =
+// //       TextEditingController(text: 'Boxer');
+// //   String? currentSelectedDevice; // Track current selection
+
+// //   // Debounce timer for filtering.
+// //   Timer? _debounce;
+// //   Timer? _periodicScanTimer; // Timer for periodic RSSI updates
+// //   bool _didScan = false;
+
+// //   // Reference to the scan subscription.
+// //   StreamSubscription<DiscoveredDevice>? _scanSubscription;
+
+// //   bool _disposed = false; // Widget disposal flag
+
+// //   // Local reactive BLE instance for scanning.
+// //   final FlutterReactiveBle _ble = FlutterReactiveBle();
+
+// //   /// Safely update state.
+// //   void _safeSetState(VoidCallback fn) {
+// //     if (!_disposed && mounted) setState(fn);
+// //   }
+
+// //   @override
+// //   void initState() {
+// //     super.initState();
+// //     currentSelectedDevice = widget.selectedDevice;
+// //     // Initial full scan to discover new devices.
+// //     _startBluetoothScan(clearDevices: true);
+// //     // Periodic scan runs every 2 seconds to update only the RSSI values.
+// //     _periodicScanTimer = Timer.periodic(
+// //       const Duration(seconds: 2),
+// //       (timer) => _startBluetoothScan(
+// //         clearDevices: false, // Do not add new devices automatically.
+// //         scanDuration: const Duration(seconds: 2),
+// //       ),
+// //     );
+// //   }
+
+// //   @override
+// //   void didChangeDependencies() {
+// //     super.didChangeDependencies();
+// //     // On first load, perform a full scan.
+// //     if (!_didScan) {
+// //       _startBluetoothScan(clearDevices: true);
+// //       _didScan = true;
+// //     } else {
+// //       // Subsequent dependency changes only update RSSI.
+// //       _startBluetoothScan(clearDevices: false);
+// //     }
+// //   }
+
+// //   /// Calculate distance from RSSI using the log-distance path loss model.
+// //   double calculateDistance(int rssi, {int txPower = -59, double n = 2.0}) {
+// //     return pow(10, ((txPower - rssi) / (10 * n))).toDouble();
+// //   }
+
+// //   /// Start scanning using flutter_reactive_ble.
+// //   ///
+// //   /// When [clearDevices] is true, the full device list is cleared and new devices are added.
+// //   /// When false, only the RSSI values of already discovered devices are updated.
+// //   Future<void> _startBluetoothScan({Duration? scanDuration, bool clearDevices = true}) async {
+// //     if (isScanning) return;
+// //     _safeSetState(() {
+// //       isScanning = true;
+// //       if (clearDevices) {
+// //         availableDevices.clear();
+// //         _deviceRSSINotifiers.clear();
+// //         _lastRssiUpdate.clear();
+// //       }
+// //     });
+
+// //     try {
+// //       // Cancel any previous scan subscription.
+// //       await _scanSubscription?.cancel();
+
+// //       // Start scanning.
+// //       _scanSubscription = _ble.scanForDevices(
+// //         withServices: [],
+// //         scanMode: ScanMode.lowLatency,
+// //       ).listen(
+// //         (DiscoveredDevice device) {
+// //           final displayName = device.name.isNotEmpty ? device.name : device.id;
+// //           bool matchesFilter = filterKeyword.isEmpty ||
+// //               displayName.toLowerCase().contains(filterKeyword.toLowerCase());
+// //           if (matchesFilter) {
+// //             DateTime now = DateTime.now();
+// //             if (!_lastRssiUpdate.containsKey(displayName) ||
+// //                 now.difference(_lastRssiUpdate[displayName]!) >= const Duration(seconds: 2)) {
+// //               _lastRssiUpdate[displayName] = now;
+// //               if (clearDevices) {
+// //                 // When doing a full scan, add new devices.
+// //                 if (!availableDevices.contains(displayName)) {
+// //                   _safeSetState(() {
+// //                     availableDevices.add(displayName);
+// //                   });
+// //                   _deviceRSSINotifiers[displayName] = ValueNotifier<int>(device.rssi);
+// //                 } else {
+// //                   // Device already exists: update the notifier.
+// //                   _deviceRSSINotifiers[displayName]?.value = device.rssi;
+// //                 }
+// //               } else {
+// //                 // When clearDevices is false, only update RSSI if the device already exists.
+// //                 if (availableDevices.contains(displayName)) {
+// //                   _deviceRSSINotifiers[displayName]?.value = device.rssi;
+// //                 }
+// //                 // Do not add new devices in this mode.
+// //               }
+// //             }
+// //           }
+// //         },
+// //         onError: (error, stackTrace) {
+// //           debugPrint("Error during scan: $error");
+// //           Sentry.captureException(error, stackTrace: stackTrace);
+// //         },
+// //       );
+
+// //       // Wait for the scan duration.
+// //       await Future.delayed(scanDuration ?? const Duration(seconds: 4));
+// //     } catch (e) {
+// //       debugPrint("Error scanning for devices: $e");
+// //     } finally {
+// //       await _scanSubscription?.cancel();
+// //       _scanSubscription = null;
+// //       // Add already-connected devices from BluetoothManager.
+// //       widget.bluetoothManager.connectedDeviceIds.forEach((name, id) {
+// //         if (id.isNotEmpty && !availableDevices.contains(name)) {
+// //           _safeSetState(() {
+// //             availableDevices.add(name);
+// //           });
+// //           _deviceRSSINotifiers[name] ??= ValueNotifier<int>(-60);
+// //         }
+// //       });
+// //       _safeSetState(() {
+// //         isScanning = false;
+// //       });
+// //     }
+// //   }
+
+// //   /// Returns a color based on RSSI value.
+// //   Color getRSSIColor(int rssi) {
+// //     if (rssi >= -30) return Theme.of(context).colorScheme.primary;
+// //     if (rssi >= -55) return Colors.green;
+// //     if (rssi >= -67) return Colors.lightGreen;
+// //     if (rssi >= -80) return Colors.yellow;
+// //     if (rssi >= -90) return Colors.orange;
+// //     return Colors.red;
+// //   }
+
+// //   /// Validate and return the currently selected device if connected.
+// //   String? getValidatedSelectedDevice() {
+// //     if (currentSelectedDevice != null &&
+// //         widget.bluetoothManager.connectedDevices[currentSelectedDevice!] == true) {
+// //       return currentSelectedDevice;
+// //     }
+// //     return null;
+// //   }
+
+// //   /// Connect to a device by name.
+// //   Future<void> _connectToDeviceByName(String deviceName) async {
+// //     // Start a new scan for devices and listen until we find a match.
+// //     late StreamSubscription<DiscoveredDevice> subscription;
+// //     subscription = _ble.scanForDevices(
+// //       withServices: [],
+// //       scanMode: ScanMode.lowLatency,
+// //     ).listen((DiscoveredDevice device) async {
+// //       final currentName = device.name.isNotEmpty ? device.name : device.id;
+// //       if (currentName == deviceName) {
+// //         try {
+// //           await widget.bluetoothManager.connectToDevice(device);
+// //           _safeSetState(() {});
+// //           debugPrint('Connected to $deviceName successfully.');
+// //         } catch (e) {
+// //           debugPrint('Failed to connect to $deviceName: $e');
+// //         } finally {
+// //           await subscription.cancel();
+// //         }
+// //       }
+// //     });
+// //   }
+
+// //   /// Connect to all target devices.
+// //   Future<void> _connectBothDevices() async {
+// //     final Set<String> targetDevices = {'BlueBoxer', 'RedBoxer', 'BoxerServer'};
+// //     final Set<String> attemptedDevices = {};
+// //     Timer? postConnectionTimer;
+// //     Timer? maxTimeoutTimer;
+// //     late StreamSubscription<DiscoveredDevice> subscription;
+
+// //     try {
+// //       subscription = _ble.scanForDevices(
+// //         withServices: [],
+// //         scanMode: ScanMode.lowLatency,
+// //       ).listen((DiscoveredDevice device) async {
+// //         try {
+// //           final deviceName = device.name.isNotEmpty ? device.name : device.id;
+// //           if (targetDevices.contains(deviceName) &&
+// //               widget.bluetoothManager.connectedDevices[deviceName] != true &&
+// //               !attemptedDevices.contains(deviceName)) {
+// //             attemptedDevices.add(deviceName);
+// //             await widget.bluetoothManager.connectToDevice(device);
+// //             _safeSetState(() {});
+// //             debugPrint('Connected to $deviceName successfully.');
+
+// //             // Set the post-connection timer only once.
+// //             postConnectionTimer ??= Timer(const Duration(seconds: 4), () {
+// //               subscription.cancel();
+// //               debugPrint("Post-connection timer expired. Stopping scan.");
+// //             });
+
+// //             if (widget.bluetoothManager.connectedDevices['BlueBoxer'] == true &&
+// //                 widget.bluetoothManager.connectedDevices['RedBoxer'] == true &&
+// //                 widget.bluetoothManager.connectedDevices['BoxerServer'] == true) {
+// //               postConnectionTimer?.cancel();
+// //               subscription.cancel();
+// //               debugPrint("All devices connected. Stopping scan.");
+// //               maxTimeoutTimer?.cancel();
+// //             }
+// //           }
+// //         } catch (e, st) {
+// //           debugPrint("Error connecting to device: $e");
+// //           Sentry.captureException(e, stackTrace: st);
+// //         }
+// //       }, onError: (error, stackTrace) {
+// //         debugPrint("Error in scanResults stream: $error");
+// //         Sentry.captureException(error, stackTrace: stackTrace);
+// //       });
+
+// //       maxTimeoutTimer = Timer(const Duration(seconds: 5), () {
+// //         subscription.cancel();
+// //         debugPrint("Maximum scan timeout reached. Stopping scan.");
+// //       });
+
+// //       await subscription.asFuture();
+// //     } catch (e, st) {
+// //       debugPrint("Exception in _connectBothDevices: $e");
+// //       Sentry.captureException(e, stackTrace: st);
+// //     } finally {
+// //       postConnectionTimer?.cancel();
+// //       maxTimeoutTimer?.cancel();
+// //     }
+// //   }
+
+// //   @override
+// //   void dispose() {
+// //     _scanSubscription?.cancel();
+// //     _periodicScanTimer?.cancel();
+// //     _debounce?.cancel();
+// //     for (var notifier in _deviceRSSINotifiers.values) {
+// //       notifier.dispose();
+// //     }
+// //     _filterController.dispose();
+// //     _disposed = true;
+// //     super.dispose();
+// //   }
+
+// //   @override
+// //   Widget build(BuildContext context) {
+// //     final theme = Theme.of(context);
+// //     return Scaffold(
+// //       body: Column(
+// //         children: [
+// //           // Header row
+// //           DisplayRow(title: 'Device Scanner'),
+// //           const SizedBox(height: 2.0),
+// //           // Filter TextField
+// //           Card(
+// //             margin: const EdgeInsets.symmetric(horizontal: 16.0),
+// //             color: theme.cardColor,
+// //             elevation: 6,
+// //             shape: RoundedRectangleBorder(
+// //               borderRadius: BorderRadius.circular(12.0),
+// //             ),
+// //             child: Padding(
+// //               padding: const EdgeInsets.all(8.0),
+// //               child: TextField(
+// //                 controller: _filterController,
+// //                 style: TextStyle(color: theme.colorScheme.primary),
+// //                 decoration: InputDecoration(
+// //                   filled: true,
+// //                   fillColor: theme.cardColor,
+// //                   isDense: true,
+// //                   contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+// //                   labelText: 'Search / Filter Devices by Keyword',
+// //                   labelStyle: TextStyle(color: theme.colorScheme.primary),
+// //                   border: const OutlineInputBorder(),
+// //                   prefixIcon: Icon(
+// //                     Icons.search,
+// //                     color: theme.colorScheme.primary,
+// //                   ),
+// //                 ),
+// //                 onChanged: (value) {
+// //                   if (_debounce?.isActive ?? false) _debounce!.cancel();
+// //                   _debounce = Timer(const Duration(milliseconds: 500), () {
+// //                     _safeSetState(() {
+// //                       filterKeyword = value;
+// //                     });
+// //                     // Trigger a full scan to discover new devices matching the filter.
+// //                     _startBluetoothScan(clearDevices: true);
+// //                   });
+// //                 },
+// //               ),
+// //             ),
+// //           ),
+// //           // Instruction text
+// //           Padding(
+// //             padding: const EdgeInsets.symmetric(horizontal: 16.0),
+// //             child: Text(
+// //               "Tap a Device to connect",
+// //               style: TextStyle(
+// //                   fontWeight: FontWeight.bold,
+// //                   fontSize: 16.0,
+// //                   color: theme.colorScheme.primary),
+// //             ),
+// //           ),
+// //           // Scan status indicator
+// //           isScanning
+// //               ? const Center(child: CircularProgressIndicator())
+// //               : Center(
+// //                   child: Text(
+// //                     availableDevices.isEmpty
+// //                         ? "No devices available. Tap 'Scan' to search again."
+// //                         : "Found ${availableDevices.length} device(s).",
+// //                     style: TextStyle(fontSize: 14, color: theme.colorScheme.primary),
+// //                   ),
+// //                 ),
+// //           // List of available devices
+// //           Expanded(
+// //             child: ListView(
+// //               padding: const EdgeInsets.symmetric(horizontal: 16.0),
+// //               children: availableDevices.map((deviceName) {
+// //                 return Card(
+// //                   margin: const EdgeInsets.symmetric(vertical: 4.0),
+// //                   color: theme.cardColor,
+// //                   elevation: 6,
+// //                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+// //                   child: Padding(
+// //                     padding: const EdgeInsets.all(12.0),
+// //                     child: Row(
+// //                       crossAxisAlignment: CrossAxisAlignment.start,
+// //                       children: [
+// //                         Expanded(
+// //                           child: InkWell(
+// //                             onTap: () => _connectToDeviceByName(deviceName),
+// //                             child: Column(
+// //                               crossAxisAlignment: CrossAxisAlignment.start,
+// //                               children: [
+// //                                 Row(
+// //                                   children: [
+// //                                     Icon(Icons.bluetooth, color: theme.colorScheme.primary),
+// //                                     const SizedBox(width: 8),
+// //                                     Expanded(
+// //                                       child: Text(
+// //                                         deviceName,
+// //                                         style: theme.textTheme.bodyMedium?.copyWith(
+// //                                               color: deviceName == 'RedBoxer'
+// //                                                   ? Colors.red
+// //                                                   : deviceName == 'BlueBoxer'
+// //                                                       ? Colors.blue
+// //                                                       : deviceName == 'BoxerServer'
+// //                                                           ? Colors.green
+// //                                                           : theme.textTheme.bodyMedium?.color,
+// //                                             ),
+// //                                       ),
+// //                                     ),
+// //                                   ],
+// //                                 ),
+// //                                 const SizedBox(height: 8),
+// //                                 ValueListenableBuilder<int>(
+// //                                   valueListenable: _deviceRSSINotifiers[deviceName]!,
+// //                                   builder: (context, rssi, child) {
+// //                                     double distance = calculateDistance(rssi);
+// //                                     return Row(
+// //                                       children: [
+// //                                         CircleAvatar(
+// //                                           backgroundColor: getRSSIColor(rssi),
+// //                                           radius: 16,
+// //                                           child: Text(
+// //                                             '$rssi',
+// //                                             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+// //                                           ),
+// //                                         ),
+// //                                         const SizedBox(width: 2),
+// //                                         Text.rich(
+// //                                           TextSpan(
+// //                                             text: 'dBm\nDistance:',
+// //                                             style: DefaultTextStyle.of(context).style.copyWith(fontSize: 10),
+// //                                             children: [
+// //                                               TextSpan(
+// //                                                 text: ' ${distance.toStringAsFixed(2)} meter(s)',
+// //                                                 style: DefaultTextStyle.of(context).style.copyWith(fontSize: 10),
+// //                                               ),
+// //                                             ],
+// //                                           ),
+// //                                         ),
+// //                                       ],
+// //                                     );
+// //                                   },
+// //                                 ),
+// //                               ],
+// //                             ),
+// //                           ),
+// //                         ),
+// //                         // Disconnect button
+// //                         Column(
+// //                           mainAxisSize: MainAxisSize.min,
+// //                           children: [
+// //                             ElevatedButton(
+// //                               onPressed: widget.bluetoothManager.connectedDevices[deviceName] == true
+// //                                   ? () async {
+// //                                       // Disconnect the device.
+// //                                       widget.disconnectFromDevice();
+// //                                     }
+// //                                   : null,
+// //                               style: ElevatedButton.styleFrom(
+// //                                 backgroundColor: widget.bluetoothManager.connectedDevices[deviceName] == true
+// //                                     ? theme.colorScheme.primary
+// //                                     : theme.colorScheme.surfaceContainerHighest,
+// //                                 foregroundColor: widget.bluetoothManager.connectedDevices[deviceName] == true
+// //                                     ? theme.colorScheme.onPrimary
+// //                                     : theme.colorScheme.onSurface,
+// //                                 elevation: widget.bluetoothManager.connectedDevices[deviceName] == true ? 8 : 2,
+// //                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+// //                                 minimumSize: const Size(120, 52),
+// //                               ),
+// //                               child: const Text(
+// //                                 'Disconnect',
+// //                                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+// //                               ),
+// //                             ),
+// //                           ],
+// //                         ),
+// //                       ],
+// //                     ),
+// //                   ),
+// //                 );
+// //               }).toList(),
+// //             ),
+// //           ),
+// //           // Scan for Devices button.
+// //           Row(
+// //             mainAxisAlignment: MainAxisAlignment.center,
+// //             children: [
+// //               ElevatedButton.icon(
+// //                 onPressed: () => _startBluetoothScan(clearDevices: true, scanDuration: const Duration(seconds: 2)),
+// //                 icon: Icon(Icons.refresh, color: theme.colorScheme.onPrimary),
+// //                 label: const Text('Scan for Devices'),
+// //                 style: ElevatedButton.styleFrom(
+// //                   backgroundColor: theme.colorScheme.primary,
+// //                   foregroundColor: theme.colorScheme.onPrimary,
+// //                   elevation: 6,
+// //                   fixedSize: const Size(300, 40),
+// //                 ),
+// //               ),
+// //             ],
+// //           ),
+// //           const SizedBox(height: 4.0),
+// //           // Connect all devices button.
+// //           Row(
+// //             mainAxisAlignment: MainAxisAlignment.center,
+// //             children: [
+// //               ElevatedButton.icon(
+// //                 onPressed: widget.bluetoothManager.connectedDevices.values.where((isConnected) => isConnected).length >= 2
+// //                     ? null
+// //                     : () => _connectBothDevices(),
+// //                 icon: SizedBox(
+// //                   width: 40,
+// //                   height: 40,
+// //                   child: Stack(
+// //                     alignment: Alignment.center,
+// //                     children: [
+// //                       Icon(Icons.smartphone, size: 28, color: theme.colorScheme.onPrimary),
+// //                       Positioned(
+// //                         top: 2,
+// //                         right: -2,
+// //                         child: Icon(Icons.bluetooth_connected, size: 16, color: theme.colorScheme.onPrimary),
+// //                       ),
+// //                     ],
+// //                   ),
+// //                 ),
+// //                 label: const Text('Connect all Boxer Devices'),
+// //                 style: ElevatedButton.styleFrom(
+// //                   backgroundColor: theme.colorScheme.primary,
+// //                   foregroundColor: theme.colorScheme.onPrimary,
+// //                   elevation: 6,
+// //                   fixedSize: const Size(300, 40),
+// //                 ),
+// //               ),
+// //             ],
+// //           ),
+// //           const SizedBox(height: 4.0),
+// //           // Disconnect All Devices button.
+// //           Row(
+// //             mainAxisAlignment: MainAxisAlignment.center,
+// //             children: [
+// //               ElevatedButton.icon(
+// //                 onPressed: widget.bluetoothManager.connectedDevices.values.any((isConnected) => isConnected)
+// //                     ? widget.disconnectFromDevice
+// //                     : null,
+// //                 icon: Icon(Icons.bluetooth_disabled, color: theme.colorScheme.onPrimary),
+// //                 label: const Text('Disconnect All Devices'),
+// //                 style: ElevatedButton.styleFrom(
+// //                   backgroundColor: theme.colorScheme.primary,
+// //                   foregroundColor: theme.colorScheme.onPrimary,
+// //                   elevation: 6,
+// //                   fixedSize: const Size(300, 40),
+// //                 ),
+// //               ),
+// //             ],
+// //           ),
+// //         ],
+// //       ),
+// //     );
+// //   }
+// // }

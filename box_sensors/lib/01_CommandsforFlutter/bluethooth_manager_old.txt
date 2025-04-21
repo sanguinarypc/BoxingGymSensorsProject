@@ -1,0 +1,3730 @@
+// // flutter_blue_plus code ---------------------------------------------
+// import 'package:box_sensors/state/timer_state.dart';
+// import 'package:flutter/material.dart';
+// import 'dart:async';
+// import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+// import 'dart:convert';
+// import 'package:box_sensors/database_tools/database_helper.dart';
+// import 'package:flutter/foundation.dart' show kIsWeb;
+// import 'dart:collection';
+// import 'dart:io' show Platform;
+// import 'package:sentry_flutter/sentry_flutter.dart';
+
+// class BluetoothManager with ChangeNotifier {
+
+//   TimerState? _timerState;
+//   int? _currentRoundId;
+//   int? _currentMatchId;
+//   bool _isDiscoveringServices = false;
+//   bool _disposed = false; // Flag to check if disposed
+//   bool _manualDisconnect = false; // New flag to disable auto reconnect
+
+//   // Stream controllers.
+//   final StreamController<List<DataRow>> _messageStreamController =
+//       StreamController<List<DataRow>>.broadcast();
+//   final StreamController<String?> _disconnectionStreamController =
+//       StreamController<String?>.broadcast();
+
+//   // Bluetooth properties.
+//   BluetoothCharacteristic? writableCharacteristic;
+//   Map<Guid, String> readValues = {};
+//   Set<String> uniqueMessages = {};
+//   List<DataRow> rows = [];
+
+//   // Device connection maps.
+//   Map<String, bool> connectedDevices = {
+//     'BlueBoxer': false,
+//     'RedBoxer': false,
+//     'BoxerServer': false,
+//   };
+//   Map<String, BluetoothDevice?> connectedBluetoothDevices = {
+//     'BlueBoxer': null,
+//     'RedBoxer': null,
+//     'BoxerServer': null,
+//   };
+
+//   // Notification subscriptions.
+//   final Map<String, StreamSubscription<List<int>>> _notificationSubscriptions =
+//       {};
+//   bool isScanning = false;
+
+//   // Database helper.
+//   final DatabaseHelper dbHelper = DatabaseHelper();
+
+//   // Getters.
+//   int? get currentRoundId => _currentRoundId;
+//   int? get currentMatchId => _currentMatchId;
+//   Stream<List<DataRow>> get messageStream => _messageStreamController.stream;
+//   Stream<String?> get disconnectionStream =>
+//       _disconnectionStreamController.stream;
+//   bool get isConnectedDevice1 => connectedDevices['BlueBoxer'] ?? false;
+//   bool get isConnectedDevice2 => connectedDevices['RedBoxer'] ?? false;
+//   bool get isConnectedDevice3 => connectedDevices['BoxerServer'] ?? false;
+
+//   /// Helper method to get a unique device key.
+//   String getDeviceKey(BluetoothDevice device) {
+//     final platformName = device.platformName.trim();
+//     if (platformName.isEmpty || platformName.toLowerCase() == 'unknown') {
+//       return device.remoteId.toString();
+//     }
+//     return platformName;
+//   }
+
+//   /// Set TimerState.
+//   void setTimerState(TimerState timerState) {
+//     debugPrint('setTimerState(...) called with timerState=$timerState');
+//     _timerState = timerState;
+//   }
+
+//   /// Set current round ID.
+//   void setCurrentRoundId(int roundId) {
+//     _currentRoundId = roundId;
+//     _safeNotifyListeners();
+//   }
+
+//   /// Set current match ID.
+//   void setCurrentMatchId(int? matchId) {
+//     _currentMatchId = matchId;
+//     _safeNotifyListeners();
+//   }
+
+//   /// Discover services on all connected devices.
+//   Future<void> discoverServices() async {
+//     if (_isDiscoveringServices) {
+//       debugPrint("⏳ Service discovery already in progress, skipping new call.");
+//       return;
+//     }
+//     _isDiscoveringServices = true;
+//     debugPrint("🔄 discoverServices() called");
+
+//     try {
+//       List<Future<void>> discoveryFutures =
+//           connectedBluetoothDevices.entries.map((entry) async {
+//             final deviceName = entry.key;
+//             final BluetoothDevice? connectedDevice = entry.value;
+//             if (connectedDevice == null) {
+//               debugPrint("⚠️ Device $deviceName is null. Skipping.");
+//               return;
+//             }
+//             debugPrint("🔍 Discovering services for device: $deviceName");
+
+//             try {
+//               List<BluetoothService> servicesList =
+//                   await connectedDevice.discoverServices();
+//               debugPrint(
+//                 "📡 Discovered ${servicesList.length} services for $deviceName",
+//               );
+
+//               // Process each service and its characteristics.
+//               for (var service in servicesList) {
+//                 for (var characteristic in service.characteristics) {
+//                   if (characteristic.properties.notify) {
+//                     String charKey = '$deviceName-${characteristic.uuid}';
+//                     if (_notificationSubscriptions.containsKey(charKey)) {
+//                       debugPrint(
+//                         "⚠️ Listener already exists for $charKey, skipping.",
+//                       );
+//                       continue;
+//                     }
+//                     debugPrint(
+//                       "✅ Subscribing to characteristic ${characteristic.uuid} for $deviceName.",
+//                     );
+//                     await characteristic.setNotifyValue(true);
+//                     // Adding a small delay to mitigate race conditions.
+//                     await Future.delayed(Duration(milliseconds: 400));
+
+//                     var subscription = characteristic.lastValueStream.listen(
+//                       (value) => _handleNotification(value, deviceName),
+//                       onError: (error, stackTrace) {
+//                         debugPrint(
+//                           "❌ Error in notification stream for $deviceName: $error",
+//                         );
+//                         debugPrint(stackTrace.toString());
+//                         Sentry.captureException(error, stackTrace: stackTrace);
+//                       },
+//                     );
+//                     _notificationSubscriptions[charKey] = subscription;
+//                     debugPrint(
+//                       "👂 Active Listeners Count: ${_notificationSubscriptions.length}",
+//                     );
+//                   }
+//                 }
+//               }
+//             } catch (e, stackTrace) {
+//               debugPrint("❌ Error discovering services for $deviceName: $e");
+//               Sentry.captureException(e, stackTrace: stackTrace);
+//             }
+//           }).toList();
+//       await Future.wait(discoveryFutures);
+//     } finally {
+//       _isDiscoveringServices = false;
+//     }
+//   }
+
+//   /// Process incoming notifications.
+//   void _handleNotification(List<int> value, String deviceName) async {
+//     if (_disposed) return;
+//     try {
+//       String decodedMessage = utf8.decode(value);
+//       debugPrint("📩 Received notification from $deviceName: $decodedMessage");
+
+//       try {
+//         final dynamic parsed = json.decode(decodedMessage);
+//         if (parsed is Map<String, dynamic> &&
+//             parsed["RoundState"] == "Completed") {
+//           _timerState?.endMatch();
+//         }
+//       } catch (jsonError) {
+//         // Ignore JSON parsing errors or missing keys.
+//       }
+
+//       final punchCount = _extractPunchCount(decodedMessage);
+//       final timestamp = _extractTimestamp(decodedMessage);
+//       String extractedDevice = _extractDevice(decodedMessage);
+//       final deviceStr =
+//           (extractedDevice == "UnknownDevice") ? deviceName : extractedDevice;
+//       final sensorValue = _extractSensorValue(decodedMessage);
+
+//       if (punchCount != null && timestamp != null && sensorValue != null) {
+//         String oppositeDevice =
+//             (deviceStr == "BlueBoxer") ? "RedBoxer" : "BlueBoxer";
+
+//         final newRow = DataRow(
+//           cells: [
+//             DataCell(Center(child: Text(deviceStr))),
+//             DataCell(Center(child: Text(oppositeDevice))),
+//             DataCell(Center(child: Text(punchCount.toString()))),
+//             DataCell(Center(child: Text(timestamp))),
+//             DataCell(Center(child: Text(sensorValue))),
+//           ],
+//         );
+//         rows.add(newRow);
+//         _messageStreamController.add(List.from(rows));
+//         _safeNotifyListeners();
+
+//         final localRoundId = _currentRoundId;
+//         final localMatchId = _currentMatchId;
+//         if (localMatchId == null) {
+//           _sendDataAndInsertToDatabase(
+//             deviceStr,
+//             oppositeDevice,
+//             punchCount,
+//             timestamp,
+//             sensorValue,
+//             0,
+//             null,
+//           );
+//         } else {
+//           _sendDataAndInsertToDatabase(
+//             deviceStr,
+//             oppositeDevice,
+//             punchCount,
+//             timestamp,
+//             sensorValue,
+//             localRoundId ?? 0,
+//             localMatchId,
+//           );
+//         }
+//       }
+//     } catch (e, stackTrace) {
+//       if (!_disposed) {
+//         debugPrint("❌ 🔴 Error processing notification from $deviceName: $e");
+//         debugPrint(stackTrace.toString());
+//         Sentry.captureException(e, stackTrace: stackTrace);
+//       }
+//     }
+//   }
+
+//   /// Insert data into the database for StartMatch mode.
+//   Future<void> _insertDataToDatabase(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//     int roundId,
+//     int matchId,
+//   ) async {
+//     try {
+//       await dbHelper.insertMessage(
+//         deviceStr,
+//         oppositeDevice,
+//         punchCount,
+//         timestamp,
+//         sensorValue,
+//         roundId,
+//         matchId,
+//       );
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ 💾 🔴 Error inserting message into DB: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Insert training data into the database.
+//   Future<void> _insertTrainingDataToDatabase(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//   ) async {
+//     try {
+//       await dbHelper.insertTrainingData(
+//         deviceStr,
+//         oppositeDevice,
+//         punchCount,
+//         timestamp,
+//         sensorValue,
+//       );
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ 💾 🔴 Error inserting training data into DB: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Send data and insert into the database concurrently.
+//   void _sendDataAndInsertToDatabase(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//     int roundId,
+//     int? matchId,
+//   ) {
+//     if (matchId != null) {
+//       Future.wait([
+//         _sendDataToBoxerServer(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         ),
+//         _insertDataToDatabase(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//           roundId,
+//           matchId,
+//         ),
+//       ]);
+//     } else {
+//       Future.wait([
+//         _sendDataToBoxerServer(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         ),
+//         _insertTrainingDataToDatabase(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         ),
+//       ]);
+//     }
+//   }
+
+//   /// Helper function to send data to BoxerServer.
+//   Future<void> _sendDataToBoxerServer(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//   ) async {
+//     if (!isDeviceConnected("BoxerServer")) {
+//       debugPrint(
+//         "❌ 🔴 BoxerServer not connected. Skipping sendDataToBoxerServer.",
+//       );
+//       return;
+//     }
+//     try {
+//       await sendDataToBoxerServer(
+//         deviceStr: deviceStr,
+//         oppositeDevice: oppositeDevice,
+//         punchCount: punchCount,
+//         timestamp: timestamp,
+//         sensorValue: sensorValue,
+//       );
+//     } catch (e, stackTrace) {
+//       debugPrint("➡️ ❌ 🔴 Error sending data to BoxerServer: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Connect to a device.
+//   Future<void> connectToDevice(BluetoothDevice device) async {
+//     // Clear the manual disconnect flag when a new connection is initiated.
+//     // _manualDisconnect = false;
+//     // Set the manual disconnect flag so auto reconnect is disabled.
+//     _manualDisconnect = true;
+//     final deviceKey = getDeviceKey(device);
+//     if (connectedBluetoothDevices[deviceKey] != null) {
+//       debugPrint("Device $deviceKey is already connected.");
+//       return;
+//     }
+//     try {
+//       await device.connect(timeout: const Duration(seconds: 5));
+//       connectedBluetoothDevices[deviceKey] = device;
+//       _updateDeviceConnectionStatus(deviceKey, true);
+//       _safeNotifyListeners();
+
+//       // Ensure the connection is fully established.
+//       await Future.delayed(const Duration(seconds: 1));
+
+//       // Listen for disconnection events.
+//       late final StreamSubscription<BluetoothConnectionState>
+//       disconnectionSubscription;
+//       disconnectionSubscription = device.connectionState.listen((
+//         connectionState,
+//       ) {
+//         if (connectionState == BluetoothConnectionState.disconnected) {
+//           _updateDeviceConnectionStatus(deviceKey, false);
+//           connectedBluetoothDevices[deviceKey] = null;
+//           _disconnectionStreamController.add(deviceKey);
+//           disconnectionSubscription.cancel();
+//           _safeNotifyListeners();
+//           // Only attempt to reconnect if the disconnect wasn't manual.
+//           Future.delayed(const Duration(seconds: 3), () {
+//             if (!_disposed && !_manualDisconnect) {
+//               debugPrint("Attempting to reconnect to $deviceKey...");
+//               connectToDevice(device).catchError((e, stackTrace) {
+//                 debugPrint("Reconnection to $deviceKey failed: $e");
+//                 Sentry.captureException(e, stackTrace: stackTrace);
+//               });
+//             }
+//           });
+//         }
+//       });
+
+//       // Request a larger MTU only on Android.
+//       if (Platform.isAndroid) {
+//         try {
+//           int newMtu = await device.requestMtu(512);
+//           debugPrint('Requested MTU = 512, actually set to: $newMtu');
+//         } catch (mtuError, stackTrace) {
+//           debugPrint('Error requesting MTU: $mtuError');
+//           Sentry.captureException(mtuError, stackTrace: stackTrace);
+//         }
+//       }
+
+//       // Discover services.
+//       await discoverServices();
+//     } catch (e, stackTrace) {
+//       debugPrint("Error connecting to device: $e");
+//       _updateDeviceConnectionStatus(deviceKey, false);
+//       _safeNotifyListeners();
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Disconnect from all devices.
+//   Future<void> disconnectFromDevice() async {
+//     // Set the manual disconnect flag so auto reconnect is disabled.
+//     _manualDisconnect = true;
+//     List<Future<void>> disconnectFutures = [];
+//     for (String deviceName in connectedDevices.keys) {
+//       BluetoothDevice? connectedDevice = connectedBluetoothDevices[deviceName];
+//       if (connectedDevice != null) {
+//         disconnectFutures.add(_disconnectDevice(deviceName, connectedDevice));
+//       }
+//     }
+//     await Future.wait(disconnectFutures);
+//     _safeNotifyListeners();
+//   }
+
+//   Future<void> _disconnectDevice(
+//     String deviceName,
+//     BluetoothDevice device,
+//   ) async {
+//     try {
+//       await device.disconnect();
+//       await device.connectionState
+//           .firstWhere(
+//             (state) => state == BluetoothConnectionState.disconnected,
+//             orElse: () => BluetoothConnectionState.disconnected,
+//           )
+//           .timeout(
+//             const Duration(seconds: 5),
+//             onTimeout: () => BluetoothConnectionState.disconnected,
+//           );
+//       connectedBluetoothDevices[deviceName] = null;
+//       _updateDeviceConnectionStatus(deviceName, false);
+//       _disconnectionStreamController.add(deviceName);
+//       writableCharacteristic = null;
+//     } catch (e, stackTrace) {
+//       debugPrint("Error disconnecting from device $deviceName: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   void _updateDeviceConnectionStatus(String deviceName, bool status) {
+//     if (!connectedDevices.containsKey(deviceName)) {
+//       debugPrint("Warning: $deviceName is not registered in connectedDevices.");
+//       return;
+//     }
+//     if (connectedDevices[deviceName] != status) {
+//       connectedDevices[deviceName] = status;
+//       debugPrint('$deviceName connection status updated to: $status');
+//       _safeNotifyListeners();
+//     }
+//   }
+
+//   bool isDeviceConnected(String deviceName) =>
+//       connectedDevices[deviceName] ?? false;
+
+//   /// Scan for devices.
+//   Future<void> scanForDevices() async {
+//     if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) {
+//       debugPrint("BLE scanning is not supported on this platform.");
+//       return;
+//     }
+//     if (isScanning) {
+//       debugPrint("Scan already in progress. Skipping new scan request.");
+//       return;
+//     }
+//     isScanning = true;
+//     _safeNotifyListeners();
+//     debugPrint("Starting BLE scan...");
+//     try {
+//       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 3));
+//     } catch (e, stackTrace) {
+//       debugPrint("Error during scan: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     } finally {
+//       isScanning = false;
+//       _safeNotifyListeners();
+//       debugPrint("BLE scan finished.");
+//     }
+//   }
+
+//   Set<String> getUniqueMessages() {
+//     return UnmodifiableSetView(uniqueMessages);
+//   }
+
+//   // Precompiled regular expressions.
+//   static final RegExp _deviceRegex = RegExp(r'Device:\s*(\S+)');
+//   static final RegExp _punchCountRegex = RegExp(r'Punch Count:\s*([\d:]+)');
+//   static final RegExp _timestampRegex = RegExp(r'Timestamp:\s*([\d:]+)');
+//   static final RegExp _sensorValueRegex = RegExp(r'Sensor millivolts:\s*(\d+)');
+
+//   String? _extractValue(String message, RegExp regex) {
+//     final match = regex.firstMatch(message);
+//     return match?.group(1);
+//   }
+
+//   String _extractDevice(String message) =>
+//       _extractValue(message, _deviceRegex) ?? "UnknownDevice";
+//   String? _extractPunchCount(String message) =>
+//       _extractValue(message, _punchCountRegex);
+//   String? _extractTimestamp(String message) =>
+//       _extractValue(message, _timestampRegex);
+//   String? _extractSensorValue(String message) =>
+//       _extractValue(message, _sensorValueRegex);
+
+//   /// Clear the internal table and notify listeners.
+//   void clearTable() {
+//     if (rows.isEmpty) {
+//       debugPrint("Table is already clear.");
+//       return;
+//     }
+//     rows.clear();
+//     if (!_messageStreamController.isClosed) {
+//       _messageStreamController.add([]);
+//     }
+//     _safeNotifyListeners();
+//   }
+
+//   /// Send a message to all connected devices.
+//   Future<void> sendMessageToAllConnectedDevices(String message) async {
+//     final trimmedMessage = message.trim();
+//     if (trimmedMessage.isEmpty || trimmedMessage == "[]") {
+//       debugPrint("Refusing to send empty/bracket message.");
+//       return;
+//     }
+//     List<Future<void>> sendFutures = [];
+//     for (var entry in connectedBluetoothDevices.entries) {
+//       final deviceName = entry.key;
+//       final BluetoothDevice? device = entry.value;
+//       if (device != null) {
+//         sendFutures.add(
+//           _sendMessageToDevice(device, deviceName, trimmedMessage).catchError((
+//             e,
+//             stackTrace,
+//           ) {
+//             debugPrint("Error sending message to $deviceName: $e");
+//             Sentry.captureException(e, stackTrace: stackTrace);
+//           }),
+//         );
+//       } else {
+//         debugPrint("Device $deviceName is not connected.");
+//       }
+//     }
+//     if (sendFutures.isEmpty) {
+//       debugPrint("No connected devices available to send the message.");
+//       return;
+//     }
+//     await Future.wait(sendFutures);
+//   }
+
+//   Future<void> _sendMessageToDevice(
+//     BluetoothDevice device,
+//     String deviceName,
+//     String message,
+//   ) async {
+//     try {
+//       final services = await device.discoverServices();
+//       final List<Future<void>> writeFutures = [];
+//       for (var service in services) {
+//         for (var characteristic in service.characteristics) {
+//           if (characteristic.properties.write) {
+//             debugPrint(
+//               "Discovered writable characteristic ${characteristic.uuid} on $deviceName",
+//             );
+//             writeFutures.add(
+//               characteristic
+//                   .write(utf8.encode(message), withoutResponse: false)
+//                   .then(
+//                     (_) => debugPrint(
+//                       "Message sent to $deviceName via ${characteristic.uuid}: $message",
+//                     ),
+//                   )
+//                   .catchError((error, stackTrace) {
+//                     debugPrint(
+//                       "Error sending message via ${characteristic.uuid} on $deviceName: $error",
+//                     );
+//                     Sentry.captureException(error, stackTrace: stackTrace);
+//                   }),
+//             );
+//           }
+//         }
+//       }
+//       if (writeFutures.isEmpty) {
+//         debugPrint(
+//           "No writable characteristics found on $deviceName to send message.",
+//         );
+//       } else {
+//         await Future.wait(writeFutures);
+//       }
+//     } catch (e, stackTrace) {
+//       debugPrint("Error in _sendMessageToDevice for $deviceName: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   Future<void> sendMessageToConnectedDevice(String message) async {
+//     final trimmedMessage = message.trim();
+//     if (trimmedMessage.isEmpty || trimmedMessage == "[]") {
+//       debugPrint("Refusing to send empty/bracket message.");
+//       return;
+//     }
+//     if (writableCharacteristic != null) {
+//       try {
+//         final dataToSend = utf8.encode(trimmedMessage);
+//         await writableCharacteristic!.write(dataToSend, withoutResponse: false);
+//         debugPrint("Message sent via cached characteristic: $trimmedMessage");
+//         return;
+//       } catch (e, stackTrace) {
+//         debugPrint("Error sending message via cached characteristic: $e");
+//         Sentry.captureException(e, stackTrace: stackTrace);
+//         debugPrint("Falling back to service discovery.");
+//       }
+//     } else {
+//       debugPrint(
+//         "No cached writable characteristic found. Falling back to service discovery.",
+//       );
+//     }
+//     BluetoothDevice? fallbackDevice;
+//     String fallbackDeviceName = "";
+//     for (final entry in connectedBluetoothDevices.entries) {
+//       if (entry.value != null) {
+//         fallbackDevice = entry.value;
+//         fallbackDeviceName = entry.key;
+//         break;
+//       }
+//     }
+//     if (fallbackDevice == null) {
+//       debugPrint("No connected devices available for fallback.");
+//       return;
+//     }
+//     try {
+//       await _sendMessageToDevice(
+//         fallbackDevice,
+//         fallbackDeviceName,
+//         trimmedMessage,
+//       );
+//     } catch (e, stackTrace) {
+//       debugPrint("Error sending message via service discovery: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Sends JSON-formatted data to BoxerServer.
+//   Future<void> sendDataToBoxerServer({
+//     required String deviceStr,
+//     required String oppositeDevice,
+//     required String punchCount,
+//     required String timestamp,
+//     required String sensorValue,
+//   }) async {
+//     final dataMap = {
+//       "deviceStr": deviceStr,
+//       "oppositeDevice": oppositeDevice,
+//       "punchCount": punchCount,
+//       "timestamp": timestamp,
+//       "sensorValue": sensorValue,
+//     };
+//     final dataMessage = jsonEncode(dataMap);
+//     debugPrint("Sending data to BoxerServer (JSON): $dataMessage");
+
+//     final boxerServerDevice = connectedBluetoothDevices["BoxerServer"];
+//     if (boxerServerDevice == null) {
+//       debugPrint("🚀 ❌ BoxerServer is not connected. Cannot send data.");
+//       return;
+//     }
+//     try {
+//       await _sendMessageToDevice(boxerServerDevice, "BoxerServer", dataMessage);
+//       debugPrint("📤 ➡️ Data sent to BoxerServer successfully.");
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ Error sending data to BoxerServer: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Dispose method to clean up stream controllers and subscriptions.
+//   void disposeBluetooth() {
+//     try {
+//       _messageStreamController.close();
+//       _disconnectionStreamController.close();
+//       _notificationSubscriptions.forEach((_, subscription) {
+//         subscription.cancel();
+//       });
+//       _notificationSubscriptions.clear();
+//     } catch (e, stackTrace) {
+//       debugPrint("Error during BluetoothManager dispose: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   // Safely call notifyListeners if not disposed.
+//   void _safeNotifyListeners() {
+//     if (!_disposed) {
+//       notifyListeners();
+//     }
+//   }
+
+//   @override
+//   void dispose() {
+//     disposeBluetooth();
+//     _disposed = true;
+//     super.dispose();
+//   }
+
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//----------------------------------------------------------------------------
+  // Private constructor.
+  // BluetoothManager._privateConstructor();
+
+  // The singleton instance.
+  // static final BluetoothManager _instance = BluetoothManager._privateConstructor();
+
+  // Public getter to access the singleton instance.
+  // static BluetoothManager get instance => _instance;
+
+  // // In BluetoothManager.dart (at the end of the class)
+  // static Future<void> checkBluetoothHealth() async {
+  //   // For example: Re-run a scan or reinitialize connections if needed.
+  //   debugPrint("Running Bluetooth health check...");
+  //   // You could call a scan or reset method here.
+  // }
+
+  //  static Future<void> checkBluetoothHealth() async {
+  //   // For each target device, check if it's connected.
+  //   // This is a simplified example.
+  //   for (final deviceName in ['BlueBoxer', 'RedBoxer', 'BoxerServer']) {
+  //     // Assume you have a way to check the connection status (like isDeviceConnected).
+  //     // If not connected, log the event and attempt reconnection.
+  //     if (!instance.isDeviceConnected(deviceName)) {
+  //       debugPrint('Health check: $deviceName is not connected. Attempting reconnection...');
+  //       // You might need to trigger a scan or call a reconnection method.
+  //       // For example:
+  //       // await instance.reconnectDeviceByName(deviceName);
+  //     }
+  //   }
+  // }
+
+
+
+
+
+
+
+
+
+// flutter_blue_plus code ---------------------------------------------
+// import 'package:box_sensors/state/timer_state.dart';
+// import 'package:flutter/material.dart';
+// import 'dart:async';
+// import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+// import 'dart:convert';
+// import 'package:box_sensors/database_tools/database_helper.dart';
+// import 'package:flutter/foundation.dart' show kIsWeb;
+// import 'dart:collection';
+// import 'dart:io' show Platform;
+// import 'package:sentry_flutter/sentry_flutter.dart';
+
+// class BluetoothManager with ChangeNotifier {
+//   TimerState? _timerState;
+//   int? _currentRoundId;
+//   int? _currentMatchId;
+//   bool _isDiscoveringServices = false;
+//   bool _disposed = false; // Flag to check if disposed
+
+//   // Stream controllers.
+//   final StreamController<List<DataRow>> _messageStreamController =
+//       StreamController<List<DataRow>>.broadcast();
+//   final StreamController<String?> _disconnectionStreamController =
+//       StreamController<String?>.broadcast();
+
+//   // Bluetooth properties.
+//   BluetoothCharacteristic? writableCharacteristic;
+//   Map<Guid, String> readValues = {};
+//   Set<String> uniqueMessages = {};
+//   List<DataRow> rows = [];
+
+//   // Device connection maps.
+//   Map<String, bool> connectedDevices = {
+//     'BlueBoxer': false,
+//     'RedBoxer': false,
+//     'BoxerServer': false,
+//   };
+//   Map<String, BluetoothDevice?> connectedBluetoothDevices = {
+//     'BlueBoxer': null,
+//     'RedBoxer': null,
+//     'BoxerServer': null,
+//   };
+
+//   // Notification subscriptions.
+//   final Map<String, StreamSubscription<List<int>>> _notificationSubscriptions =
+//       {};
+//   bool isScanning = false;
+
+//   // Database helper.
+//   final DatabaseHelper dbHelper = DatabaseHelper();
+
+//   // Getters.
+//   int? get currentRoundId => _currentRoundId;
+//   int? get currentMatchId => _currentMatchId;
+//   Stream<List<DataRow>> get messageStream => _messageStreamController.stream;
+//   Stream<String?> get disconnectionStream =>
+//       _disconnectionStreamController.stream;
+//   bool get isConnectedDevice1 => connectedDevices['BlueBoxer'] ?? false;
+//   bool get isConnectedDevice2 => connectedDevices['RedBoxer'] ?? false;
+//   bool get isConnectedDevice3 => connectedDevices['BoxerServer'] ?? false;
+
+//   /// Helper method to get a unique device key.
+//   String getDeviceKey(BluetoothDevice device) {
+//     final platformName = device.platformName.trim();
+//     if (platformName.isEmpty || platformName.toLowerCase() == 'unknown') {
+//       return device.remoteId.toString();
+//     }
+//     return platformName;
+//   }
+
+//   /// Set TimerState.
+//   void setTimerState(TimerState timerState) {
+//     debugPrint('setTimerState(...) called with timerState=$timerState');
+//     _timerState = timerState;
+//   }
+
+//   /// Set current round ID.
+//   void setCurrentRoundId(int roundId) {
+//     _currentRoundId = roundId;
+//     _safeNotifyListeners();
+//   }
+
+//   /// Set current match ID.
+//   void setCurrentMatchId(int? matchId) {
+//     _currentMatchId = matchId;
+//     _safeNotifyListeners();
+//   }
+
+//   /// Discover services on all connected devices.
+//   Future<void> discoverServices() async {
+//     if (_isDiscoveringServices) {
+//       debugPrint("⏳ Service discovery already in progress, skipping new call.");
+//       return;
+//     }
+//     _isDiscoveringServices = true;
+//     debugPrint("🔄 discoverServices() called");
+
+//     try {
+//       List<Future<void>> discoveryFutures =
+//           connectedBluetoothDevices.entries.map((entry) async {
+//         final deviceName = entry.key;
+//         final BluetoothDevice? connectedDevice = entry.value;
+//         if (connectedDevice == null) {
+//           debugPrint("⚠️ Device $deviceName is null. Skipping.");
+//           return;
+//         }
+//         debugPrint("🔍 Discovering services for device: $deviceName");
+
+//         try {
+//           List<BluetoothService> servicesList =
+//               await connectedDevice.discoverServices();
+//           debugPrint(
+//               "📡 Discovered ${servicesList.length} services for $deviceName");
+
+//           // Process each service and its characteristics.
+//           for (var service in servicesList) {
+//             for (var characteristic in service.characteristics) {
+//               if (characteristic.properties.notify) {
+//                 String charKey = '$deviceName-${characteristic.uuid}';
+//                 if (_notificationSubscriptions.containsKey(charKey)) {
+//                   debugPrint(
+//                       "⚠️ Listener already exists for $charKey, skipping.");
+//                   continue;
+//                 }
+//                 debugPrint(
+//                     "✅ Subscribing to characteristic ${characteristic.uuid} for $deviceName.");
+//                 await characteristic.setNotifyValue(true);
+//                 // Adding a small delay to mitigate race conditions.
+//                 await Future.delayed(Duration(milliseconds: 400));
+
+//                 var subscription = characteristic.lastValueStream.listen(
+//                   (value) => _handleNotification(value, deviceName),
+//                   onError: (error, stackTrace) {
+//                     debugPrint(
+//                         "❌ Error in notification stream for $deviceName: $error");
+//                     debugPrint(stackTrace.toString());
+//                     Sentry.captureException(error, stackTrace: stackTrace);
+//                   },
+//                 );
+//                 _notificationSubscriptions[charKey] = subscription;
+//                 debugPrint(
+//                     "👂 Active Listeners Count: ${_notificationSubscriptions.length}");
+//               }
+//             }
+//           }
+//         } catch (e, stackTrace) {
+//           debugPrint("❌ Error discovering services for $deviceName: $e");
+//           Sentry.captureException(e, stackTrace: stackTrace);
+//         }
+//       }).toList();
+//       await Future.wait(discoveryFutures);
+//     } finally {
+//       _isDiscoveringServices = false;
+//     }
+//   }
+
+//   /// Process incoming notifications.
+//   void _handleNotification(List<int> value, String deviceName) async {
+//     if (_disposed) return;
+//     try {
+//       String decodedMessage = utf8.decode(value);
+//       debugPrint("📩 Received notification from $deviceName: $decodedMessage");
+
+//       try {
+//         final dynamic parsed = json.decode(decodedMessage);
+//         if (parsed is Map<String, dynamic> &&
+//             parsed["RoundState"] == "Completed") {
+//           _timerState?.endMatch();
+//         }
+//       } catch (jsonError) {
+//         // Ignore JSON parsing errors or missing keys.
+//       }
+
+//       final punchCount = _extractPunchCount(decodedMessage);
+//       final timestamp = _extractTimestamp(decodedMessage);
+//       String extractedDevice = _extractDevice(decodedMessage);
+//       final deviceStr =
+//           (extractedDevice == "UnknownDevice") ? deviceName : extractedDevice;
+//       final sensorValue = _extractSensorValue(decodedMessage);
+
+//       if (punchCount != null && timestamp != null && sensorValue != null) {
+//         String oppositeDevice =
+//             (deviceStr == "BlueBoxer") ? "RedBoxer" : "BlueBoxer";
+
+//         final newRow = DataRow(
+//           cells: [
+//             DataCell(Center(child: Text(deviceStr))),
+//             DataCell(Center(child: Text(oppositeDevice))),
+//             DataCell(Center(child: Text(punchCount.toString()))),
+//             DataCell(Center(child: Text(timestamp))),
+//             DataCell(Center(child: Text(sensorValue))),
+//           ],
+//         );
+//         rows.add(newRow);
+//         _messageStreamController.add(List.from(rows));
+//         _safeNotifyListeners();
+
+//         final localRoundId = _currentRoundId;
+//         final localMatchId = _currentMatchId;
+//         if (localMatchId == null) {
+//           _sendDataAndInsertToDatabase(
+//               deviceStr, oppositeDevice, punchCount, timestamp, sensorValue, 0, null);
+//         } else {
+//           _sendDataAndInsertToDatabase(
+//               deviceStr, oppositeDevice, punchCount, timestamp, sensorValue, localRoundId ?? 0, localMatchId);
+//         }
+//       }
+//     } catch (e, stackTrace) {
+//       if (!_disposed) {
+//         debugPrint("❌ 🔴 Error processing notification from $deviceName: $e");
+//         debugPrint(stackTrace.toString());
+//         Sentry.captureException(e, stackTrace: stackTrace);
+//       }
+//     }
+//   }
+
+//   /// Insert data into the database for StartMatch mode.
+//   Future<void> _insertDataToDatabase(
+//       String deviceStr,
+//       String oppositeDevice,
+//       String punchCount,
+//       String timestamp,
+//       String sensorValue,
+//       int roundId,
+//       int matchId) async {
+//     try {
+//       await dbHelper.insertMessage(
+//           deviceStr, oppositeDevice, punchCount, timestamp, sensorValue, roundId, matchId);
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ 💾 🔴 Error inserting message into DB: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Insert training data into the database.
+//   Future<void> _insertTrainingDataToDatabase(
+//       String deviceStr,
+//       String oppositeDevice,
+//       String punchCount,
+//       String timestamp,
+//       String sensorValue) async {
+//     try {
+//       await dbHelper.insertTrainingData(
+//           deviceStr, oppositeDevice, punchCount, timestamp, sensorValue);
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ 💾 🔴 Error inserting training data into DB: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Send data and insert into the database concurrently.
+//   void _sendDataAndInsertToDatabase(
+//       String deviceStr,
+//       String oppositeDevice,
+//       String punchCount,
+//       String timestamp,
+//       String sensorValue,
+//       int roundId,
+//       int? matchId) {
+//     if (matchId != null) {
+//       Future.wait([
+//         _sendDataToBoxerServer(deviceStr, oppositeDevice, punchCount, timestamp, sensorValue),
+//         _insertDataToDatabase(deviceStr, oppositeDevice, punchCount, timestamp, sensorValue, roundId, matchId),
+//       ]);
+//     } else {
+//       Future.wait([
+//         _sendDataToBoxerServer(deviceStr, oppositeDevice, punchCount, timestamp, sensorValue),
+//         _insertTrainingDataToDatabase(deviceStr, oppositeDevice, punchCount, timestamp, sensorValue),
+//       ]);
+//     }
+//   }
+
+//   /// Helper function to send data to BoxerServer.
+//   Future<void> _sendDataToBoxerServer(
+//       String deviceStr,
+//       String oppositeDevice,
+//       String punchCount,
+//       String timestamp,
+//       String sensorValue) async {
+//     if (!isDeviceConnected("BoxerServer")) {
+//       debugPrint("❌ 🔴 BoxerServer not connected. Skipping sendDataToBoxerServer.");
+//       return;
+//     }
+//     try {
+//       await sendDataToBoxerServer(
+//           deviceStr: deviceStr,
+//           oppositeDevice: oppositeDevice,
+//           punchCount: punchCount,
+//           timestamp: timestamp,
+//           sensorValue: sensorValue);
+//     } catch (e, stackTrace) {
+//       debugPrint("➡️ ❌ 🔴 Error sending data to BoxerServer: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Connect to a device.
+//   Future<void> connectToDevice(BluetoothDevice device) async {
+//     final deviceKey = getDeviceKey(device);
+//     if (connectedBluetoothDevices[deviceKey] != null) {
+//       debugPrint("Device $deviceKey is already connected.");
+//       return;
+//     }
+//     try {
+//       await device.connect(timeout: const Duration(seconds: 5));
+//       connectedBluetoothDevices[deviceKey] = device;
+//       _updateDeviceConnectionStatus(deviceKey, true);
+//       _safeNotifyListeners();
+
+//       // Ensure the connection is fully established.
+//       await Future.delayed(const Duration(seconds: 1));
+
+//       // Listen for disconnection events.
+//       late final StreamSubscription<BluetoothConnectionState> disconnectionSubscription;
+//       disconnectionSubscription = device.connectionState.listen((connectionState) {
+//         if (connectionState == BluetoothConnectionState.disconnected) {
+//           _updateDeviceConnectionStatus(deviceKey, false);
+//           connectedBluetoothDevices[deviceKey] = null;
+//           _disconnectionStreamController.add(deviceKey);
+//           disconnectionSubscription.cancel();
+//           _safeNotifyListeners();
+//           Future.delayed(const Duration(seconds: 3), () {
+//             if (!_disposed) {
+//               debugPrint("Attempting to reconnect to $deviceKey...");
+//               connectToDevice(device).catchError((e, stackTrace) {
+//                 debugPrint("Reconnection to $deviceKey failed: $e");
+//                 Sentry.captureException(e, stackTrace: stackTrace);
+//               });
+//             }
+//           });
+//         }
+//       });
+
+//       // Request a larger MTU only on Android.
+//       if (Platform.isAndroid) {
+//         try {
+//           int newMtu = await device.requestMtu(512);
+//           debugPrint('Requested MTU = 512, actually set to: $newMtu');
+//         } catch (mtuError, stackTrace) {
+//           debugPrint('Error requesting MTU: $mtuError');
+//           Sentry.captureException(mtuError, stackTrace: stackTrace);
+//         }
+//       }
+
+//       // Discover services.
+//       await discoverServices();
+//     } catch (e, stackTrace) {
+//       debugPrint("Error connecting to device: $e");
+//       _updateDeviceConnectionStatus(deviceKey, false);
+//       _safeNotifyListeners();
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Disconnect from all devices.
+//   Future<void> disconnectFromDevice() async {
+//     List<Future<void>> disconnectFutures = [];
+//     for (String deviceName in connectedDevices.keys) {
+//       BluetoothDevice? connectedDevice = connectedBluetoothDevices[deviceName];
+//       if (connectedDevice != null) {
+//         disconnectFutures.add(_disconnectDevice(deviceName, connectedDevice));
+//       }
+//     }
+//     await Future.wait(disconnectFutures);
+//     _safeNotifyListeners();
+//   }
+
+//   Future<void> _disconnectDevice(String deviceName, BluetoothDevice device) async {
+//     try {
+//       await device.disconnect();
+//       await device.connectionState
+//           .firstWhere(
+//             (state) => state == BluetoothConnectionState.disconnected,
+//             orElse: () => BluetoothConnectionState.disconnected,
+//           )
+//           .timeout(
+//             const Duration(seconds: 5),
+//             onTimeout: () => BluetoothConnectionState.disconnected,
+//           );
+//       connectedBluetoothDevices[deviceName] = null;
+//       _updateDeviceConnectionStatus(deviceName, false);
+//       _disconnectionStreamController.add(deviceName);
+//       writableCharacteristic = null;
+//     } catch (e, stackTrace) {
+//       debugPrint("Error disconnecting from device $deviceName: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   void _updateDeviceConnectionStatus(String deviceName, bool status) {
+//     if (!connectedDevices.containsKey(deviceName)) {
+//       debugPrint("Warning: $deviceName is not registered in connectedDevices.");
+//       return;
+//     }
+//     if (connectedDevices[deviceName] != status) {
+//       connectedDevices[deviceName] = status;
+//       debugPrint('$deviceName connection status updated to: $status');
+//       _safeNotifyListeners();
+//     }
+//   }
+
+//   bool isDeviceConnected(String deviceName) =>
+//       connectedDevices[deviceName] ?? false;
+
+//   /// Scan for devices.
+//   Future<void> scanForDevices() async {
+//     if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) {
+//       debugPrint("BLE scanning is not supported on this platform.");
+//       return;
+//     }
+//     if (isScanning) {
+//       debugPrint("Scan already in progress. Skipping new scan request.");
+//       return;
+//     }
+//     isScanning = true;
+//     _safeNotifyListeners();
+//     debugPrint("Starting BLE scan...");
+//     try {
+//       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 3));
+//     } catch (e, stackTrace) {
+//       debugPrint("Error during scan: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     } finally {
+//       isScanning = false;
+//       _safeNotifyListeners();
+//       debugPrint("BLE scan finished.");
+//     }
+//   }
+
+//   Set<String> getUniqueMessages() {
+//     return UnmodifiableSetView(uniqueMessages);
+//   }
+
+//   // Precompiled regular expressions.
+//   static final RegExp _deviceRegex = RegExp(r'Device:\s*(\S+)');
+//   static final RegExp _punchCountRegex = RegExp(r'Punch Count:\s*([\d:]+)');
+//   static final RegExp _timestampRegex = RegExp(r'Timestamp:\s*([\d:]+)');
+//   static final RegExp _sensorValueRegex = RegExp(r'Sensor millivolts:\s*(\d+)');
+
+//   String? _extractValue(String message, RegExp regex) {
+//     final match = regex.firstMatch(message);
+//     return match?.group(1);
+//   }
+
+//   String _extractDevice(String message) =>
+//       _extractValue(message, _deviceRegex) ?? "UnknownDevice";
+//   String? _extractPunchCount(String message) =>
+//       _extractValue(message, _punchCountRegex);
+//   String? _extractTimestamp(String message) =>
+//       _extractValue(message, _timestampRegex);
+//   String? _extractSensorValue(String message) =>
+//       _extractValue(message, _sensorValueRegex);
+
+//   /// Clear the internal table and notify listeners.
+//   void clearTable() {
+//     if (rows.isEmpty) {
+//       debugPrint("Table is already clear.");
+//       return;
+//     }
+//     rows.clear();
+//     if (!_messageStreamController.isClosed) {
+//       _messageStreamController.add([]);
+//     }
+//     _safeNotifyListeners();
+//   }
+
+//   /// Send a message to all connected devices.
+//   Future<void> sendMessageToAllConnectedDevices(String message) async {
+//     final trimmedMessage = message.trim();
+//     if (trimmedMessage.isEmpty || trimmedMessage == "[]") {
+//       debugPrint("Refusing to send empty/bracket message.");
+//       return;
+//     }
+//     List<Future<void>> sendFutures = [];
+//     for (var entry in connectedBluetoothDevices.entries) {
+//       final deviceName = entry.key;
+//       final BluetoothDevice? device = entry.value;
+//       if (device != null) {
+//         sendFutures.add(
+//           _sendMessageToDevice(device, deviceName, trimmedMessage)
+//               .catchError((e, stackTrace) {
+//             debugPrint("Error sending message to $deviceName: $e");
+//             Sentry.captureException(e, stackTrace: stackTrace);
+//           }),
+//         );
+//       } else {
+//         debugPrint("Device $deviceName is not connected.");
+//       }
+//     }
+//     if (sendFutures.isEmpty) {
+//       debugPrint("No connected devices available to send the message.");
+//       return;
+//     }
+//     await Future.wait(sendFutures);
+//   }
+
+//   Future<void> _sendMessageToDevice(
+//       BluetoothDevice device, String deviceName, String message) async {
+//     try {
+//       final services = await device.discoverServices();
+//       final List<Future<void>> writeFutures = [];
+//       for (var service in services) {
+//         for (var characteristic in service.characteristics) {
+//           if (characteristic.properties.write) {
+//             debugPrint(
+//                 "Discovered writable characteristic ${characteristic.uuid} on $deviceName");
+//             writeFutures.add(
+//               characteristic
+//                   .write(utf8.encode(message), withoutResponse: false)
+//                   .then(
+//                     (_) => debugPrint(
+//                         "Message sent to $deviceName via ${characteristic.uuid}: $message"),
+//                   )
+//                   .catchError((error, stackTrace) {
+//                 debugPrint(
+//                     "Error sending message via ${characteristic.uuid} on $deviceName: $error");
+//                 Sentry.captureException(error, stackTrace: stackTrace);
+//               }),
+//             );
+//           }
+//         }
+//       }
+//       if (writeFutures.isEmpty) {
+//         debugPrint("No writable characteristics found on $deviceName to send message.");
+//       } else {
+//         await Future.wait(writeFutures);
+//       }
+//     } catch (e, stackTrace) {
+//       debugPrint("Error in _sendMessageToDevice for $deviceName: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   Future<void> sendMessageToConnectedDevice(String message) async {
+//     final trimmedMessage = message.trim();
+//     if (trimmedMessage.isEmpty || trimmedMessage == "[]") {
+//       debugPrint("Refusing to send empty/bracket message.");
+//       return;
+//     }
+//     if (writableCharacteristic != null) {
+//       try {
+//         final dataToSend = utf8.encode(trimmedMessage);
+//         await writableCharacteristic!.write(dataToSend, withoutResponse: false);
+//         debugPrint("Message sent via cached characteristic: $trimmedMessage");
+//         return;
+//       } catch (e, stackTrace) {
+//         debugPrint("Error sending message via cached characteristic: $e");
+//         Sentry.captureException(e, stackTrace: stackTrace);
+//         debugPrint("Falling back to service discovery.");
+//       }
+//     } else {
+//       debugPrint("No cached writable characteristic found. Falling back to service discovery.");
+//     }
+//     BluetoothDevice? fallbackDevice;
+//     String fallbackDeviceName = "";
+//     for (final entry in connectedBluetoothDevices.entries) {
+//       if (entry.value != null) {
+//         fallbackDevice = entry.value;
+//         fallbackDeviceName = entry.key;
+//         break;
+//       }
+//     }
+//     if (fallbackDevice == null) {
+//       debugPrint("No connected devices available for fallback.");
+//       return;
+//     }
+//     try {
+//       await _sendMessageToDevice(fallbackDevice, fallbackDeviceName, trimmedMessage);
+//     } catch (e, stackTrace) {
+//       debugPrint("Error sending message via service discovery: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Sends JSON-formatted data to BoxerServer.
+//   Future<void> sendDataToBoxerServer({
+//     required String deviceStr,
+//     required String oppositeDevice,
+//     required String punchCount,
+//     required String timestamp,
+//     required String sensorValue,
+//   }) async {
+//     final dataMap = {
+//       "deviceStr": deviceStr,
+//       "oppositeDevice": oppositeDevice,
+//       "punchCount": punchCount,
+//       "timestamp": timestamp,
+//       "sensorValue": sensorValue,
+//     };
+//     final dataMessage = jsonEncode(dataMap);
+//     debugPrint("Sending data to BoxerServer (JSON): $dataMessage");
+
+//     final boxerServerDevice = connectedBluetoothDevices["BoxerServer"];
+//     if (boxerServerDevice == null) {
+//       debugPrint("🚀 ❌ BoxerServer is not connected. Cannot send data.");
+//       return;
+//     }
+//     try {
+//       await _sendMessageToDevice(boxerServerDevice, "BoxerServer", dataMessage);
+//       debugPrint("📤 ➡️ Data sent to BoxerServer successfully.");
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ Error sending data to BoxerServer: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Dispose method to clean up stream controllers and subscriptions.
+//   void disposeBluetooth() {
+//     try {
+//       _messageStreamController.close();
+//       _disconnectionStreamController.close();
+//       _notificationSubscriptions.forEach((_, subscription) {
+//         subscription.cancel();
+//       });
+//       _notificationSubscriptions.clear();
+//     } catch (e, stackTrace) {
+//       debugPrint("Error during BluetoothManager dispose: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   // Safely call notifyListeners if not disposed.
+//   void _safeNotifyListeners() {
+//     if (!_disposed) {
+//       notifyListeners();
+//     }
+//   }
+
+//   @override
+//   void dispose() {
+//     disposeBluetooth();
+//     _disposed = true;
+//     super.dispose();
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+// import 'package:box_sensors/state/timer_state.dart';
+// import 'package:flutter/material.dart';
+// import 'dart:async';
+// import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+// import 'dart:convert';
+// import 'package:box_sensors/database_tools/database_helper.dart';
+// import 'package:flutter/foundation.dart' show kIsWeb;
+// import 'dart:collection';
+// import 'dart:io' show Platform;
+// import 'package:sentry_flutter/sentry_flutter.dart';
+
+// class BluetoothManager with ChangeNotifier {
+//   TimerState? _timerState;
+//   int? _currentRoundId;
+//   int? _currentMatchId;
+//   bool _isDiscoveringServices = false;
+//   bool _disposed = false; // Flag to check if disposed
+
+//   // Stream controllers.
+//   final StreamController<List<DataRow>> _messageStreamController =
+//       StreamController<List<DataRow>>.broadcast();
+//   final StreamController<String?> _disconnectionStreamController =
+//       StreamController<String?>.broadcast();
+
+//   // Bluetooth properties.
+//   BluetoothCharacteristic? writableCharacteristic;
+//   Map<Guid, String> readValues = {};
+//   Set<String> uniqueMessages = {};
+//   List<DataRow> rows = [];
+
+//   // Device connection maps.
+//   Map<String, bool> connectedDevices = {
+//     'BlueBoxer': false,
+//     'RedBoxer': false,
+//     'BoxerServer': false,
+//   };
+//   Map<String, BluetoothDevice?> connectedBluetoothDevices = {
+//     'BlueBoxer': null,
+//     'RedBoxer': null,
+//     'BoxerServer': null,
+//   };
+
+//   // Notification subscriptions.
+//   final Map<String, StreamSubscription<List<int>>> _notificationSubscriptions =
+//       {};
+//   bool isScanning = false;
+
+//   // Database helper.
+//   final DatabaseHelper dbHelper = DatabaseHelper();
+
+//   // Getters.
+//   int? get currentRoundId => _currentRoundId;
+//   int? get currentMatchId => _currentMatchId;
+//   Stream<List<DataRow>> get messageStream => _messageStreamController.stream;
+//   Stream<String?> get disconnectionStream =>
+//       _disconnectionStreamController.stream;
+//   bool get isConnectedDevice1 => connectedDevices['BlueBoxer'] ?? false;
+//   bool get isConnectedDevice2 => connectedDevices['RedBoxer'] ?? false;
+//   bool get isConnectedDevice3 => connectedDevices['BoxerServer'] ?? false;
+
+//   /// Helper method to get a unique device key.
+//   String getDeviceKey(BluetoothDevice device) {
+//     final platformName = device.platformName.trim();
+//     if (platformName.isEmpty || platformName.toLowerCase() == 'unknown') {
+//       return device.remoteId.toString();
+//     }
+//     return platformName;
+//   }
+
+//   /// Set TimerState.
+//   void setTimerState(TimerState timerState) {
+//     debugPrint('setTimerState(...) called with timerState=$timerState');
+//     _timerState = timerState;
+//   }
+
+//   /// Set current round ID.
+//   void setCurrentRoundId(int roundId) {
+//     _currentRoundId = roundId;
+//     _safeNotifyListeners();
+//   }
+
+//   /// Set current match ID.
+//   void setCurrentMatchId(int? matchId) {
+//     _currentMatchId = matchId;
+//     _safeNotifyListeners();
+//   }
+
+//   /// Discover services on all connected devices.
+//   Future<void> discoverServices() async {
+//     if (_isDiscoveringServices) {
+//       debugPrint("⏳ Service discovery already in progress, skipping new call.");
+//       return;
+//     }
+//     _isDiscoveringServices = true;
+//     debugPrint("🔄 discoverServices() called");
+
+//     try {
+//       List<Future<void>> discoveryFutures =
+//           connectedBluetoothDevices.entries.map((entry) async {
+//             final deviceName = entry.key;
+//             final BluetoothDevice? connectedDevice = entry.value;
+//             if (connectedDevice == null) {
+//               debugPrint("⚠️ Device $deviceName is null. Skipping.");
+//               return;
+//             }
+//             debugPrint("🔍 Discovering services for device: $deviceName");
+
+//             try {
+//               List<BluetoothService> servicesList =
+//                   await connectedDevice.discoverServices();
+//               debugPrint(
+//                 "📡 Discovered ${servicesList.length} services for $deviceName",
+//               );
+
+//               // Process each service and its characteristics.
+//               for (var service in servicesList) {
+//                 for (var characteristic in service.characteristics) {
+//                   if (characteristic.properties.notify) {
+//                     String charKey = '$deviceName-${characteristic.uuid}';
+//                     if (_notificationSubscriptions.containsKey(charKey)) {
+//                       debugPrint(
+//                         "⚠️ Listener already exists for $charKey, skipping.",
+//                       );
+//                       continue;
+//                     }
+//                     debugPrint(
+//                       "✅ Subscribing to characteristic ${characteristic.uuid} for $deviceName.",
+//                     );
+//                     await characteristic.setNotifyValue(true);
+//                     await Future.delayed(Duration(milliseconds: 400));
+
+//                     var subscription = characteristic.lastValueStream.listen(
+//                       (value) => _handleNotification(value, deviceName),
+//                       onError: (error, stackTrace) {
+//                         debugPrint(
+//                           "❌ Error in notification stream for $deviceName: $error",
+//                         );
+//                         debugPrint(stackTrace.toString());
+//                         Sentry.captureException(error, stackTrace: stackTrace);
+//                       },
+//                     );
+//                     _notificationSubscriptions[charKey] = subscription;
+//                     debugPrint(
+//                       "👂 Active Listeners Count: ${_notificationSubscriptions.length}",
+//                     );
+//                   }
+//                 }
+//               }
+//             } catch (e, stackTrace) {
+//               debugPrint("❌ Error discovering services for $deviceName: $e");
+//               Sentry.captureException(e, stackTrace: stackTrace);
+//             }
+//           }).toList();
+//       await Future.wait(discoveryFutures);
+//     } finally {
+//       _isDiscoveringServices = false;
+//     }
+//   }
+
+//   /// Process incoming notifications.
+//   // void _handleNotification(List<int> value, String deviceName) async {
+//   //   try {
+//   //     String decodedMessage = utf8.decode(value);
+//   //     debugPrint("📩 Received notification from $deviceName: $decodedMessage");
+
+//   //     try {
+//   //       final dynamic parsed = json.decode(decodedMessage);
+//   //       if (parsed is Map<String, dynamic> &&
+//   //           parsed["RoundState"] == "Completed") {
+//   //         _timerState?.endMatch();
+//   //       }
+//   //     } catch (jsonError) {
+//   //       // Not valid JSON or missing "RoundState": ignore.
+//   //     }
+
+//   //     final punchCount = _extractPunchCount(decodedMessage);
+//   //     final timestamp = _extractTimestamp(decodedMessage);
+//   //     String extractedDevice = _extractDevice(decodedMessage);
+//   //     final deviceStr =
+//   //         (extractedDevice == "UnknownDevice") ? deviceName : extractedDevice;
+//   //     final sensorValue = _extractSensorValue(decodedMessage);
+
+//   //     if (punchCount != null && timestamp != null && sensorValue != null) {
+//   //       String oppositeDevice =
+//   //           (deviceStr == "BlueBoxer") ? "RedBoxer" : "BlueBoxer";
+
+//   //       final newRow = DataRow(
+//   //         cells: [
+//   //           DataCell(Center(child: Text(deviceStr))),
+//   //           DataCell(Center(child: Text(oppositeDevice))),
+//   //           DataCell(Center(child: Text(punchCount.toString()))),
+//   //           DataCell(Center(child: Text(timestamp))),
+//   //           DataCell(Center(child: Text(sensorValue))),
+//   //         ],
+//   //       );
+//   //       rows.add(newRow);
+//   //       _messageStreamController.add(List.from(rows));
+//   //       _safeNotifyListeners();
+
+//   //       final localRoundId = _currentRoundId;
+//   //       final localMatchId = _currentMatchId;
+//   //       if (localMatchId == null) {
+//   //         _sendDataAndInsertToDatabase(
+//   //           deviceStr,
+//   //           oppositeDevice,
+//   //           punchCount,
+//   //           timestamp,
+//   //           sensorValue,
+//   //           0,
+//   //           null,
+//   //         );
+//   //       } else {
+//   //         _sendDataAndInsertToDatabase(
+//   //           deviceStr,
+//   //           oppositeDevice,
+//   //           punchCount,
+//   //           timestamp,
+//   //           sensorValue,
+//   //           localRoundId ?? 0,
+//   //           localMatchId,
+//   //         );
+//   //       }
+//   //     }
+//   //   } catch (e, stackTrace) {
+//   //     debugPrint("❌ 🔴 Error processing notification from $deviceName: $e");
+//   //     debugPrint(stackTrace.toString());
+//   //     Sentry.captureException(e, stackTrace: stackTrace);
+//   //   }
+//   // }
+
+//   void _handleNotification(List<int> value, String deviceName) async {
+//     // If the manager is disposed, do not process further.
+//     if (_disposed) return;
+//     try {
+//       String decodedMessage = utf8.decode(value);
+//       debugPrint("📩 Received notification from $deviceName: $decodedMessage");
+
+//       try {
+//         final dynamic parsed = json.decode(decodedMessage);
+//         if (parsed is Map<String, dynamic> &&
+//             parsed["RoundState"] == "Completed") {
+//           _timerState?.endMatch();
+//         }
+//       } catch (jsonError) {
+//         // Not valid JSON or missing "RoundState": ignore.
+//       }
+
+//       final punchCount = _extractPunchCount(decodedMessage);
+//       final timestamp = _extractTimestamp(decodedMessage);
+//       String extractedDevice = _extractDevice(decodedMessage);
+//       final deviceStr =
+//           (extractedDevice == "UnknownDevice") ? deviceName : extractedDevice;
+//       final sensorValue = _extractSensorValue(decodedMessage);
+
+//       if (punchCount != null && timestamp != null && sensorValue != null) {
+//         String oppositeDevice =
+//             (deviceStr == "BlueBoxer") ? "RedBoxer" : "BlueBoxer";
+
+//         final newRow = DataRow(
+//           cells: [
+//             DataCell(Center(child: Text(deviceStr))),
+//             DataCell(Center(child: Text(oppositeDevice))),
+//             DataCell(Center(child: Text(punchCount.toString()))),
+//             DataCell(Center(child: Text(timestamp))),
+//             DataCell(Center(child: Text(sensorValue))),
+//           ],
+//         );
+//         rows.add(newRow);
+//         _messageStreamController.add(List.from(rows));
+//         _safeNotifyListeners();
+
+//         final localRoundId = _currentRoundId;
+//         final localMatchId = _currentMatchId;
+//         if (localMatchId == null) {
+//           _sendDataAndInsertToDatabase(
+//             deviceStr,
+//             oppositeDevice,
+//             punchCount,
+//             timestamp,
+//             sensorValue,
+//             0,
+//             null,
+//           );
+//         } else {
+//           _sendDataAndInsertToDatabase(
+//             deviceStr,
+//             oppositeDevice,
+//             punchCount,
+//             timestamp,
+//             sensorValue,
+//             localRoundId ?? 0,
+//             localMatchId,
+//           );
+//         }
+//       }
+//     } catch (e, stackTrace) {
+//       if (!_disposed) {
+//         // Check again before logging errors
+//         debugPrint("❌ 🔴 Error processing notification from $deviceName: $e");
+//         debugPrint(stackTrace.toString());
+//         Sentry.captureException(e, stackTrace: stackTrace);
+//       }
+//     }
+//   }
+
+//   /// Insert data into the database for StartMatch mode.
+//   Future<void> _insertDataToDatabase(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//     int roundId,
+//     int matchId,
+//   ) async {
+//     try {
+//       await dbHelper.insertMessage(
+//         deviceStr,
+//         oppositeDevice,
+//         punchCount,
+//         timestamp,
+//         sensorValue,
+//         roundId,
+//         matchId,
+//       );
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ 💾 🔴 Error inserting message into DB: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Insert training data into the database.
+//   Future<void> _insertTrainingDataToDatabase(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//   ) async {
+//     try {
+//       await dbHelper.insertTrainingData(
+//         deviceStr,
+//         oppositeDevice,
+//         punchCount,
+//         timestamp,
+//         sensorValue,
+//       );
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ 💾 🔴 Error inserting training data into DB: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Send data and insert into the database concurrently.
+//   void _sendDataAndInsertToDatabase(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//     int roundId,
+//     int? matchId,
+//   ) {
+//     if (matchId != null) {
+//       Future.wait([
+//         _sendDataToBoxerServer(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         ),
+//         _insertDataToDatabase(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//           roundId,
+//           matchId,
+//         ),
+//       ]);
+//     } else {
+//       Future.wait([
+//         _sendDataToBoxerServer(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         ),
+//         _insertTrainingDataToDatabase(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         ),
+//       ]);
+//     }
+//   }
+
+//   /// Helper function to send data to BoxerServer.
+//   Future<void> _sendDataToBoxerServer(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//   ) async {
+//     if (!isDeviceConnected("BoxerServer")) {
+//       debugPrint(
+//         "❌ 🔴 BoxerServer not connected. Skipping sendDataToBoxerServer.",
+//       );
+//       return;
+//     }
+//     try {
+//       await sendDataToBoxerServer(
+//         deviceStr: deviceStr,
+//         oppositeDevice: oppositeDevice,
+//         punchCount: punchCount,
+//         timestamp: timestamp,
+//         sensorValue: sensorValue,
+//       );
+//     } catch (e, stackTrace) {
+//       debugPrint("➡️ ❌ 🔴 Error sending data to BoxerServer: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Connect to a device.
+//   // Future<void> connectToDevice(BluetoothDevice device) async {
+//   //   final deviceKey = getDeviceKey(device);
+//   //   if (connectedBluetoothDevices[deviceKey] != null) {
+//   //     debugPrint("Device $deviceKey is already connected.");
+//   //     return;
+//   //   }
+//   //   try {
+//   //     await device.connect(timeout: const Duration(seconds: 5));
+//   //     connectedBluetoothDevices[deviceKey] = device;
+//   //     _updateDeviceConnectionStatus(deviceKey, true);
+//   //     _safeNotifyListeners();
+
+//   //     // Ensure the connection is fully established.
+//   //     await Future.delayed(const Duration(seconds: 1));
+
+//   //     // Listen for disconnection events.
+//   //     late final StreamSubscription<BluetoothConnectionState> disconnectionSubscription;
+//   //     disconnectionSubscription = device.connectionState.listen((connectionState) {
+//   //       if (connectionState == BluetoothConnectionState.disconnected) {
+//   //         _updateDeviceConnectionStatus(deviceKey, false);
+//   //         connectedBluetoothDevices[deviceKey] = null;
+//   //         _disconnectionStreamController.add(deviceKey);
+//   //         disconnectionSubscription.cancel();
+//   //         _safeNotifyListeners();
+//   //         Future.delayed(const Duration(seconds: 3), () {
+//   //           debugPrint("Attempting to reconnect to $deviceKey...");
+//   //           connectToDevice(device).catchError((e, stackTrace) {
+//   //             debugPrint("Reconnection to $deviceKey failed: $e");
+//   //             Sentry.captureException(e, stackTrace: stackTrace);
+//   //           });
+//   //         });
+//   //       }
+//   //     });
+
+//   //     // Request a larger MTU.
+//   //     try {
+//   //       int newMtu = await device.requestMtu(512);
+//   //       debugPrint('Requested MTU = 512, actually set to: $newMtu');
+//   //     } catch (mtuError, stackTrace) {
+//   //       debugPrint('Error requesting MTU: $mtuError');
+//   //       Sentry.captureException(mtuError, stackTrace: stackTrace);
+//   //     }
+
+//   //     // Discover services.
+//   //     await discoverServices();
+//   //   } catch (e, stackTrace) {
+//   //     debugPrint("Error connecting to device: $e");
+//   //     _updateDeviceConnectionStatus(deviceKey, false);
+//   //     _safeNotifyListeners();
+//   //     Sentry.captureException(e, stackTrace: stackTrace);
+//   //   }
+//   // }
+
+//   Future<void> connectToDevice(BluetoothDevice device) async {
+//     final deviceKey = getDeviceKey(device);
+//     if (connectedBluetoothDevices[deviceKey] != null) {
+//       debugPrint("Device $deviceKey is already connected.");
+//       return;
+//     }
+//     try {
+//       await device.connect(timeout: const Duration(seconds: 5));
+//       connectedBluetoothDevices[deviceKey] = device;
+//       _updateDeviceConnectionStatus(deviceKey, true);
+//       _safeNotifyListeners();
+
+//       // Ensure the connection is fully established.
+//       await Future.delayed(const Duration(seconds: 1));
+
+//       // Listen for disconnection events.
+//       late final StreamSubscription<BluetoothConnectionState>
+//       disconnectionSubscription;
+//       disconnectionSubscription = device.connectionState.listen((
+//         connectionState,
+//       ) {
+//         if (connectionState == BluetoothConnectionState.disconnected) {
+//           _updateDeviceConnectionStatus(deviceKey, false);
+//           connectedBluetoothDevices[deviceKey] = null;
+//           _disconnectionStreamController.add(deviceKey);
+//           disconnectionSubscription.cancel();
+//           _safeNotifyListeners();
+//           Future.delayed(const Duration(seconds: 3), () {
+//             // Ensure the provider is still active before attempting reconnection.
+//             if (!_disposed) {
+//               debugPrint("Attempting to reconnect to $deviceKey...");
+//               connectToDevice(device).catchError((e, stackTrace) {
+//                 debugPrint("Reconnection to $deviceKey failed: $e");
+//                 Sentry.captureException(e, stackTrace: stackTrace);
+//               });
+//             }
+//           });
+//         }
+//       });
+
+//       // Request a larger MTU only on Android.
+//       if (Platform.isAndroid) {
+//         try {
+//           int newMtu = await device.requestMtu(512);
+//           debugPrint('Requested MTU = 512, actually set to: $newMtu');
+//         } catch (mtuError, stackTrace) {
+//           debugPrint('Error requesting MTU: $mtuError');
+//           Sentry.captureException(mtuError, stackTrace: stackTrace);
+//         }
+//       }
+
+//       // Discover services.
+//       await discoverServices();
+//     } catch (e, stackTrace) {
+//       debugPrint("Error connecting to device: $e");
+//       _updateDeviceConnectionStatus(deviceKey, false);
+//       _safeNotifyListeners();
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Disconnect from all devices.
+//   Future<void> disconnectFromDevice() async {
+//     List<Future<void>> disconnectFutures = [];
+//     for (String deviceName in connectedDevices.keys) {
+//       BluetoothDevice? connectedDevice = connectedBluetoothDevices[deviceName];
+//       if (connectedDevice != null) {
+//         disconnectFutures.add(_disconnectDevice(deviceName, connectedDevice));
+//       }
+//     }
+//     await Future.wait(disconnectFutures);
+//     _safeNotifyListeners();
+//   }
+
+//   Future<void> _disconnectDevice(
+//     String deviceName,
+//     BluetoothDevice device,
+//   ) async {
+//     try {
+//       await device.disconnect();
+//       await device.connectionState
+//           .firstWhere(
+//             (state) => state == BluetoothConnectionState.disconnected,
+//             orElse: () => BluetoothConnectionState.disconnected,
+//           )
+//           .timeout(
+//             const Duration(seconds: 5),
+//             onTimeout: () => BluetoothConnectionState.disconnected,
+//           );
+//       connectedBluetoothDevices[deviceName] = null;
+//       _updateDeviceConnectionStatus(deviceName, false);
+//       _disconnectionStreamController.add(deviceName);
+//       writableCharacteristic = null;
+//     } catch (e, stackTrace) {
+//       debugPrint("Error disconnecting from device $deviceName: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   void _updateDeviceConnectionStatus(String deviceName, bool status) {
+//     if (!connectedDevices.containsKey(deviceName)) {
+//       debugPrint("Warning: $deviceName is not registered in connectedDevices.");
+//       return;
+//     }
+//     if (connectedDevices[deviceName] != status) {
+//       connectedDevices[deviceName] = status;
+//       debugPrint('$deviceName connection status updated to: $status');
+//       _safeNotifyListeners();
+//     }
+//   }
+
+//   bool isDeviceConnected(String deviceName) =>
+//       connectedDevices[deviceName] ?? false;
+
+//   /// Scan for devices.
+//   Future<void> scanForDevices() async {
+//     if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) {
+//       debugPrint("BLE scanning is not supported on this platform.");
+//       return;
+//     }
+//     if (isScanning) {
+//       debugPrint("Scan already in progress. Skipping new scan request.");
+//       return;
+//     }
+//     isScanning = true;
+//     _safeNotifyListeners();
+//     debugPrint("Starting BLE scan...");
+//     try {
+//       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 3));
+//     } catch (e, stackTrace) {
+//       debugPrint("Error during scan: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     } finally {
+//       isScanning = false;
+//       _safeNotifyListeners();
+//       debugPrint("BLE scan finished.");
+//     }
+//   }
+
+//   Set<String> getUniqueMessages() {
+//     return UnmodifiableSetView(uniqueMessages);
+//   }
+
+//   // Precompiled regular expressions.
+//   static final RegExp _deviceRegex = RegExp(r'Device:\s*(\S+)');
+//   static final RegExp _punchCountRegex = RegExp(r'Punch Count:\s*([\d:]+)');
+//   static final RegExp _timestampRegex = RegExp(r'Timestamp:\s*([\d:]+)');
+//   static final RegExp _sensorValueRegex = RegExp(r'Sensor millivolts:\s*(\d+)');
+
+//   String? _extractValue(String message, RegExp regex) {
+//     final match = regex.firstMatch(message);
+//     return match?.group(1);
+//   }
+
+//   String _extractDevice(String message) =>
+//       _extractValue(message, _deviceRegex) ?? "UnknownDevice";
+//   String? _extractPunchCount(String message) =>
+//       _extractValue(message, _punchCountRegex);
+//   String? _extractTimestamp(String message) =>
+//       _extractValue(message, _timestampRegex);
+//   String? _extractSensorValue(String message) =>
+//       _extractValue(message, _sensorValueRegex);
+
+//   /// Clear the internal table and notify listeners.
+//   void clearTable() {
+//     if (rows.isEmpty) {
+//       debugPrint("Table is already clear.");
+//       return;
+//     }
+//     rows.clear();
+//     if (!_messageStreamController.isClosed) {
+//       _messageStreamController.add([]);
+//     }
+//     _safeNotifyListeners();
+//   }
+
+//   /// Send a message to all connected devices.
+//   Future<void> sendMessageToAllConnectedDevices(String message) async {
+//     final trimmedMessage = message.trim();
+//     if (trimmedMessage.isEmpty || trimmedMessage == "[]") {
+//       debugPrint("Refusing to send empty/bracket message.");
+//       return;
+//     }
+//     List<Future<void>> sendFutures = [];
+//     for (var entry in connectedBluetoothDevices.entries) {
+//       final deviceName = entry.key;
+//       final BluetoothDevice? device = entry.value;
+//       if (device != null) {
+//         sendFutures.add(
+//           _sendMessageToDevice(device, deviceName, trimmedMessage).catchError((
+//             e,
+//             stackTrace,
+//           ) {
+//             debugPrint("Error sending message to $deviceName: $e");
+//             Sentry.captureException(e, stackTrace: stackTrace);
+//           }),
+//         );
+//       } else {
+//         debugPrint("Device $deviceName is not connected.");
+//       }
+//     }
+//     if (sendFutures.isEmpty) {
+//       debugPrint("No connected devices available to send the message.");
+//       return;
+//     }
+//     await Future.wait(sendFutures);
+//   }
+
+//   Future<void> _sendMessageToDevice(
+//     BluetoothDevice device,
+//     String deviceName,
+//     String message,
+//   ) async {
+//     final services = await device.discoverServices();
+//     final List<Future<void>> writeFutures = [];
+//     for (var service in services) {
+//       for (var characteristic in service.characteristics) {
+//         if (characteristic.properties.write) {
+//           debugPrint(
+//             "Discovered writable characteristic ${characteristic.uuid} on $deviceName",
+//           );
+//           writeFutures.add(
+//             characteristic
+//                 .write(utf8.encode(message), withoutResponse: false)
+//                 .then(
+//                   (_) => debugPrint(
+//                     "Message sent to $deviceName via ${characteristic.uuid}: $message",
+//                   ),
+//                 )
+//                 .catchError((error, stackTrace) {
+//                   debugPrint(
+//                     "Error sending message via ${characteristic.uuid} on $deviceName: $error",
+//                   );
+//                   Sentry.captureException(error, stackTrace: stackTrace);
+//                 }),
+//           );
+//         }
+//       }
+//     }
+//     if (writeFutures.isEmpty) {
+//       debugPrint(
+//         "No writable characteristics found on $deviceName to send message.",
+//       );
+//     } else {
+//       await Future.wait(writeFutures);
+//     }
+//   }
+
+//   Future<void> sendMessageToConnectedDevice(String message) async {
+//     final trimmedMessage = message.trim();
+//     if (trimmedMessage.isEmpty || trimmedMessage == "[]") {
+//       debugPrint("Refusing to send empty/bracket message.");
+//       return;
+//     }
+//     if (writableCharacteristic != null) {
+//       try {
+//         final dataToSend = utf8.encode(trimmedMessage);
+//         await writableCharacteristic!.write(dataToSend, withoutResponse: false);
+//         debugPrint("Message sent via cached characteristic: $trimmedMessage");
+//         return;
+//       } catch (e, stackTrace) {
+//         debugPrint("Error sending message via cached characteristic: $e");
+//         Sentry.captureException(e, stackTrace: stackTrace);
+//         debugPrint("Falling back to service discovery.");
+//       }
+//     } else {
+//       debugPrint(
+//         "No cached writable characteristic found. Falling back to service discovery.",
+//       );
+//     }
+//     BluetoothDevice? fallbackDevice;
+//     String fallbackDeviceName = "";
+//     for (final entry in connectedBluetoothDevices.entries) {
+//       if (entry.value != null) {
+//         fallbackDevice = entry.value;
+//         fallbackDeviceName = entry.key;
+//         break;
+//       }
+//     }
+//     if (fallbackDevice == null) {
+//       debugPrint("No connected devices available for fallback.");
+//       return;
+//     }
+//     try {
+//       await _sendMessageToDevice(
+//         fallbackDevice,
+//         fallbackDeviceName,
+//         trimmedMessage,
+//       );
+//     } catch (e, stackTrace) {
+//       debugPrint("Error sending message via service discovery: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Sends JSON-formatted data to BoxerServer.
+//   Future<void> sendDataToBoxerServer({
+//     required String deviceStr,
+//     required String oppositeDevice,
+//     required String punchCount,
+//     required String timestamp,
+//     required String sensorValue,
+//   }) async {
+//     final dataMap = {
+//       "deviceStr": deviceStr,
+//       "oppositeDevice": oppositeDevice,
+//       "punchCount": punchCount,
+//       "timestamp": timestamp,
+//       "sensorValue": sensorValue,
+//     };
+//     final dataMessage = jsonEncode(dataMap);
+//     debugPrint("Sending data to BoxerServer (JSON): $dataMessage");
+
+//     final boxerServerDevice = connectedBluetoothDevices["BoxerServer"];
+//     if (boxerServerDevice == null) {
+//       debugPrint("🚀 ❌ BoxerServer is not connected. Cannot send data.");
+//       return;
+//     }
+//     try {
+//       await _sendMessageToDevice(boxerServerDevice, "BoxerServer", dataMessage);
+//       debugPrint("📤 ➡️ Data sent to BoxerServer successfully.");
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ Error sending data to BoxerServer: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Dispose method to clean up stream controllers and subscriptions.
+//   void disposeBluetooth() {
+//     try {
+//       _messageStreamController.close();
+//       _disconnectionStreamController.close();
+//       _notificationSubscriptions.forEach((_, subscription) {
+//         subscription.cancel();
+//       });
+//       _notificationSubscriptions.clear();
+//     } catch (e, stackTrace) {
+//       debugPrint("Error during BluetoothManager dispose: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   // Safely call notifyListeners if not disposed.
+//   void _safeNotifyListeners() {
+//     if (!_disposed) {
+//       notifyListeners();
+//     }
+//   }
+
+//   @override
+//   void dispose() {
+//     disposeBluetooth();
+//     _disposed = true;
+//     super.dispose();
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+// Code 2
+// import 'package:box_sensors/state/timer_state.dart';
+// import 'package:flutter/material.dart';
+// import 'dart:async'; 
+// import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+// import 'dart:convert';
+// import 'package:box_sensors/database_tools/database_helper.dart';
+// import 'package:flutter/foundation.dart' show kIsWeb;
+// import 'dart:collection';
+// import 'dart:io' show Platform; // For Platform.isAndroid, etc.
+// import 'package:sentry_flutter/sentry_flutter.dart'; // Optional: for error logging
+
+// class BluetoothManager with ChangeNotifier {
+//   TimerState? _timerState;
+//   void setTimerState(TimerState timerState) {
+//     debugPrint('setTimerState(...) called with timerState=$timerState');
+//     _timerState = timerState;
+//   }
+
+//   int? _currentRoundId;
+//   int? get currentRoundId => _currentRoundId;
+
+//   void setCurrentRoundId(int roundId) {
+//     _currentRoundId = roundId;
+//     notifyListeners();
+//   }
+
+//   int? _currentMatchId;
+//   int? get currentMatchId => _currentMatchId;
+
+//   void setCurrentMatchId(int? matchId) {
+//     _currentMatchId = matchId;
+//     notifyListeners();
+//   }
+
+//   final StreamController<List<DataRow>> _messageStreamController =
+//       StreamController<List<DataRow>>.broadcast();
+//   Stream<List<DataRow>> get messageStream => _messageStreamController.stream;
+
+//   final StreamController<String?> _disconnectionStreamController =
+//       StreamController<String?>.broadcast();
+//   Stream<String?> get disconnectionStream =>
+//       _disconnectionStreamController.stream;
+
+//   BluetoothCharacteristic? writableCharacteristic;
+//   Map<Guid, String> readValues = {};
+
+//   Set<String> uniqueMessages = {}; // Stores unique messages
+//   List<DataRow> rows = [];
+
+//   bool _isDiscoveringServices = false; // To prevent overlapping service discoveries
+
+//   // Maps for the three devices.
+//   Map<String, bool> connectedDevices = {
+//     'BlueBoxer': false,
+//     'RedBoxer': false,
+//     'BoxerServer': false,
+//   };
+
+//   Map<String, BluetoothDevice?> connectedBluetoothDevices = {
+//     'BlueBoxer': null,
+//     'RedBoxer': null,
+//     'BoxerServer': null,
+//   };
+
+//   // Track notification subscriptions by a unique key.
+//   final Map<String, StreamSubscription<List<int>>> _notificationSubscriptions =
+//       {};
+
+//   bool isScanning = false;
+
+//   bool get isConnectedDevice1 => connectedDevices['BlueBoxer'] ?? false;
+//   bool get isConnectedDevice2 => connectedDevices['RedBoxer'] ?? false;
+//   bool get isConnectedDevice3 => connectedDevices['BoxerServer'] ?? false;
+
+//   // Database helper initialization.
+//   final DatabaseHelper dbHelper = DatabaseHelper();
+
+//   /// Helper method to get a unique device key.
+//   String getDeviceKey(BluetoothDevice device) {
+//     final platformName = device.platformName.trim();
+//     if (platformName.isEmpty || platformName.toLowerCase() == 'unknown') {
+//       return device.remoteId.toString();
+//     }
+//     return platformName;
+//   }
+
+//   /// Discover services on all connected devices.
+//   Future<void> discoverServices() async {
+//     if (_isDiscoveringServices) {
+//       debugPrint("⏳ Service discovery already in progress, skipping new call.");
+//       return;
+//     }
+
+//     _isDiscoveringServices = true;
+//     debugPrint("🔄 discoverServices() called");
+
+//     try {
+//       List<Future<void>> discoveryFutures =
+//           connectedBluetoothDevices.entries.map((entry) async {
+//         final deviceName = entry.key;
+//         final BluetoothDevice? connectedDevice = entry.value;
+//         if (connectedDevice == null) {
+//           debugPrint("⚠️ Device $deviceName is null. Skipping.");
+//           return;
+//         }
+
+//         debugPrint("🔍 Discovering services for device: $deviceName");
+
+//         try {
+//           List<BluetoothService> servicesList =
+//               await connectedDevice.discoverServices();
+//           debugPrint(
+//             "📡 Discovered ${servicesList.length} services for $deviceName",
+//           );
+
+//           // Process each service and its characteristics.
+//           for (var service in servicesList) {
+//             for (var characteristic in service.characteristics) {
+//               if (characteristic.properties.notify) {
+//                 String charKey = '$deviceName-${characteristic.uuid}';
+
+//                 if (_notificationSubscriptions.containsKey(charKey)) {
+//                   debugPrint(
+//                     "⚠️ Listener already exists for $charKey, skipping.",
+//                   );
+//                   continue;
+//                 }
+
+//                 debugPrint(
+//                   "✅ Subscribing to characteristic ${characteristic.uuid} for $deviceName.",
+//                 );
+//                 await characteristic.setNotifyValue(true);
+
+//                 // Added delay to ensure subscription is established.
+//                 await Future.delayed(Duration(milliseconds: 400));
+
+//                 var subscription = characteristic.lastValueStream.listen(
+//                   (value) => _handleNotification(value, deviceName),
+//                   onError: (error, stackTrace) {
+//                     debugPrint(
+//                       "❌ Error in notification stream for $deviceName: $error",
+//                     );
+//                     debugPrint(stackTrace.toString());
+//                     // Optionally capture the error with Sentry:
+//                     Sentry.captureException(error, stackTrace: stackTrace);
+//                   },
+//                 );
+
+//                 _notificationSubscriptions[charKey] = subscription;
+//                 debugPrint("👂 Active Listeners Count: ${_notificationSubscriptions.length}");
+//               }
+//             }
+//           }
+//         } catch (e, stackTrace) {
+//           debugPrint("❌ Error discovering services for $deviceName: $e");
+//           Sentry.captureException(e, stackTrace: stackTrace);
+//         }
+//       }).toList();
+
+//       await Future.wait(discoveryFutures);
+//     } finally {
+//       _isDiscoveringServices = false;
+//     }
+//   }
+
+//   /// Process incoming notifications.
+//   void _handleNotification(List<int> value, String deviceName) async {
+//     try {
+//       String decodedMessage = utf8.decode(value);
+//       debugPrint("📩 Received notification from $deviceName: $decodedMessage");
+
+//       try {
+//         final dynamic parsed = json.decode(decodedMessage);
+//         if (parsed is Map<String, dynamic> &&
+//             parsed["RoundState"] == "Completed") {
+//           _timerState?.endMatch();
+//         }
+//       } catch (jsonError) {
+//         // Not valid JSON or missing "RoundState": ignore.
+//       }
+
+//       final punchCount = _extractPunchCount(decodedMessage);
+//       final timestamp = _extractTimestamp(decodedMessage);
+//       String extractedDevice = _extractDevice(decodedMessage);
+//       final deviceStr =
+//           (extractedDevice == "UnknownDevice") ? deviceName : extractedDevice;
+//       final sensorValue = _extractSensorValue(decodedMessage);
+
+//       if (punchCount != null && timestamp != null && sensorValue != null) {
+//         String oppositeDevice =
+//             (deviceStr == "BlueBoxer") ? "RedBoxer" : "BlueBoxer";
+
+//         final newRow = DataRow(
+//           cells: [
+//             DataCell(Center(child: Text(deviceStr))),
+//             DataCell(Center(child: Text(oppositeDevice))),
+//             DataCell(Center(child: Text(punchCount.toString()))),
+//             DataCell(Center(child: Text(timestamp))),
+//             DataCell(Center(child: Text(sensorValue))),
+//           ],
+//         );
+//         rows.add(newRow);
+//         _messageStreamController.add(List.from(rows));
+//         notifyListeners();
+
+//         // Store current IDs locally to avoid race conditions.
+//         final localRoundId = _currentRoundId;
+//         final localMatchId = _currentMatchId;
+
+//         if (localMatchId == null) {
+//           _sendDataAndInsertToDatabase(
+//             deviceStr,
+//             oppositeDevice,
+//             punchCount,
+//             timestamp,
+//             sensorValue,
+//             0,
+//             null,
+//           );
+//         } else {
+//           _sendDataAndInsertToDatabase(
+//             deviceStr,
+//             oppositeDevice,
+//             punchCount,
+//             timestamp,
+//             sensorValue,
+//             localRoundId ?? 0,
+//             localMatchId,
+//           );
+//         }
+//       }
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ 🔴 Error processing notification from $deviceName: $e");
+//       debugPrint(stackTrace.toString());
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Insert data into the database for StartMatch mode.
+//   Future<void> _insertDataToDatabase(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//     int roundId,
+//     int matchId,
+//   ) async {
+//     try {
+//       await dbHelper.insertMessage(
+//         deviceStr,
+//         oppositeDevice,
+//         punchCount,
+//         timestamp,
+//         sensorValue,
+//         roundId,
+//         matchId,
+//       );
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ 💾 🔴 Error inserting message into DB: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Insert training data into the database.
+//   Future<void> _insertTrainingDataToDatabase(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//   ) async {
+//     try {
+//       await dbHelper.insertTrainingData(
+//         deviceStr,
+//         oppositeDevice,
+//         punchCount,
+//         timestamp,
+//         sensorValue,
+//       );
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ 💾 🔴 Error inserting training data into DB: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Send data and insert into the database concurrently.
+//   void _sendDataAndInsertToDatabase(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//     int roundId,
+//     int? matchId,
+//   ) {
+//     if (matchId != null) {
+//       Future.wait([
+//         _sendDataToBoxerServer(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         ),
+//         _insertDataToDatabase(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//           roundId,
+//           matchId,
+//         ),
+//       ]);
+//     } else {
+//       Future.wait([
+//         _sendDataToBoxerServer(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         ),
+//         _insertTrainingDataToDatabase(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         ),
+//       ]);
+//     }
+//   }
+
+//   /// Helper function to send data to BoxerServer.
+//   Future<void> _sendDataToBoxerServer(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//   ) async {
+//     if (!isDeviceConnected("BoxerServer")) {
+//       debugPrint("❌ 🔴 BoxerServer not connected. Skipping sendDataToBoxerServer.");
+//       return;
+//     }
+
+//     try {
+//       await sendDataToBoxerServer(
+//         deviceStr: deviceStr,
+//         oppositeDevice: oppositeDevice,
+//         punchCount: punchCount,
+//         timestamp: timestamp,
+//         sensorValue: sensorValue,
+//       );
+//     } catch (e, stackTrace) {
+//       debugPrint("➡️ ❌ 🔴 Error sending data to BoxerServer: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Connect to a device.
+//   Future<void> connectToDevice(BluetoothDevice device) async {
+//     final deviceKey = getDeviceKey(device);
+
+//     if (connectedBluetoothDevices[deviceKey] != null) {
+//       debugPrint("Device $deviceKey is already connected.");
+//       return;
+//     }
+
+//     try {
+//       await device.connect(timeout: const Duration(seconds: 5));
+//       connectedBluetoothDevices[deviceKey] = device;
+//       _updateDeviceConnectionStatus(deviceKey, true);
+//       notifyListeners();
+
+//       // Ensure the connection is fully established.
+//       await Future.delayed(const Duration(seconds: 1));
+
+//       // Listen for disconnection events.
+//       late final StreamSubscription<BluetoothConnectionState> disconnectionSubscription;
+//       disconnectionSubscription = device.connectionState.listen((connectionState) {
+//         if (connectionState == BluetoothConnectionState.disconnected) {
+//           _updateDeviceConnectionStatus(deviceKey, false);
+//           connectedBluetoothDevices[deviceKey] = null;
+//           _disconnectionStreamController.add(deviceKey);
+//           disconnectionSubscription.cancel();
+//           notifyListeners();
+
+//           // Optional: Attempt reconnection after a delay.
+//           Future.delayed(const Duration(seconds: 3), () {
+//             debugPrint("Attempting to reconnect to $deviceKey...");
+//             connectToDevice(device).catchError((e, stackTrace) {
+//               debugPrint("Reconnection to $deviceKey failed: $e");
+//               Sentry.captureException(e, stackTrace: stackTrace);
+//             });
+//           });
+//         }
+//       });
+
+//       // Request a larger MTU.
+//       try {
+//         int newMtu = await device.requestMtu(512);
+//         debugPrint('Requested MTU = 512, actually set to: $newMtu');
+//       } catch (mtuError, stackTrace) {
+//         debugPrint('Error requesting MTU: $mtuError');
+//         Sentry.captureException(mtuError, stackTrace: stackTrace);
+//       }
+
+//       // Discover services.
+//       await discoverServices();
+//     } catch (e, stackTrace) {
+//       debugPrint("Error connecting to device: $e");
+//       _updateDeviceConnectionStatus(deviceKey, false);
+//       notifyListeners();
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Disconnect from all devices.
+//   Future<void> disconnectFromDevice() async {
+//     List<Future<void>> disconnectFutures = [];
+
+//     for (String deviceName in connectedDevices.keys) {
+//       BluetoothDevice? connectedDevice = connectedBluetoothDevices[deviceName];
+//       if (connectedDevice != null) {
+//         disconnectFutures.add(_disconnectDevice(deviceName, connectedDevice));
+//       }
+//     }
+
+//     await Future.wait(disconnectFutures);
+//     notifyListeners();
+//   }
+
+//   Future<void> _disconnectDevice(
+//     String deviceName,
+//     BluetoothDevice device,
+//   ) async {
+//     try {
+//       await device.disconnect();
+//       await device.connectionState.firstWhere(
+//         (state) => state == BluetoothConnectionState.disconnected,
+//         orElse: () => BluetoothConnectionState.disconnected,
+//       ).timeout(
+//         const Duration(seconds: 5),
+//         onTimeout: () => BluetoothConnectionState.disconnected,
+//       );
+//       connectedBluetoothDevices[deviceName] = null;
+//       _updateDeviceConnectionStatus(deviceName, false);
+//       _disconnectionStreamController.add(deviceName);
+//       writableCharacteristic = null;
+//     } catch (e, stackTrace) {
+//       debugPrint("Error disconnecting from device $deviceName: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   void _updateDeviceConnectionStatus(String deviceName, bool status) {
+//     if (!connectedDevices.containsKey(deviceName)) {
+//       debugPrint("Warning: $deviceName is not registered in connectedDevices.");
+//       return;
+//     }
+//     if (connectedDevices[deviceName] != status) {
+//       connectedDevices[deviceName] = status;
+//       debugPrint('$deviceName connection status updated to: $status');
+//       notifyListeners();
+//     }
+//   }
+
+//   bool isDeviceConnected(String deviceName) =>
+//       connectedDevices[deviceName] ?? false;
+
+//   /// Scan for devices.
+//   Future<void> scanForDevices() async {
+//     if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) {
+//       debugPrint("BLE scanning is not supported on this platform.");
+//       return;
+//     }
+
+//     if (isScanning) {
+//       debugPrint("Scan already in progress. Skipping new scan request.");
+//       return;
+//     }
+
+//     isScanning = true;
+//     notifyListeners();
+//     debugPrint("Starting BLE scan...");
+
+//     try {
+//       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 3));
+//     } catch (e, stackTrace) {
+//       debugPrint("Error during scan: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     } finally {
+//       isScanning = false;
+//       notifyListeners();
+//       debugPrint("BLE scan finished.");
+//     }
+//   }
+
+//   Set<String> getUniqueMessages() {
+//     return UnmodifiableSetView(uniqueMessages);
+//   }
+
+//   // Precompiled regular expressions.
+//   static final RegExp _deviceRegex = RegExp(r'Device:\s*(\S+)');
+//   static final RegExp _punchCountRegex = RegExp(r'Punch Count:\s*([\d:]+)');
+//   static final RegExp _timestampRegex = RegExp(r'Timestamp:\s*([\d:]+)');
+//   static final RegExp _sensorValueRegex = RegExp(r'Sensor millivolts:\s*(\d+)');
+
+//   String? _extractValue(String message, RegExp regex) {
+//     final match = regex.firstMatch(message);
+//     return match?.group(1);
+//   }
+
+//   String _extractDevice(String message) =>
+//       _extractValue(message, _deviceRegex) ?? "UnknownDevice";
+
+//   String? _extractPunchCount(String message) =>
+//       _extractValue(message, _punchCountRegex);
+
+//   String? _extractTimestamp(String message) =>
+//       _extractValue(message, _timestampRegex);
+
+//   String? _extractSensorValue(String message) =>
+//       _extractValue(message, _sensorValueRegex);
+
+//   /// Clear the internal table and notify listeners.
+//   void clearTable() {
+//     if (rows.isEmpty) {
+//       debugPrint("Table is already clear.");
+//       return;
+//     }
+//     rows.clear();
+//     if (!_messageStreamController.isClosed) {
+//       _messageStreamController.add([]);
+//     }
+//     notifyListeners();
+//   }
+
+//   /// Send a message to all connected devices.
+//   Future<void> sendMessageToAllConnectedDevices(String message) async {
+//     final trimmedMessage = message.trim();
+//     if (trimmedMessage.isEmpty || trimmedMessage == "[]") {
+//       debugPrint("Refusing to send empty/bracket message.");
+//       return;
+//     }
+//     List<Future<void>> sendFutures = [];
+//     for (var entry in connectedBluetoothDevices.entries) {
+//       final deviceName = entry.key;
+//       final BluetoothDevice? device = entry.value;
+//       if (device != null) {
+//         sendFutures.add(
+//           _sendMessageToDevice(device, deviceName, trimmedMessage).catchError(
+//             (e, stackTrace) {
+//               debugPrint("Error sending message to $deviceName: $e");
+//               Sentry.captureException(e, stackTrace: stackTrace);
+//             },
+//           ),
+//         );
+//       } else {
+//         debugPrint("Device $deviceName is not connected.");
+//       }
+//     }
+//     if (sendFutures.isEmpty) {
+//       debugPrint("No connected devices available to send the message.");
+//       return;
+//     }
+//     await Future.wait(sendFutures);
+//   }
+
+//   Future<void> _sendMessageToDevice(
+//     BluetoothDevice device,
+//     String deviceName,
+//     String message,
+//   ) async {
+//     final services = await device.discoverServices();
+//     final List<Future<void>> writeFutures = [];
+//     for (var service in services) {
+//       for (var characteristic in service.characteristics) {
+//         if (characteristic.properties.write) {
+//           debugPrint("Discovered writable characteristic ${characteristic.uuid} on $deviceName");
+//           writeFutures.add(
+//             characteristic
+//                 .write(utf8.encode(message), withoutResponse: false)
+//                 .then((_) => debugPrint("Message sent to $deviceName via ${characteristic.uuid}: $message"))
+//                 .catchError((error, stackTrace) {
+//                   debugPrint("Error sending message via ${characteristic.uuid} on $deviceName: $error");
+//                   Sentry.captureException(error, stackTrace: stackTrace);
+//                 }),
+//           );
+//         }
+//       }
+//     }
+//     if (writeFutures.isEmpty) {
+//       debugPrint("No writable characteristics found on $deviceName to send message.");
+//     } else {
+//       await Future.wait(writeFutures);
+//     }
+//   }
+
+//   Future<void> sendMessageToConnectedDevice(String message) async {
+//     final trimmedMessage = message.trim();
+//     if (trimmedMessage.isEmpty || trimmedMessage == "[]") {
+//       debugPrint("Refusing to send empty/bracket message.");
+//       return;
+//     }
+//     if (writableCharacteristic != null) {
+//       try {
+//         final dataToSend = utf8.encode(trimmedMessage);
+//         await writableCharacteristic!.write(dataToSend, withoutResponse: false);
+//         debugPrint("Message sent via cached characteristic: $trimmedMessage");
+//         return;
+//       } catch (e, stackTrace) {
+//         debugPrint("Error sending message via cached characteristic: $e");
+//         Sentry.captureException(e, stackTrace: stackTrace);
+//         debugPrint("Falling back to service discovery.");
+//       }
+//     } else {
+//       debugPrint("No cached writable characteristic found. Falling back to service discovery.");
+//     }
+//     BluetoothDevice? fallbackDevice;
+//     String fallbackDeviceName = "";
+//     for (final entry in connectedBluetoothDevices.entries) {
+//       if (entry.value != null) {
+//         fallbackDevice = entry.value;
+//         fallbackDeviceName = entry.key;
+//         break;
+//       }
+//     }
+//     if (fallbackDevice == null) {
+//       debugPrint("No connected devices available for fallback.");
+//       return;
+//     }
+//     try {
+//       await _sendMessageToDevice(fallbackDevice, fallbackDeviceName, trimmedMessage);
+//     } catch (e, stackTrace) {
+//       debugPrint("Error sending message via service discovery: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Sends JSON-formatted data to BoxerServer.
+//   Future<void> sendDataToBoxerServer({
+//     required String deviceStr,
+//     required String oppositeDevice,
+//     required String punchCount,
+//     required String timestamp,
+//     required String sensorValue,
+//   }) async {
+//     final dataMap = {
+//       "deviceStr": deviceStr,
+//       "oppositeDevice": oppositeDevice,
+//       "punchCount": punchCount,
+//       "timestamp": timestamp,
+//       "sensorValue": sensorValue,
+//     };
+
+//     final dataMessage = jsonEncode(dataMap);
+//     debugPrint("Sending data to BoxerServer (JSON): $dataMessage");
+
+//     final boxerServerDevice = connectedBluetoothDevices["BoxerServer"];
+//     if (boxerServerDevice == null) {
+//       debugPrint("🚀 ❌ BoxerServer is not connected. Cannot send data.");
+//       return;
+//     }
+
+//     try {
+//       await _sendMessageToDevice(boxerServerDevice, "BoxerServer", dataMessage);
+//       debugPrint("📤 ➡️ Data sent to BoxerServer successfully.");
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ Error sending data to BoxerServer: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   /// Dispose method to clean up stream controllers and subscriptions.
+//   void disposeBluetooth() {
+//     try {
+//       _messageStreamController.close();
+//       _disconnectionStreamController.close();
+//       // Cancel all active notification subscriptions.
+//       _notificationSubscriptions.forEach((_, subscription) {
+//         subscription.cancel();
+//       });
+//       _notificationSubscriptions.clear();
+//     } catch (e, stackTrace) {
+//       debugPrint("Error during BluetoothManager dispose: $e");
+//       Sentry.captureException(e, stackTrace: stackTrace);
+//     }
+//   }
+
+//   @override
+//   void dispose() {
+//     disposeBluetooth();
+//     super.dispose();
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import 'package:box_sensors/state/timer_state.dart';
+// import 'package:flutter/material.dart';
+// import 'dart:async'; 
+// import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+// import 'dart:convert';
+// import 'package:box_sensors/database_tools/database_helper.dart';
+// import 'package:flutter/foundation.dart' show kIsWeb;
+// import 'dart:collection';
+// import 'dart:io' show Platform; // For Platform.isAndroid, etc.
+
+// class BluetoothManager with ChangeNotifier {
+//   TimerState? _timerState;
+//   void setTimerState(TimerState timerState) {
+//     debugPrint('setTimerState(...) called with timerState=$timerState');
+//     _timerState = timerState;
+//   }
+
+//   int? _currentRoundId;
+//   int? get currentRoundId => _currentRoundId;
+
+//   void setCurrentRoundId(int roundId) {
+//     _currentRoundId = roundId;
+//     notifyListeners();
+//   }
+
+//   int? _currentMatchId;
+//   int? get currentMatchId => _currentMatchId;
+
+//   void setCurrentMatchId(int? matchId) {
+//     _currentMatchId = matchId;
+//     notifyListeners();
+//   }
+
+//   final StreamController<List<DataRow>> _messageStreamController =
+//       StreamController<List<DataRow>>.broadcast();
+//   Stream<List<DataRow>> get messageStream => _messageStreamController.stream;
+
+//   final StreamController<String?> _disconnectionStreamController =
+//       StreamController<String?>.broadcast();
+//   Stream<String?> get disconnectionStream =>
+//       _disconnectionStreamController.stream;
+
+//   BluetoothCharacteristic? writableCharacteristic;
+//   Map<Guid, String> readValues = {};
+
+//   Set<String> uniqueMessages = {}; // This set will store unique messages
+//   List<DataRow> rows = [];
+
+//   bool _isDiscoveringServices = false; // Flag to track service discovery
+
+//   // Map of the 3 devices
+//   Map<String, bool> connectedDevices = {
+//     'BlueBoxer': false,
+//     'RedBoxer': false,
+//     'BoxerServer': false,
+//   };
+
+//   // Map of the 3 devices
+//   Map<String, BluetoothDevice?> connectedBluetoothDevices = {
+//     'BlueBoxer': null,
+//     'RedBoxer': null,
+//     'BoxerServer': null,
+//   };
+
+//   // Map to track notification subscriptions by characteristic UUID.
+//   final Map<String, StreamSubscription<List<int>>> _notificationSubscriptions =
+//       {};
+
+//   bool isScanning = false;
+
+//   bool get isConnectedDevice1 => connectedDevices['BlueBoxer'] ?? false;
+//   bool get isConnectedDevice2 => connectedDevices['RedBoxer'] ?? false;
+//   bool get isConnectedDevice3 => connectedDevices['BoxerServer'] ?? false;
+
+//   // Database helper initialization.
+//   final DatabaseHelper dbHelper = DatabaseHelper();
+
+//   // Helper method to get the device key. It uses the recommended device.platformName
+//   // if available otherwise, it falls back to device.remoteId.
+//   String getDeviceKey(BluetoothDevice device) {
+//     final platformName = device.platformName.trim();
+//     if (platformName.isEmpty || platformName.toLowerCase() == 'unknown') {
+//       // Fallback to the device's remoteId, which is unique and not deprecated.
+//       return device.remoteId.toString();
+//     }
+//     return platformName;
+//   }
+
+//   Future<void> discoverServices() async {
+//     if (_isDiscoveringServices) {
+//       debugPrint("⏳ Service discovery already in progress, skipping new call.");
+//       return;
+//     }
+
+//     _isDiscoveringServices = true; // Lock function execution
+//     debugPrint("🔄 discoverServices() called");
+
+//     try {
+//       // Iterate using entries for clarity.
+//       List<Future<void>> discoveryFutures =
+//           connectedBluetoothDevices.entries.map((entry) async {
+//         final deviceName = entry.key;
+//         final BluetoothDevice? connectedDevice = entry.value;
+//         if (connectedDevice == null) {
+//           debugPrint("⚠️ Device $deviceName is null. Skipping.");
+//           return;
+//         }
+
+//         debugPrint("🔍 Discovering services for device: $deviceName");
+
+//         try {
+//           List<BluetoothService> servicesList =
+//               await connectedDevice.discoverServices();
+//           debugPrint(
+//             "📡 Discovered ${servicesList.length} services for $deviceName",
+//           );
+
+//           // Process each service and its characteristics.
+//           for (var service in servicesList) {
+//             for (var characteristic in service.characteristics) {
+//               if (characteristic.properties.notify) {
+//                 String charKey = '$deviceName-${characteristic.uuid}';
+
+//                 if (_notificationSubscriptions.containsKey(charKey)) {
+//                   debugPrint(
+//                     "⚠️ Listener already exists for $charKey, skipping.",
+//                   );
+//                   continue;
+//                 }
+
+//                 debugPrint(
+//                   "✅ Subscribing to characteristic ${characteristic.uuid} for $deviceName.",
+//                 );
+//                 await characteristic.setNotifyValue(true);
+
+//                 // Added delay to ensure subscription is fully established
+//                 await Future.delayed(
+//                   Duration(milliseconds: 400),
+//                 );
+
+//                 // Subscribe to the characteristic's notification stream.
+//                 var subscription = characteristic.lastValueStream.listen(
+//                   (value) => _handleNotification(value, deviceName),
+//                   onError: (error, stackTrace) {
+//                     debugPrint(
+//                       "❌ Error in notification stream for $deviceName: $error",
+//                     );
+//                     debugPrint(stackTrace.toString());
+//                   },
+//                 );
+
+//                 _notificationSubscriptions[charKey] = subscription;
+//                 debugPrint(
+//                   "👂 Active Listeners Count: ${_notificationSubscriptions.length}",
+//                 );
+//               }
+//             }
+//           }
+//         } catch (e) {
+//           debugPrint("❌ Error discovering services for $deviceName: $e");
+//         }
+//       }).toList();
+
+//       // Run all device discoveries concurrently.
+//       await Future.wait(discoveryFutures);
+//     } finally {
+//       _isDiscoveringServices = false; // Unlock after execution.
+//     }
+//   }
+
+//   void _handleNotification(List<int> value, String deviceName) async {
+//     try {
+//       String decodedMessage = utf8.decode(value);
+//       debugPrint("📩 Received notification from $deviceName: $decodedMessage");
+
+//       try {
+//         final dynamic parsed = json.decode(decodedMessage);
+//         if (parsed is Map<String, dynamic> &&
+//             parsed["RoundState"] == "Completed") {
+//           // Call timerState.endMatch() if you have a reference to TimerState here:
+//           _timerState?.endMatch();
+//         }
+//       } catch (jsonError) {
+//         // If it's not valid JSON or missing "RoundState", do nothing.
+//       }
+
+//       final punchCount = _extractPunchCount(decodedMessage);
+//       final timestamp = _extractTimestamp(decodedMessage);
+//       // Use deviceName if the extracted device is "UnknownDevice".
+//       String extractedDevice = _extractDevice(decodedMessage);
+//       final deviceStr =
+//           (extractedDevice == "UnknownDevice") ? deviceName : extractedDevice;
+//       final sensorValue = _extractSensorValue(decodedMessage);
+
+//       if (punchCount != null && timestamp != null && sensorValue != null) {
+//         // Determine the opposite device.
+//         String oppositeDevice =
+//             (deviceStr == "BlueBoxer") ? "RedBoxer" : "BlueBoxer";
+
+//         // Update the table immediately.
+//         final newRow = DataRow(
+//           cells: [
+//             DataCell(Center(child: Text(deviceStr))),
+//             DataCell(Center(child: Text(oppositeDevice))),
+//             DataCell(Center(child: Text(punchCount.toString()))),
+//             DataCell(Center(child: Text(timestamp))),
+//             DataCell(Center(child: Text(sensorValue))),
+//           ],
+//         );
+//         rows.add(newRow);
+//         _messageStreamController.add(List.from(rows));
+//         notifyListeners();
+
+//         // Store the current IDs locally to avoid race conditions.
+//         final localRoundId = _currentRoundId;
+//         final localMatchId = _currentMatchId;
+
+//         if (localMatchId == null) {
+//           // => We are in training mode
+//           _sendDataAndInsertToDatabase(
+//             deviceStr,
+//             oppositeDevice,
+//             punchCount,
+//             timestamp,
+//             sensorValue,
+//             0, // some dummy roundId
+//             null, // triggers training path
+//           );
+//         } else {
+//           // => StartMatch mode
+//           _sendDataAndInsertToDatabase(
+//             deviceStr,
+//             oppositeDevice,
+//             punchCount,
+//             timestamp,
+//             sensorValue,
+//             localRoundId ?? 0,
+//             localMatchId,
+//           );
+//         }
+//       }
+//     } catch (e, stackTrace) {
+//       debugPrint("❌ 🔴 Error processing notification from $deviceName: $e");
+//       debugPrint(stackTrace.toString());
+//     }
+//   }
+
+//   // Helper function to insert data into the database (StartMatch mode).
+//   Future<void> _insertDataToDatabase(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//     int roundId,
+//     int matchId,
+//   ) async {
+//     await dbHelper
+//         .insertMessage(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//           roundId,
+//           matchId,
+//         )
+//         .catchError((e) {
+//       debugPrint("❌ 💾 🔴 Error inserting message into DB: $e");
+//     });
+//   }
+
+//   // Helper function to insert training data into the database (TrainingGame mode).
+//   Future<void> _insertTrainingDataToDatabase(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//     // int roundId,
+//   ) async {
+//     await dbHelper
+//         .insertTrainingData(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         )
+//         .catchError((e) {
+//       debugPrint("❌ 💾 🔴 Error inserting training data into DB: $e");
+//     });
+//   }
+
+//   // Combined helper function to run sending data and inserting into the database concurrently.
+//   // If matchId is not null, then it's StartMatch mode; otherwise, it's TrainingGame mode.
+//   void _sendDataAndInsertToDatabase(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//     int roundId,
+//     int? matchId,
+//   ) {
+//     if (matchId != null) {
+//       // StartMatch mode
+//       Future.wait([
+//         _sendDataToBoxerServer(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         ),
+//         _insertDataToDatabase(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//           roundId,
+//           matchId,
+//         ),
+//       ]);
+//     } else {
+//       // TrainingGame mode
+//       Future.wait([
+//         _sendDataToBoxerServer(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         ),
+//         _insertTrainingDataToDatabase(
+//           deviceStr,
+//           oppositeDevice,
+//           punchCount,
+//           timestamp,
+//           sensorValue,
+//         ),
+//       ]);
+//     }
+//   }
+
+//   // Helper function to send data to BoxerServer via Bluetooth.
+//   Future<void> _sendDataToBoxerServer(
+//     String deviceStr,
+//     String oppositeDevice,
+//     String punchCount,
+//     String timestamp,
+//     String sensorValue,
+//   ) async {
+//     if (!isDeviceConnected("BoxerServer")) {
+//       debugPrint(
+//         "❌ 🔴 BoxerServer not connected. Skipping sendDataToBoxerServer.",
+//       );
+//       return;
+//     }
+
+//     await sendDataToBoxerServer(
+//       deviceStr: deviceStr,
+//       oppositeDevice: oppositeDevice,
+//       punchCount: punchCount,
+//       timestamp: timestamp,
+//       sensorValue: sensorValue,
+//     ).catchError((e) {
+//       debugPrint("➡️ ❌ 🔴 Error sending data to BoxerServer: $e");
+//     });
+//   }
+
+//   // Original Code 1 connectToDevice
+//   Future<void> connectToDevice(BluetoothDevice device) async {
+//     final deviceKey = getDeviceKey(device);
+
+//     // Prevent duplicate connections.
+//     if (connectedBluetoothDevices[deviceKey] != null) {
+//       debugPrint("Device $deviceKey is already connected.");
+//       return;
+//     }
+
+//     try {
+//       // STEP 1: Connect (with a timeout).
+//       await device.connect(timeout: const Duration(seconds: 5));
+//       connectedBluetoothDevices[deviceKey] = device;
+//       _updateDeviceConnectionStatus(deviceKey, true);
+//       notifyListeners();
+
+//       // Wait a short time to ensure the connection is fully established.
+//       await Future.delayed(const Duration(seconds: 1));
+
+//       // STEP 2: Listen for disconnection events
+//       late final StreamSubscription<BluetoothConnectionState>
+//           disconnectionSubscription;
+//       disconnectionSubscription = device.connectionState.listen((connectionState) {
+//         if (connectionState == BluetoothConnectionState.disconnected) {
+//           _updateDeviceConnectionStatus(deviceKey, false);
+//           connectedBluetoothDevices[deviceKey] = null;
+//           _disconnectionStreamController.add(deviceKey);
+//           // Cancel the subscription to free resources.
+//           disconnectionSubscription.cancel();
+//           notifyListeners();
+//         }
+//       });
+
+//       // STEP 3: Request a larger MTU.
+//       try {
+//         int newMtu = await device.requestMtu(512);
+//         debugPrint('Requested MTU = 512, actually set to: $newMtu');
+//       } catch (mtuError) {
+//         debugPrint('Error requesting MTU: $mtuError');
+//       }
+
+//       // STEP 4: Discover services.
+//       await discoverServices();
+//     } catch (e) {
+//       debugPrint("Error connecting to device: $e");
+//       _updateDeviceConnectionStatus(deviceKey, false);
+//       notifyListeners();
+//     }
+//   }
+
+//   Future<void> disconnectFromDevice() async {
+//     // Gather disconnect futures for all connected devices.
+//     List<Future<void>> disconnectFutures = [];
+
+//     for (String deviceName in connectedDevices.keys) {
+//       BluetoothDevice? connectedDevice = connectedBluetoothDevices[deviceName];
+//       if (connectedDevice != null) {
+//         disconnectFutures.add(_disconnectDevice(deviceName, connectedDevice));
+//       }
+//     }
+
+//     // Wait for all disconnect operations concurrently.
+//     await Future.wait(disconnectFutures);
+//     notifyListeners();
+//   }
+
+//   Future<void> _disconnectDevice(
+//     String deviceName,
+//     BluetoothDevice device,
+//   ) async {
+//     try {
+//       // Request disconnection.
+//       await device.disconnect();
+
+//       // Wait until the device state reports that it is disconnected, with a timeout.
+//       await device.connectionState
+//           .firstWhere(
+//             (state) => state == BluetoothConnectionState.disconnected,
+//             orElse: () => BluetoothConnectionState.disconnected,
+//           )
+//           .timeout(
+//             const Duration(seconds: 5),
+//             onTimeout: () => BluetoothConnectionState.disconnected,
+//           );
+
+//       // Update internal state.
+//       connectedBluetoothDevices[deviceName] = null;
+//       _updateDeviceConnectionStatus(deviceName, false);
+//       _disconnectionStreamController.add(deviceName);
+
+//       // Reset the writable characteristic if necessary.
+//       writableCharacteristic = null;
+//     } catch (e) {
+//       debugPrint("Error disconnecting from device $deviceName: $e");
+//     }
+//   }
+
+//   void _updateDeviceConnectionStatus(String deviceName, bool status) {
+//     if (!connectedDevices.containsKey(deviceName)) {
+//       debugPrint("Warning: $deviceName is not registered in connectedDevices.");
+//       return;
+//     }
+
+//     // Only update and notify if the status has changed.
+//     if (connectedDevices[deviceName] != status) {
+//       connectedDevices[deviceName] = status;
+//       debugPrint('$deviceName connection status updated to: $status');
+//       notifyListeners();
+//     }
+//   }
+
+//   bool isDeviceConnected(String deviceName) =>
+//       connectedDevices[deviceName] ?? false;
+
+//   Future<void> scanForDevices() async {
+//     // If we're not running on Android or iOS (or if running on web), skip scanning.
+//     if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) {
+//       debugPrint("BLE scanning is not supported on this platform.");
+//       return;
+//     }
+
+//     // Prevent duplicate scans.
+//     if (isScanning) {
+//       debugPrint("Scan already in progress. Skipping new scan request.");
+//       return;
+//     }
+
+//     isScanning = true;
+//     notifyListeners();
+//     debugPrint("Starting BLE scan...");
+
+//     try {
+//       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 3));
+//     } catch (e) {
+//       debugPrint("Error during scan: $e");
+//     } finally {
+//       isScanning = false;
+//       notifyListeners();
+//       debugPrint("BLE scan finished.");
+//     }
+//   }
+
+//   Set<String> getUniqueMessages() {
+//     return UnmodifiableSetView(uniqueMessages);
+//   }
+
+//   // Precompiled regular expressions.
+//   static final RegExp _deviceRegex = RegExp(r'Device:\s*(\S+)');
+//   static final RegExp _punchCountRegex = RegExp(r'Punch Count:\s*([\d:]+)');
+//   static final RegExp _timestampRegex = RegExp(r'Timestamp:\s*([\d:]+)');
+//   static final RegExp _sensorValueRegex = RegExp(r'Sensor millivolts:\s*(\d+)');
+
+//   // Generic helper to extract a group from a message using a regex.
+//   String? _extractValue(String message, RegExp regex) {
+//     final match = regex.firstMatch(message);
+//     return match?.group(1);
+//   }
+
+//   // Since a fallback value is provided, this returns a non-nullable String.
+//   String _extractDevice(String message) =>
+//       _extractValue(message, _deviceRegex) ?? "UnknownDevice";
+
+//   String? _extractPunchCount(String message) =>
+//       _extractValue(message, _punchCountRegex);
+
+//   String? _extractTimestamp(String message) =>
+//       _extractValue(message, _timestampRegex);
+
+//   String? _extractSensorValue(String message) =>
+//       _extractValue(message, _sensorValueRegex);
+
+//   void clearTable() {
+//     if (rows.isEmpty) {
+//       debugPrint("Table is already clear.");
+//       return;
+//     }
+//     rows.clear();
+
+//     if (!_messageStreamController.isClosed) {
+//       _messageStreamController.add([]);
+//     }
+//     notifyListeners();
+//   }
+
+//   Future<void> sendMessageToAllConnectedDevices(String message) async {
+//     final trimmedMessage = message.trim();
+//     if (trimmedMessage.isEmpty || trimmedMessage == "[]") {
+//       debugPrint("Refusing to send empty/bracket message.");
+//       return;
+//     }
+
+//     // Prepare a list of futures—one per connected device.
+//     List<Future<void>> sendFutures = [];
+//     for (var entry in connectedBluetoothDevices.entries) {
+//       final deviceName = entry.key;
+//       final BluetoothDevice? device = entry.value;
+//       if (device != null) {
+//         sendFutures.add(
+//           _sendMessageToDevice(device, deviceName, trimmedMessage).catchError(
+//             (e) => debugPrint("Error sending message to $deviceName: $e"),
+//           ),
+//         );
+//       } else {
+//         debugPrint("Device $deviceName is not connected.");
+//       }
+//     }
+
+//     if (sendFutures.isEmpty) {
+//       debugPrint("No connected devices available to send the message.");
+//       return;
+//     }
+
+//     // Run all message sends concurrently.
+//     await Future.wait(sendFutures);
+//   }
+
+//   Future<void> _sendMessageToDevice(
+//     BluetoothDevice device,
+//     String deviceName,
+//     String message,
+//   ) async {
+//     // Discover services on the device.
+//     final services = await device.discoverServices();
+//     final List<Future<void>> writeFutures = [];
+
+//     // Loop through each service and its characteristics.
+//     for (var service in services) {
+//       for (var characteristic in service.characteristics) {
+//         // Check if the characteristic supports writing.
+//         if (characteristic.properties.write) {
+//           debugPrint(
+//             "Discovered writable characteristic ${characteristic.uuid} on $deviceName",
+//           );
+//           // Queue up the write operation.
+//           writeFutures.add(
+//             characteristic
+//                 .write(utf8.encode(message), withoutResponse: false)
+//                 .then(
+//                   (_) => debugPrint(
+//                     "Message sent to $deviceName via ${characteristic.uuid}: $message",
+//                   ),
+//                 )
+//                 .catchError(
+//                   (error) => debugPrint(
+//                     "Error sending message via ${characteristic.uuid} on $deviceName: $error",
+//                   ),
+//                 ),
+//           );
+//         }
+//       }
+//     }
+
+//     if (writeFutures.isEmpty) {
+//       debugPrint(
+//         "No writable characteristics found on $deviceName to send message.",
+//       );
+//     } else {
+//       // Wait for all write operations to complete.
+//       await Future.wait(writeFutures);
+//     }
+//   }
+
+//   Future<void> sendMessageToConnectedDevice(String message) async {
+//     final trimmedMessage = message.trim();
+//     if (trimmedMessage.isEmpty || trimmedMessage == "[]") {
+//       debugPrint("Refusing to send empty/bracket message.");
+//       return;
+//     }
+
+//     // Try sending using the cached writable characteristic.
+//     if (writableCharacteristic != null) {
+//       try {
+//         final dataToSend = utf8.encode(trimmedMessage);
+//         await writableCharacteristic!.write(dataToSend, withoutResponse: false);
+//         debugPrint("Message sent via cached characteristic: $trimmedMessage");
+//         return; // Message sent successfully; exit early.
+//       } catch (e) {
+//         debugPrint("Error sending message via cached characteristic: $e");
+//         debugPrint("Falling back to service discovery.");
+//       }
+//     } else {
+//       debugPrint(
+//         "No cached writable characteristic found. Falling back to service discovery.",
+//       );
+//     }
+
+//     // Fallback: send to the first available connected device.
+//     BluetoothDevice? fallbackDevice;
+//     String fallbackDeviceName = "";
+//     for (final entry in connectedBluetoothDevices.entries) {
+//       if (entry.value != null) {
+//         fallbackDevice = entry.value;
+//         fallbackDeviceName = entry.key;
+//         break;
+//       }
+//     }
+
+//     if (fallbackDevice == null) {
+//       debugPrint("No connected devices available for fallback.");
+//       return;
+//     }
+
+//     try {
+//       await _sendMessageToDevice(
+//         fallbackDevice,
+//         fallbackDeviceName,
+//         trimmedMessage,
+//       );
+//     } catch (e) {
+//       debugPrint("Error sending message via service discovery: $e");
+//     }
+//   }
+
+//   // Sends the formatted data Json style
+//   // (deviceStr, oppositeDevice, punchCount, timestamp, sensorValue)
+//   // via Bluetooth to the BoxerServer device.
+//   Future<void> sendDataToBoxerServer({
+//     required String deviceStr,
+//     required String oppositeDevice,
+//     required String punchCount,
+//     required String timestamp,
+//     required String sensorValue,
+//   }) async {
+//     // 1) Build a JSON map
+//     final dataMap = {
+//       "deviceStr": deviceStr,
+//       "oppositeDevice": oppositeDevice,
+//       "punchCount": punchCount,
+//       "timestamp": timestamp,
+//       "sensorValue": sensorValue,
+//     };
+
+//     // 2) Convert map to a JSON string
+//     final dataMessage = jsonEncode(dataMap);
+//     debugPrint("Sending data to BoxerServer (JSON): $dataMessage");
+
+//     // Retrieve the BoxerServer device from the connected devices map.
+//     final boxerServerDevice = connectedBluetoothDevices["BoxerServer"];
+//     if (boxerServerDevice == null) {
+//       debugPrint("🚀 ❌ ( BoxerServer is not connected. Cannot send data.");
+//       return;
+//     }
+
+//     try {
+//       // Use the existing _sendMessageToDevice function to send the data.
+//       await _sendMessageToDevice(boxerServerDevice, "BoxerServer", dataMessage);
+//       debugPrint("📤 ➡️ Data sent to BoxerServer successfully.");
+//     } catch (e) {
+//       debugPrint("❌ Error sending data to BoxerServer: $e");
+//     }
+//   }
+// }
