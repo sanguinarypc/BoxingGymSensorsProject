@@ -1,0 +1,2058 @@
+  /// Connect to a device by its name using scan results.
+  // Future<void> _connectToDeviceByName(String deviceName) async {
+  //   await FlutterBluePlus.startScan(timeout: const Duration(seconds: 3));
+  //   late StreamSubscription<List<ScanResult>> subscription;
+  //   subscription = FlutterBluePlus.scanResults.listen((results) async {
+  //     for (var result in results) {
+  //       if (result.device.platformName == deviceName) {
+  //         try {
+  //           await widget.bluetoothManager.connectToDevice(result.device);
+  //           _deviceConnectionNotifiers[deviceName]?.value = true;
+  //           _updateConnectedDevicesCount();
+  //           if (mounted) {
+  //             _safeSetState(() {});
+  //           }
+  //           debugPrint('Connected to $deviceName successfully.');
+  //         } catch (e) {
+  //           debugPrint('Failed to connect to $deviceName: $e');
+  //           Sentry.captureException(e);
+  //         }
+  //         await subscription.cancel();
+  //         break;
+  //       }
+  //     }
+  //   });
+  // }
+  
+  
+  // /// Disconnect a device and update its connection state.
+  // Future<void> _handleDisconnectDevice(String deviceName) async {
+  //   final BluetoothDevice? device =
+  //       widget.bluetoothManager.connectedBluetoothDevices[deviceName];
+  //   if (device != null) {
+  //     try {
+  //       await device.disconnect();
+  //       await device.connectionState.firstWhere(
+  //         (state) => state == BluetoothConnectionState.disconnected,
+  //         orElse: () => BluetoothConnectionState.disconnected,
+  //       );
+  //     } catch (e) {
+  //       debugPrint("Error disconnecting $deviceName: $e");
+  //       Sentry.captureException(e);
+  //     }
+  //     widget.bluetoothManager.connectedBluetoothDevices[deviceName] = null;
+  //     widget.bluetoothManager.connectedDevices[deviceName] = false;
+  //     _deviceConnectionNotifiers[deviceName]?.value = false;
+  //     _updateConnectedDevicesCount();
+  //     _safeSetState(() {
+  //       if (currentSelectedDevice == deviceName) {
+  //         currentSelectedDevice = null;
+  //       }
+  //     });
+  //   }
+  // }
+
+  /// Disconnect a device and update its connection state.
+  // Future<void> _handleDisconnectDevice(String deviceName) async {
+  //   final BluetoothDevice? device =
+  //       widget.bluetoothManager.connectedBluetoothDevices[deviceName];
+  //   if (device != null) {
+  //     try {
+  //       await device.disconnect();
+  //       await device.connectionState.firstWhere(
+  //         (state) => state == BluetoothConnectionState.disconnected,
+  //         orElse: () => BluetoothConnectionState.disconnected,
+  //       );
+  //     } catch (e, stackTrace) {
+  //       debugPrint("Error disconnecting $deviceName: $e");
+  //       Sentry.captureException(e, stackTrace: stackTrace);
+  //       // Provide user feedback if disconnecting fails.
+  //       if (mounted) {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(
+  //             content: Text(
+  //               "Error disconnecting $deviceName. Please try again.",
+  //             ),
+  //           ),
+  //         );
+  //       }
+  //     }
+  //     widget.bluetoothManager.connectedBluetoothDevices[deviceName] = null;
+  //     widget.bluetoothManager.connectedDevices[deviceName] = false;
+  //     _deviceConnectionNotifiers[deviceName]?.value = false;
+  //     _updateConnectedDevicesCount();
+  //     _safeSetState(() {
+  //       if (currentSelectedDevice == deviceName) {
+  //         currentSelectedDevice = null;
+  //       }
+  //     });
+  //   }
+  // }
+  
+  
+    // Future<void> _disconnectAllDevices() async {
+  //   // Call the external disconnect callback (this disconnects devices at the BluetoothManager level).
+  //   await widget.disconnectFromDevice(); // await
+
+  //   // Wait a short moment to let the manager update its state (if needed)
+  //   await Future.delayed(const Duration(milliseconds: 300));
+
+  //   // Update local UI state for each available device.
+  //   for (var deviceName in availableDevices) {
+  //     _deviceConnectionNotifiers[deviceName]?.value = false;
+  //     debugPrint('🔴🔴📩📩📩Updated $deviceName notifier to: ${_deviceConnectionNotifiers[deviceName]?.value}');
+  //   }
+
+  //   // Update the overall connected devices count.
+  //   _updateConnectedDevicesCount();
+
+  //   // Trigger a UI rebuild.
+  //   _safeSetState(() {});
+  // }
+  
+  
+  
+  
+  
+  /// Original method the one that crashed the app and disconnects Connect to all target code that Crashes
+  ///  devices and update their connection state.
+  // Future<void> _connectBothDevices() async {
+  //   final Set<String> targetDevices = {'BlueBoxer', 'RedBoxer', 'BoxerServer'};
+  //   final Set<String> attemptedDevices = {};
+  //   bool firstConnectionMade = false;
+  //   Timer? postConnectionTimer;
+  //   Timer? maxTimeoutTimer;
+
+  //   try {
+  //     await FlutterBluePlus.startScan();
+  //   } catch (e, stackTrace) {
+  //     debugPrint("Error starting scan: $e");
+  //     Sentry.captureException(e, stackTrace: stackTrace);
+  //     return;
+  //   }
+
+  //   late StreamSubscription<List<ScanResult>> subscription;
+  //   subscription = FlutterBluePlus.scanResults.listen(
+  //     (results) {
+  //       for (final result in results) {
+  //         final deviceName = result.device.platformName;
+  //         if (targetDevices.contains(deviceName) &&
+  //             !widget.bluetoothManager.isDeviceConnected(deviceName) &&
+  //             !attemptedDevices.contains(deviceName)) {
+  //           attemptedDevices.add(deviceName);
+  //           widget.bluetoothManager
+  //               .connectToDevice(result.device)
+  //               .then((_) {
+  //                 if (mounted) _safeSetState(() {});
+  //                 _deviceConnectionNotifiers[deviceName]?.value = true;
+  //                 _updateConnectedDevicesCount();
+  //                 debugPrint('Connected to $deviceName successfully.');
+  //                 if (!firstConnectionMade) {
+  //                   firstConnectionMade = true;
+  //                   postConnectionTimer = Timer(const Duration(seconds: 4), () {
+  //                     subscription.cancel();
+  //                     FlutterBluePlus.stopScan();
+  //                     debugPrint(
+  //                       "Post-connection timer expired. Stopping scan.",
+  //                     );
+  //                   });
+  //                 }
+  //                 if (widget.bluetoothManager.isDeviceConnected('BlueBoxer') &&
+  //                     widget.bluetoothManager.isDeviceConnected('RedBoxer') &&
+  //                     widget.bluetoothManager.isDeviceConnected(
+  //                       'BoxerServer',
+  //                     )) {
+  //                   postConnectionTimer?.cancel();
+  //                   subscription.cancel();
+  //                   FlutterBluePlus.stopScan();
+  //                   debugPrint("All devices connected. Stopping scan.");
+  //                   maxTimeoutTimer?.cancel();
+  //                 }
+  //               })
+  //               .catchError((e, stackTrace) {
+  //                 debugPrint('Failed to connect to $deviceName: $e');
+  //                 Sentry.captureException(e, stackTrace: stackTrace);
+  //               });
+  //         }
+  //       }
+  //     },
+  //     onError: (error, stackTrace) {
+  //       debugPrint("Error in scanResults stream: $error");
+  //       Sentry.captureException(error, stackTrace: stackTrace);
+  //     },
+  //   );
+
+  //   maxTimeoutTimer = Timer(const Duration(seconds: 5), () {
+  //     if (!subscription.isPaused) {
+  //       subscription.cancel();
+  //       FlutterBluePlus.stopScan();
+  //       debugPrint("Maximum scan timeout reached. Stopping scan.");
+  //     }
+  //   });
+
+  //   subscription.onDone(() {
+  //     FlutterBluePlus.stopScan();
+  //     maxTimeoutTimer?.cancel();
+  //   });
+  // }
+
+  // need to test this code on Android 10.0.0 and 13.0.0
+  // Updated method _connectBothDevices to connect to multiple devices without crashing
+  // Connect to all target devices and update their connection state.
+  // Future<void> _connectBothDevices() async {
+  //   // Define the target devices to connect.
+  //   final Set<String> targetDevices = {'BlueBoxer', 'RedBoxer', 'BoxerServer'};
+  //   // Keep track of devices we have attempted to connect.
+  //   final Set<String> attemptedDevices = {};
+  //   Timer? postConnectionTimer;
+  //   Timer? maxTimeoutTimer;
+
+  //   // Start scanning for devices.
+  //   try {
+  //     await FlutterBluePlus.startScan();
+  //   } catch (e, stackTrace) {
+  //     debugPrint("Error starting scan: $e");
+  //     Sentry.captureException(e, stackTrace: stackTrace);
+  //     return;
+  //   }
+
+  //   // Declare the subscription as a late variable so it's available in the closures.
+  //   late StreamSubscription<List<ScanResult>> subscription;
+  //   subscription = FlutterBluePlus.scanResults.listen(
+  //     (results) async {
+  //       for (final result in results) {
+  //         final deviceName = result.device.platformName;
+  //         // Check if the device is one of our target devices,
+  //         // hasn't been attempted yet, and isn't already connected.
+  //         if (targetDevices.contains(deviceName) &&
+  //             !widget.bluetoothManager.isDeviceConnected(deviceName) &&
+  //             !attemptedDevices.contains(deviceName)) {
+  //           attemptedDevices.add(deviceName);
+  //           try {
+  //             // Try connecting to the device.
+  //             await widget.bluetoothManager.connectToDevice(result.device);
+  //             if (mounted) _safeSetState(() {});
+  //             _deviceConnectionNotifiers[deviceName]?.value = true;
+  //             _updateConnectedDevicesCount();
+  //             debugPrint('Connected to $deviceName successfully.');
+
+  //             // Reset (cancel and restart) the post-connection timer with each new connection.
+  //             postConnectionTimer?.cancel();
+  //             postConnectionTimer = Timer(const Duration(seconds: 4), () {
+  //               subscription.cancel();
+  //               FlutterBluePlus.stopScan();
+  //               debugPrint("Post-connection timer expired. Stopping scan.");
+  //             });
+
+  //             // If all target devices are now connected, cancel timers and stop the scan.
+  //             if (targetDevices.every((name) => widget.bluetoothManager.isDeviceConnected(name))) {
+  //               postConnectionTimer?.cancel();
+  //               subscription.cancel();
+  //               FlutterBluePlus.stopScan();
+  //               debugPrint("All devices connected. Stopping scan.");
+  //               maxTimeoutTimer?.cancel();
+  //             }
+  //           } catch (e, stackTrace) {
+  //             debugPrint('Failed to connect to $deviceName: $e');
+  //             Sentry.captureException(e, stackTrace: stackTrace);
+  //           }
+  //         }
+  //       }
+  //     },
+  //     onError: (error, stackTrace) {
+  //       debugPrint("Error in scanResults stream: $error");
+  //       Sentry.captureException(error, stackTrace: stackTrace);
+  //     },
+  //   );
+
+  //   // Set up a maximum timeout to cancel the scan if it takes too long.
+  //   maxTimeoutTimer = Timer(const Duration(seconds: 10), () {
+  //     if (!subscription.isPaused) {
+  //       subscription.cancel();
+  //       FlutterBluePlus.stopScan();
+  //       debugPrint("Maximum scan timeout reached. Stopping scan.");
+  //     }
+  //   });
+
+  //   // When the subscription is done, ensure the scan is stopped and the timeout timer is cancelled.
+  //   subscription.onDone(() {
+  //     FlutterBluePlus.stopScan();
+  //     maxTimeoutTimer?.cancel();
+  //   });
+  // }
+
+  // Future<void> _connectBothDevices() async {
+  //   final Set<String> targetDevices = {'BlueBoxer', 'RedBoxer', 'BoxerServer'};
+  //   final Set<String> attemptedDevices = {};
+  //   Timer? postConnectionTimer;
+  //   Timer? maxTimeoutTimer;
+
+  //   try {
+  //     await FlutterBluePlus.startScan();
+  //   } catch (e, stackTrace) {
+  //     debugPrint("Error starting scan: $e");
+  //     Sentry.captureException(e, stackTrace: stackTrace);
+  //     return;
+  //   }
+
+  //   late StreamSubscription<List<ScanResult>> subscription;
+  //   subscription = FlutterBluePlus.scanResults.listen(
+  //     (results) async {
+  //       for (final result in results) {
+  //         final deviceName = result.device.platformName;
+  //         if (targetDevices.contains(deviceName) &&
+  //             !widget.bluetoothManager.isDeviceConnected(deviceName) &&
+  //             !attemptedDevices.contains(deviceName)) {
+  //           attemptedDevices.add(deviceName);
+  //           try {
+  //             // Connect to each device sequentially.
+  //             await widget.bluetoothManager.connectToDevice(result.device);
+  //             if (mounted) _safeSetState(() {});
+  //             _deviceConnectionNotifiers[deviceName]?.value = true;
+  //             _updateConnectedDevicesCount();
+  //             debugPrint('Connected to $deviceName successfully.');
+
+  //             // Reset and extend the post-connection timer for each new connection.
+  //             postConnectionTimer?.cancel();
+  //             postConnectionTimer = Timer(const Duration(seconds: 6), () {
+  //               subscription.cancel();
+  //               FlutterBluePlus.stopScan();
+  //               debugPrint("Post-connection timer expired. Stopping scan.");
+  //             });
+
+  //             // If all target devices are connected, cancel timers and stop scanning.
+  //             if (targetDevices.every((name) => widget.bluetoothManager.isDeviceConnected(name))) {
+  //               postConnectionTimer?.cancel();
+  //               subscription.cancel();
+  //               FlutterBluePlus.stopScan();
+  //               debugPrint("All devices connected. Stopping scan.");
+  //               maxTimeoutTimer?.cancel();
+  //             }
+  //           } catch (e, stackTrace) {
+  //             debugPrint('Failed to connect to $deviceName: $e');
+  //             Sentry.captureException(e, stackTrace: stackTrace);
+  //           }
+  //         }
+  //       }
+  //     },
+  //     onError: (error, stackTrace) {
+  //       debugPrint("Error in scanResults stream: $error");
+  //       Sentry.captureException(error, stackTrace: stackTrace);
+  //     },
+  //   );
+
+  //   // Increase the maximum timeout to give more time for all connections.
+  //   maxTimeoutTimer = Timer(const Duration(seconds: 15), () {
+  //     if (!subscription.isPaused) {
+  //       subscription.cancel();
+  //       FlutterBluePlus.stopScan();
+  //       debugPrint("Maximum scan timeout reached. Stopping scan.");
+  //     }
+  //   });
+
+  //   subscription.onDone(() {
+  //     FlutterBluePlus.stopScan();
+  //     maxTimeoutTimer?.cancel();
+  //   });
+  // }
+  
+  
+  
+  // ignore_for_file: deprecated_member_use, textScaleFactor
+import 'package:box_sensors/services/battery_optimization_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:box_sensors/services/bluetooth_manager.dart';
+import 'package:box_sensors/widgets/connect_home.dart';
+import 'package:box_sensors/state/timer_state.dart';
+import 'package:box_sensors/Themes/theme_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flex_color_scheme/flex_color_scheme.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+
+/// Top-level callback for starting the foreground service.
+/// This will be invoked when the service starts.
+void startCallback() {
+  FlutterForegroundTask.setTaskHandler(MyTaskHandler());
+}
+
+// /// TaskHandler for the foreground service.
+class MyTaskHandler extends TaskHandler {
+  @override
+  Future<void> onStart(DateTime timestamp, TaskStarter taskStarter) async {
+    debugPrint("Foreground task started at: $timestamp");
+  }
+
+  @override
+  void onRepeatEvent(DateTime timestamp) {
+    // Optionally add periodic code here.
+  }
+
+  @override
+  Future<void> onDestroy(DateTime timestamp) async {
+    debugPrint("Foreground task destroyed at: $timestamp");
+  }
+}
+
+/// Request all necessary permissions once at startup.
+Future<void> requestAllPermissionsOnce() async {
+  await [
+    Permission.bluetooth,
+    Permission.bluetoothScan,
+    Permission.bluetoothConnect,
+    Permission.location,
+    Permission.ignoreBatteryOptimizations,
+    // Permission.microphone, // Uncomment if needed.
+  ].request();
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Call openBatteryOptimizationSettings() once at startup.
+  // openBatteryOptimizationSettings();
+  await BatteryOptimizationHelper.requestIgnoreBatteryOptimizations();
+
+
+  // Request required permissions.
+  await requestAllPermissionsOnce();
+
+  // Initialize theme.
+  final themeProvider = ThemeProvider();
+  await themeProvider.initTheme();
+
+  // Force portrait orientation.
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  // Initialize the foreground task for Android 10+ stability.
+  FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      channelId: 'foreground_channel_id',
+      channelName: 'Foreground Service',
+      channelDescription:
+          'This notification appears when the foreground service is running.',
+      channelImportance: NotificationChannelImportance.HIGH,
+      priority: NotificationPriority.HIGH,
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(
+      showNotification: false,
+    ),
+    foregroundTaskOptions: ForegroundTaskOptions(
+      eventAction: ForegroundTaskEventAction.repeat(5000),  // Task repeats every 5 seconds.
+      autoRunOnBoot: false, // Set to true if you want the service to restart on boot.
+      allowWakeLock: true,
+      allowWifiLock: true,
+    ),
+  );
+
+  // Start the foreground service.
+  await FlutterForegroundTask.startService(
+    notificationTitle: 'Foreground Service Running',
+    notificationText: 'Box Sensors is active',
+    callback: startCallback,
+  );
+
+  // Override the default error widget to display a custom error page.
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    Sentry.captureException(details.exception, stackTrace: details.stack);
+    return Scaffold(
+      appBar: AppBar(title: const Text("Oops!")),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.error_outline, size: 80, color: Colors.red),
+            SizedBox(height: 16),
+            Text(
+              "Something went wrong.\nPlease restart the app.",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18),
+            ),
+          ],
+        ),
+      ),
+    );
+  };
+
+  // Initialize Sentry and then run your app.
+  await SentryFlutter.init(
+    (options) {
+      options.dsn =
+          'https://65073676965c01d4d4267a6c1b386ed8@o4509046173597696.ingest.de.sentry.io/4509046194241616';
+      options.sendDefaultPii = true;
+      options.tracesSampleRate = 1.0;
+      options.profilesSampleRate = 1.0;
+      options.experimental.replay.sessionSampleRate = 1.0;
+      options.experimental.replay.onErrorSampleRate = 1.0;
+    },
+    appRunner: () {
+      runApp(
+        SentryWidget(
+          child: MultiProvider(
+            providers: [
+              ChangeNotifierProvider<BluetoothManager>(
+                create: (context) => BluetoothManager(),
+                lazy: true,
+              ),
+              ChangeNotifierProvider<TimerState>(
+                create: (context) => TimerState(),
+                lazy: true,
+              ),
+              ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
+            ],
+            child: const MyApp(),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.themeMode == ThemeMode.dark;
+    final iconBrightness = isDark ? Brightness.light : Brightness.dark;
+    final navBarColor = isDark ? Colors.black : Colors.white;
+
+    // Check if the current scheme is blackWhite, sepia, or greys.
+    final isInversionScheme = [
+      FlexScheme.blackWhite,
+      FlexScheme.sepia,
+      FlexScheme.greys,
+    ].contains(themeProvider.currentScheme);
+
+    // Determine the SystemUiOverlayStyle based on the scheme.
+    final SystemUiOverlayStyle overlayStyle;
+    if (isInversionScheme) {
+      overlayStyle = isDark
+          ? SystemUiOverlayStyle(
+              statusBarColor: Colors.white,
+              statusBarIconBrightness: Brightness.dark,
+              systemNavigationBarColor: Colors.white,
+              systemNavigationBarIconBrightness: Brightness.dark,
+            )
+          : SystemUiOverlayStyle(
+              statusBarColor: Colors.black,
+              statusBarIconBrightness: Brightness.light,
+              systemNavigationBarColor: Colors.black,
+              systemNavigationBarIconBrightness: Brightness.light,
+            );
+    } else {
+      overlayStyle = SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: iconBrightness,
+        systemNavigationBarColor: navBarColor,
+        systemNavigationBarIconBrightness: iconBrightness,
+      );
+    }
+
+    // Set the overlay style globally.
+    SystemChrome.setSystemUIOverlayStyle(overlayStyle);
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Box Sensors',
+      themeMode: themeProvider.themeMode,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaleFactor: 1.0, // Force text scale to 100%
+          ),
+          child: child!,
+        );
+      },
+      theme: FlexThemeData.light(
+        useMaterial3: true,
+        scheme: themeProvider.currentScheme,
+        visualDensity: FlexColorScheme.comfortablePlatformDensity,
+        subThemesData: const FlexSubThemesData(
+          interactionEffects: true,
+          tintedDisabledControls: true,
+          blendOnColors: true,
+          useM2StyleDividerInM3: true,
+          inputDecoratorIsFilled: true,
+          inputDecoratorBorderType: FlexInputBorderType.outline,
+          alignedDropdown: true,
+          navigationRailUseIndicator: true,
+          navigationRailLabelType: NavigationRailLabelType.all,
+          elevatedButtonRadius: 16,
+          elevatedButtonElevation: 4,
+        ),
+      ).copyWith(
+        scaffoldBackgroundColor: Colors.grey[300],
+        cardColor: Colors.white,
+        textTheme: Typography.blackMountainView.copyWith(
+          bodyMedium:
+              Typography.blackMountainView.bodyMedium?.copyWith(fontSize: 14),
+          bodySmall:
+              Typography.blackMountainView.bodySmall?.copyWith(fontSize: 12),
+          bodyLarge:
+              Typography.blackMountainView.bodyLarge?.copyWith(fontSize: 16),
+          headlineMedium: Typography.blackMountainView.headlineMedium?.copyWith(
+              fontSize: 20, fontWeight: FontWeight.bold),
+          headlineSmall: Typography.blackMountainView.headlineSmall?.copyWith(
+              fontSize: 18, fontWeight: FontWeight.bold),
+          titleMedium: Typography.blackMountainView.titleMedium?.copyWith(
+              fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          systemOverlayStyle: overlayStyle,
+        ),
+      ),
+      darkTheme: FlexThemeData.dark(
+        useMaterial3: true,
+        scheme: themeProvider.currentScheme,
+        visualDensity: FlexColorScheme.comfortablePlatformDensity,
+        subThemesData: const FlexSubThemesData(
+          interactionEffects: true,
+          tintedDisabledControls: true,
+          blendOnColors: true,
+          useM2StyleDividerInM3: true,
+          inputDecoratorIsFilled: true,
+          inputDecoratorBorderType: FlexInputBorderType.outline,
+          alignedDropdown: true,
+          navigationRailUseIndicator: true,
+          navigationRailLabelType: NavigationRailLabelType.all,
+          elevatedButtonRadius: 16,
+          elevatedButtonElevation: 4,
+        ),
+      ).copyWith(
+        scaffoldBackgroundColor: Colors.grey[900],
+        cardColor: Colors.grey[850],
+        textTheme: Typography.whiteMountainView.copyWith(
+          bodyMedium:
+              Typography.whiteMountainView.bodyMedium?.copyWith(fontSize: 14),
+          bodySmall:
+              Typography.whiteMountainView.bodySmall?.copyWith(fontSize: 12),
+          bodyLarge:
+              Typography.whiteMountainView.bodyLarge?.copyWith(fontSize: 16),
+          headlineMedium: Typography.whiteMountainView.headlineMedium?.copyWith(
+              fontSize: 20, fontWeight: FontWeight.bold),
+          headlineSmall: Typography.whiteMountainView.headlineSmall?.copyWith(
+              fontSize: 18, fontWeight: FontWeight.bold),
+          titleMedium: Typography.whiteMountainView.titleMedium?.copyWith(
+              fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          systemOverlayStyle: overlayStyle,
+        ),
+      ),
+      // Home is wrapped in an AnnotatedRegion to continuously apply the overlay style.
+      home: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: overlayStyle,
+        child: Builder(
+          builder: (context) => ConnectHome(
+            bluetoothManager:
+                Provider.of<BluetoothManager>(context, listen: false),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+
+
+// // ignore_for_file: deprecated_member_use, textScaleFactor
+// import 'package:flutter/material.dart';
+// import 'package:flutter/services.dart';
+// import 'package:provider/provider.dart';
+// import 'package:box_sensors/services/bluetooth_manager.dart';
+// import 'package:box_sensors/widgets/connect_home.dart';
+// import 'package:box_sensors/state/timer_state.dart';
+// import 'package:box_sensors/Themes/theme_provider.dart';
+// import 'package:permission_handler/permission_handler.dart';
+// import 'package:flex_color_scheme/flex_color_scheme.dart';
+// import 'package:flutter/foundation.dart';
+// import 'package:sentry_flutter/sentry_flutter.dart';
+
+// Future<void> requestAllPermissionsOnce() async {
+//   await [
+//     Permission.bluetooth,
+//     Permission.bluetoothScan,
+//     Permission.bluetoothConnect,
+//     Permission.location,
+//     // Permission.microphone,
+//   ].request();
+// }
+
+// Future<void> main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+
+//   // Override debugPrint in release mode.
+//   if (kReleaseMode) {
+//     // Instead of completely silencing logs, consider logging errors to Sentry.
+//     debugPrint = (String? message, {int? wrapWidth}) {
+//       // Minimal logging; errors should still be captured via Sentry.
+//     };
+//   }
+
+//   await requestAllPermissionsOnce();
+
+//   final themeProvider = ThemeProvider();
+//   await themeProvider.initTheme();
+
+//   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+//   // Override the default error widget to display a custom error page.
+//   ErrorWidget.builder = (FlutterErrorDetails details) {
+//     // Capture the error details to Sentry.
+//     Sentry.captureException(details.exception, stackTrace: details.stack);
+
+//     // Return a friendly error page.
+//     return Scaffold(
+//       appBar: AppBar(title: const Text("Oops!")),
+//       body: Center(
+//         child: Column(
+//           mainAxisAlignment: MainAxisAlignment.center,
+//           children: const [
+//             Icon(Icons.error_outline, size: 80, color: Colors.red),
+//             SizedBox(height: 16),
+//             Text(
+//               "Something went wrong.\nPlease restart the app.",
+//               textAlign: TextAlign.center,
+//               style: TextStyle(fontSize: 18),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   };
+
+//   // Initialize Sentry and then run your app.
+//   await SentryFlutter.init(
+//     (options) {
+//       options.dsn =
+//           'https://65073676965c01d4d4267a6c1b386ed8@o4509046173597696.ingest.de.sentry.io/4509046194241616';
+//       options.sendDefaultPii = true;
+//       // Set tracesSampleRate to 1.0 to capture 100% of transactions for tracing.
+//       // We recommend adjusting this value in production.
+//       options.tracesSampleRate = 1.0;
+//       options.profilesSampleRate = 1.0;
+//       options.experimental.replay.sessionSampleRate = 1.0;
+//       options.experimental.replay.onErrorSampleRate = 1.0;
+//     },
+//     appRunner: () {
+//       runApp(
+//         SentryWidget(
+//           child: MultiProvider(
+//             providers: [
+//               // Providers are lazy by default; specifying lazy: true explicitly.
+//               ChangeNotifierProvider<BluetoothManager>(
+//                 create: (context) => BluetoothManager(),
+//                 lazy: true,
+//               ),
+//               ChangeNotifierProvider<TimerState>(
+//                 create: (context) => TimerState(),
+//                 lazy: true,
+//               ),
+//               ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
+//             ],
+//             child: const MyApp(),
+//           ),
+//         ),
+//       );
+//     },
+//   );
+// }
+
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final themeProvider = Provider.of<ThemeProvider>(context);
+//     final isDark = themeProvider.themeMode == ThemeMode.dark;
+//     final iconBrightness = isDark ? Brightness.light : Brightness.dark;
+//     final navBarColor = isDark ? Colors.black : Colors.white;
+
+//     // Check if the current scheme is blackWhite, sepia, or greys.
+//     final isInversionScheme = [
+//       FlexScheme.blackWhite,
+//       FlexScheme.sepia,
+//       FlexScheme.greys,
+//     ].contains(themeProvider.currentScheme);
+
+//     // Determine the SystemUiOverlayStyle based on the scheme.
+//     final SystemUiOverlayStyle overlayStyle;
+//     if (isInversionScheme) {
+//       overlayStyle =
+//           isDark
+//               ? SystemUiOverlayStyle(
+//                 statusBarColor: Colors.white,
+//                 statusBarIconBrightness: Brightness.dark,
+//                 systemNavigationBarColor: Colors.white,
+//                 systemNavigationBarIconBrightness: Brightness.dark,
+//               )
+//               : SystemUiOverlayStyle(
+//                 statusBarColor: Colors.black,
+//                 statusBarIconBrightness: Brightness.light,
+//                 systemNavigationBarColor: Colors.black,
+//                 systemNavigationBarIconBrightness: Brightness.light,
+//               );
+//     } else {
+//       overlayStyle = SystemUiOverlayStyle(
+//         statusBarColor: Colors.transparent,
+//         statusBarIconBrightness: iconBrightness,
+//         systemNavigationBarColor: navBarColor,
+//         systemNavigationBarIconBrightness: iconBrightness,
+//       );
+//     }
+
+//     // Set the overlay style globally.
+//     SystemChrome.setSystemUIOverlayStyle(overlayStyle);
+
+//     return MaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       title: 'Box Sensors',
+//       themeMode: themeProvider.themeMode,
+//       builder: (context, child) {
+//         return MediaQuery(
+//           data: MediaQuery.of(context).copyWith(
+//             textScaleFactor: 1.0, // Force text scale to 100%
+//           ),
+//           child: child!,
+//         );
+//       },
+//       theme: FlexThemeData.light(
+//         useMaterial3: true,
+//         scheme: themeProvider.currentScheme,
+//         visualDensity: FlexColorScheme.comfortablePlatformDensity,
+//         subThemesData: const FlexSubThemesData(
+//           interactionEffects: true,
+//           tintedDisabledControls: true,
+//           blendOnColors: true,
+//           useM2StyleDividerInM3: true,
+//           inputDecoratorIsFilled: true,
+//           inputDecoratorBorderType: FlexInputBorderType.outline,
+//           alignedDropdown: true,
+//           navigationRailUseIndicator: true,
+//           navigationRailLabelType: NavigationRailLabelType.all,
+//           elevatedButtonRadius: 16,
+//           elevatedButtonElevation: 4,
+//         ),
+//       ).copyWith(
+//         scaffoldBackgroundColor: Colors.grey[300],
+//         cardColor: Colors.white,
+//         textTheme: Typography.blackMountainView.copyWith(
+//           bodyMedium: Typography.blackMountainView.bodyMedium?.copyWith(
+//             fontSize: 14,
+//           ),
+//           bodySmall: Typography.blackMountainView.bodySmall?.copyWith(
+//             fontSize: 12,
+//           ),
+//           bodyLarge: Typography.blackMountainView.bodyLarge?.copyWith(
+//             fontSize: 16,
+//           ),
+//           headlineMedium: Typography.blackMountainView.headlineMedium?.copyWith(
+//             fontSize: 20,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           headlineSmall: Typography.blackMountainView.headlineSmall?.copyWith(
+//             fontSize: 18,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           titleMedium: Typography.blackMountainView.titleMedium?.copyWith(
+//             fontSize: 16,
+//             fontWeight: FontWeight.w600,
+//           ),
+//         ),
+//         appBarTheme: AppBarTheme(
+//           backgroundColor: Colors.transparent,
+//           elevation: 0,
+//           systemOverlayStyle: overlayStyle,
+//         ),
+//       ),
+//       darkTheme: FlexThemeData.dark(
+//         useMaterial3: true,
+//         scheme: themeProvider.currentScheme,
+//         visualDensity: FlexColorScheme.comfortablePlatformDensity,
+//         subThemesData: const FlexSubThemesData(
+//           interactionEffects: true,
+//           tintedDisabledControls: true,
+//           blendOnColors: true,
+//           useM2StyleDividerInM3: true,
+//           inputDecoratorIsFilled: true,
+//           inputDecoratorBorderType: FlexInputBorderType.outline,
+//           alignedDropdown: true,
+//           navigationRailUseIndicator: true,
+//           navigationRailLabelType: NavigationRailLabelType.all,
+//           elevatedButtonRadius: 16,
+//           elevatedButtonElevation: 4,
+//         ),
+//       ).copyWith(
+//         scaffoldBackgroundColor: Colors.grey[900],
+//         cardColor: Colors.grey[850],
+//         textTheme: Typography.whiteMountainView.copyWith(
+//           bodyMedium: Typography.whiteMountainView.bodyMedium?.copyWith(
+//             fontSize: 14,
+//           ),
+//           bodySmall: Typography.whiteMountainView.bodySmall?.copyWith(
+//             fontSize: 12,
+//           ),
+//           bodyLarge: Typography.whiteMountainView.bodyLarge?.copyWith(
+//             fontSize: 16,
+//           ),
+//           headlineMedium: Typography.whiteMountainView.headlineMedium?.copyWith(
+//             fontSize: 20,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           headlineSmall: Typography.whiteMountainView.headlineSmall?.copyWith(
+//             fontSize: 18,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           titleMedium: Typography.whiteMountainView.titleMedium?.copyWith(
+//             fontSize: 16,
+//             fontWeight: FontWeight.w600,
+//           ),
+//         ),
+//         appBarTheme: AppBarTheme(
+//           backgroundColor: Colors.transparent,
+//           elevation: 0,
+//           systemOverlayStyle: overlayStyle,
+//         ),
+//       ),
+//       // Home is wrapped in an AnnotatedRegion to continuously apply the overlay style.
+//       home: AnnotatedRegion<SystemUiOverlayStyle>(
+//         value: overlayStyle,
+//         child: Builder(
+//           builder:
+//               (context) => ConnectHome(
+//                 bluetoothManager: Provider.of<BluetoothManager>(
+//                   context,
+//                   listen: false,
+//                 ),
+//               ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
+
+
+
+// // ignore_for_file: deprecated_member_use, textScaleFactor
+// import 'package:flutter/material.dart';
+// import 'package:flutter/services.dart';
+// import 'package:provider/provider.dart';
+// import 'package:box_sensors/ble_connection/bluetooth_manager.dart';
+// import 'package:box_sensors/widgets/connect_home.dart';
+// import 'package:box_sensors/state/timer_state.dart';
+// import 'package:box_sensors/Themes/theme_provider.dart';
+// import 'package:permission_handler/permission_handler.dart';
+// import 'package:flex_color_scheme/flex_color_scheme.dart';
+// import 'package:flutter/foundation.dart';
+// import 'package:sentry_flutter/sentry_flutter.dart';
+
+// Future<void> requestAllPermissionsOnce() async {
+//   await [
+//     Permission.bluetooth,
+//     Permission.bluetoothScan,
+//     Permission.bluetoothConnect,
+//     Permission.location,
+//     // Permission.microphone,
+//   ].request();
+// }
+
+// Future<void> main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+
+//   // Override debugPrint in release mode.
+//   if (kReleaseMode) {
+//     debugPrint = (String? message, {int? wrapWidth}) {};
+//   }
+
+//   await requestAllPermissionsOnce();
+
+//   final themeProvider = ThemeProvider();
+//   await themeProvider.initTheme();
+
+//   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+//   // Override the default error widget to display a custom error page
+//   ErrorWidget.builder = (FlutterErrorDetails details) {
+//     // Capture the error details to Sentry
+//     Sentry.captureException(
+//       details.exception,
+//       stackTrace: details.stack,
+//     );
+
+//     // Return a friendly error page
+//     return Scaffold(
+//       appBar: AppBar(title: const Text("Oops!")),
+//       body: Center(
+//         child: Column(
+//           mainAxisAlignment: MainAxisAlignment.center,
+//           children: const [
+//             Icon(Icons.error_outline, size: 80, color: Colors.red),
+//             SizedBox(height: 16),
+//             Text(
+//               "Something went wrong.\nPlease restart the app.",
+//               textAlign: TextAlign.center,
+//               style: TextStyle(fontSize: 18),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   };
+
+//   // Initialize Sentry and then run your app.
+//   await SentryFlutter.init(
+//     (options) {
+//       options.dsn =
+//           'https://65073676965c01d4d4267a6c1b386ed8@o4509046173597696.ingest.de.sentry.io/4509046194241616';
+//       options.sendDefaultPii = true;
+//       //Set tracesSampleRate to 1.0 to capture 100% of transactions for tracing.
+//       // We recommend adjusting this value in production.
+//       options.tracesSampleRate = 1.0;
+//       // The sampling rate for profiling is relative to tracesSampleRate.
+//       options.profilesSampleRate = 1.0;
+//       options.experimental.replay.sessionSampleRate = 1.0;
+//       options.experimental.replay.onErrorSampleRate = 1.0;
+//     },
+//     appRunner: () {
+//       runApp(
+//         SentryWidget(
+//           child: MultiProvider(
+//             providers: [
+//               ChangeNotifierProvider(create: (context) => BluetoothManager()),
+//               ChangeNotifierProvider(create: (context) => TimerState()),
+//               ChangeNotifierProvider.value(value: themeProvider),
+//             ],
+//             child: const MyApp(),
+//           ),
+//         ),
+//       );
+//     },
+//   );
+// }
+
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final themeProvider = Provider.of<ThemeProvider>(context);
+//     final isDark = themeProvider.themeMode == ThemeMode.dark;
+//     final iconBrightness = isDark ? Brightness.light : Brightness.dark;
+//     final navBarColor = isDark ? Colors.black : Colors.white;
+
+//     // Check if the current scheme is blackWhite, sepia, or greys.
+//     final isInversionScheme = [
+//       FlexScheme.blackWhite,
+//       FlexScheme.sepia,
+//       FlexScheme.greys,
+//     ].contains(themeProvider.currentScheme);
+
+//     // Determine the SystemUiOverlayStyle based on the scheme.
+//     final SystemUiOverlayStyle overlayStyle;
+//     if (isInversionScheme) {
+//       overlayStyle = isDark
+//           ? SystemUiOverlayStyle(
+//               statusBarColor: Colors.white,
+//               statusBarIconBrightness: Brightness.dark,
+//               systemNavigationBarColor: Colors.white,
+//               systemNavigationBarIconBrightness: Brightness.dark,
+//             )
+//           : SystemUiOverlayStyle(
+//               statusBarColor: Colors.black,
+//               statusBarIconBrightness: Brightness.light,
+//               systemNavigationBarColor: Colors.black,
+//               systemNavigationBarIconBrightness: Brightness.light,
+//             );
+//     } else {
+//       overlayStyle = SystemUiOverlayStyle(
+//         statusBarColor: Colors.transparent,
+//         statusBarIconBrightness: iconBrightness,
+//         systemNavigationBarColor: navBarColor,
+//         systemNavigationBarIconBrightness: iconBrightness,
+//       );
+//     }
+
+//     // Set the overlay style globally.
+//     SystemChrome.setSystemUIOverlayStyle(overlayStyle);
+
+//     return MaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       title: 'Box Sensors',
+//       themeMode: themeProvider.themeMode,
+//       builder: (context, child) {
+//         return MediaQuery(
+//           data: MediaQuery.of(context).copyWith(
+//             textScaleFactor: 1.0, // Force text scale to 100%
+//           ),
+//           child: child!,
+//         );
+//       },
+//       theme: FlexThemeData.light(
+//         useMaterial3: true,
+//         scheme: themeProvider.currentScheme,
+//         visualDensity: FlexColorScheme.comfortablePlatformDensity,
+//         subThemesData: const FlexSubThemesData(
+//           interactionEffects: true,
+//           tintedDisabledControls: true,
+//           blendOnColors: true,
+//           useM2StyleDividerInM3: true,
+//           inputDecoratorIsFilled: true,
+//           inputDecoratorBorderType: FlexInputBorderType.outline,
+//           alignedDropdown: true,
+//           navigationRailUseIndicator: true,
+//           navigationRailLabelType: NavigationRailLabelType.all,
+//           elevatedButtonRadius: 16,
+//           elevatedButtonElevation: 4,
+//         ),
+//       ).copyWith(
+//         scaffoldBackgroundColor: Colors.grey[300],
+//         cardColor: Colors.white,
+//         textTheme: Typography.blackMountainView.copyWith(
+//           bodyMedium: Typography.blackMountainView.bodyMedium?.copyWith(
+//             fontSize: 14,
+//           ),
+//           bodySmall: Typography.blackMountainView.bodySmall?.copyWith(
+//             fontSize: 12,
+//           ),
+//           bodyLarge: Typography.blackMountainView.bodyLarge?.copyWith(
+//             fontSize: 16,
+//           ),
+//           headlineMedium: Typography.blackMountainView.headlineMedium?.copyWith(
+//             fontSize: 20,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           headlineSmall: Typography.blackMountainView.headlineSmall?.copyWith(
+//             fontSize: 18,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           titleMedium: Typography.blackMountainView.titleMedium?.copyWith(
+//             fontSize: 16,
+//             fontWeight: FontWeight.w600,
+//           ),
+//         ),
+//         appBarTheme: AppBarTheme(
+//           backgroundColor: Colors.transparent,
+//           elevation: 0,
+//           systemOverlayStyle: overlayStyle,
+//         ),
+//       ),
+//       darkTheme: FlexThemeData.dark(
+//         useMaterial3: true,
+//         scheme: themeProvider.currentScheme,
+//         visualDensity: FlexColorScheme.comfortablePlatformDensity,
+//         subThemesData: const FlexSubThemesData(
+//           interactionEffects: true,
+//           tintedDisabledControls: true,
+//           blendOnColors: true,
+//           useM2StyleDividerInM3: true,
+//           inputDecoratorIsFilled: true,
+//           inputDecoratorBorderType: FlexInputBorderType.outline,
+//           alignedDropdown: true,
+//           navigationRailUseIndicator: true,
+//           navigationRailLabelType: NavigationRailLabelType.all,
+//           elevatedButtonRadius: 16,
+//           elevatedButtonElevation: 4,
+//         ),
+//       ).copyWith(
+//         scaffoldBackgroundColor: Colors.grey[900],
+//         cardColor: Colors.grey[850],
+//         textTheme: Typography.whiteMountainView.copyWith(
+//           bodyMedium: Typography.whiteMountainView.bodyMedium?.copyWith(
+//             fontSize: 14,
+//           ),
+//           bodySmall: Typography.whiteMountainView.bodySmall?.copyWith(
+//             fontSize: 12,
+//           ),
+//           bodyLarge: Typography.whiteMountainView.bodyLarge?.copyWith(
+//             fontSize: 16,
+//           ),
+//           headlineMedium: Typography.whiteMountainView.headlineMedium?.copyWith(
+//             fontSize: 20,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           headlineSmall: Typography.whiteMountainView.headlineSmall?.copyWith(
+//             fontSize: 18,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           titleMedium: Typography.whiteMountainView.titleMedium?.copyWith(
+//             fontSize: 16,
+//             fontWeight: FontWeight.w600,
+//           ),
+//         ),
+//         appBarTheme: AppBarTheme(
+//           backgroundColor: Colors.transparent,
+//           elevation: 0,
+//           systemOverlayStyle: overlayStyle,
+//         ),
+//       ),
+//       // Home is wrapped in an AnnotatedRegion to continuously apply the overlay style.
+//       home: AnnotatedRegion<SystemUiOverlayStyle>(
+//         value: overlayStyle,
+//         child: Builder(
+//           builder: (context) => ConnectHome(
+//             bluetoothManager: Provider.of<BluetoothManager>(
+//               context,
+//               listen: false,
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
+
+
+
+
+
+
+
+// // ignore_for_file: deprecated_member_use, textScaleFactor
+// import 'package:flutter/material.dart';
+// import 'package:flutter/services.dart';
+// import 'package:provider/provider.dart';
+// import 'package:box_sensors/ble_connection/bluetooth_manager.dart';
+// import 'package:box_sensors/widgets/connect_home.dart';
+// import 'package:box_sensors/state/timer_state.dart';
+// import 'package:box_sensors/Themes/theme_provider.dart';
+// import 'package:permission_handler/permission_handler.dart';
+// import 'package:flex_color_scheme/flex_color_scheme.dart';
+// import 'package:flutter/foundation.dart';
+// import 'package:sentry_flutter/sentry_flutter.dart';
+
+// Future<void> requestAllPermissionsOnce() async {
+//   await [
+//     Permission.bluetooth,
+//     Permission.bluetoothScan,
+//     Permission.bluetoothConnect,
+//     Permission.location,
+//     // Permission.microphone,
+//   ].request();
+// }
+
+// Future<void> main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+
+//   // Override debugPrint in release mode.
+//   if (kReleaseMode) {
+//     debugPrint = (String? message, {int? wrapWidth}) {};
+//   }
+
+//   await requestAllPermissionsOnce();
+
+//   final themeProvider = ThemeProvider();
+//   await themeProvider.initTheme();
+
+//   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+//   // Initialize Sentry and then run your app.
+//   await SentryFlutter.init(
+//     (options) {
+//       options.dsn =
+//           'https://65073676965c01d4d4267a6c1b386ed8@o4509046173597696.ingest.de.sentry.io/4509046194241616';
+//       options.sendDefaultPii = true;
+//       // Set tracesSampleRate to 1.0 to capture 100% of transactions for tracing.
+//       // We recommend adjusting this value in production.
+//       options.tracesSampleRate = 1.0;
+//       // The sampling rate for profiling is relative to tracesSampleRate
+//       // Setting to 1.0 will profile 100% of sampled transactions:
+//       options.profilesSampleRate = 1.0;
+//       options.experimental.replay.sessionSampleRate = 1.0;
+//       options.experimental.replay.onErrorSampleRate = 1.0;
+//     },
+//     appRunner: () {
+//       runApp(
+//         SentryWidget(
+//           child: MultiProvider(
+//             providers: [
+//               ChangeNotifierProvider(create: (context) => BluetoothManager()),
+//               ChangeNotifierProvider(create: (context) => TimerState()),
+//               ChangeNotifierProvider.value(value: themeProvider),
+//             ],
+//             child: const MyApp(),
+//           ),
+//         ),
+//       );
+//     },
+//   );
+// }
+
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+//   @override
+//   Widget build(BuildContext context) {
+//     final themeProvider = Provider.of<ThemeProvider>(context);
+//     final isDark = themeProvider.themeMode == ThemeMode.dark;
+//     final iconBrightness = isDark ? Brightness.light : Brightness.dark;
+//     final navBarColor = isDark ? Colors.black : Colors.white;
+
+//     // Check if the current scheme is blackWhite, sepia, or greys.
+//     final isInversionScheme = [
+//       FlexScheme.blackWhite,
+//       FlexScheme.sepia,
+//       FlexScheme.greys,
+//     ].contains(themeProvider.currentScheme);
+
+//     // Determine the SystemUiOverlayStyle based on the scheme.
+//     final SystemUiOverlayStyle overlayStyle;
+//     if (isInversionScheme) {
+//       overlayStyle =
+//           isDark
+//               ? SystemUiOverlayStyle(
+//                 statusBarColor: Colors.white,
+//                 statusBarIconBrightness: Brightness.dark,
+//                 systemNavigationBarColor: Colors.white,
+//                 systemNavigationBarIconBrightness: Brightness.dark,
+//               )
+//               : SystemUiOverlayStyle(
+//                 statusBarColor: Colors.black,
+//                 statusBarIconBrightness: Brightness.light,
+//                 systemNavigationBarColor: Colors.black,
+//                 systemNavigationBarIconBrightness: Brightness.light,
+//               );
+//     } else {
+//       overlayStyle = SystemUiOverlayStyle(
+//         statusBarColor: Colors.transparent,
+//         statusBarIconBrightness: iconBrightness,
+//         systemNavigationBarColor: navBarColor,
+//         systemNavigationBarIconBrightness: iconBrightness,
+//       );
+//     }
+
+//     // Set the overlay style globally.
+//     SystemChrome.setSystemUIOverlayStyle(overlayStyle);
+
+//     return MaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       title: 'Box Sensors',
+//       themeMode: themeProvider.themeMode,
+//       builder: (context, child) {
+//         return MediaQuery(
+//           data: MediaQuery.of(context).copyWith(
+//             textScaleFactor: 1.0, // Force text scale to 100%
+//           ),
+//           child: child!,
+//         );
+//       },
+//       theme: FlexThemeData.light(
+//         useMaterial3: true,
+//         scheme: themeProvider.currentScheme,
+//         visualDensity: FlexColorScheme.comfortablePlatformDensity,
+//         subThemesData: const FlexSubThemesData(
+//           interactionEffects: true,
+//           tintedDisabledControls: true,
+//           blendOnColors: true,
+//           useM2StyleDividerInM3: true,
+//           inputDecoratorIsFilled: true,
+//           inputDecoratorBorderType: FlexInputBorderType.outline,
+//           alignedDropdown: true,
+//           navigationRailUseIndicator: true,
+//           navigationRailLabelType: NavigationRailLabelType.all,
+//           elevatedButtonRadius: 16,
+//           elevatedButtonElevation: 4,
+//         ),
+//       ).copyWith(
+//         scaffoldBackgroundColor: Colors.grey[300],
+//         cardColor: Colors.white,
+//         textTheme: Typography.blackMountainView.copyWith(
+//           bodyMedium: Typography.blackMountainView.bodyMedium?.copyWith(
+//             fontSize: 14,
+//           ),
+//           bodySmall: Typography.blackMountainView.bodySmall?.copyWith(
+//             fontSize: 12,
+//           ),
+//           bodyLarge: Typography.blackMountainView.bodyLarge?.copyWith(
+//             fontSize: 16,
+//           ),
+//           headlineMedium: Typography.blackMountainView.headlineMedium?.copyWith(
+//             fontSize: 20,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           headlineSmall: Typography.blackMountainView.headlineSmall?.copyWith(
+//             fontSize: 18,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           titleMedium: Typography.blackMountainView.titleMedium?.copyWith(
+//             fontSize: 16,
+//             fontWeight: FontWeight.w600,
+//           ),
+//         ),
+//         appBarTheme: AppBarTheme(
+//           backgroundColor: Colors.transparent,
+//           elevation: 0,
+//           systemOverlayStyle: overlayStyle,
+//         ),
+//       ),
+//       darkTheme: FlexThemeData.dark(
+//         useMaterial3: true,
+//         scheme: themeProvider.currentScheme,
+//         visualDensity: FlexColorScheme.comfortablePlatformDensity,
+//         subThemesData: const FlexSubThemesData(
+//           interactionEffects: true,
+//           tintedDisabledControls: true,
+//           blendOnColors: true,
+//           useM2StyleDividerInM3: true,
+//           inputDecoratorIsFilled: true,
+//           inputDecoratorBorderType: FlexInputBorderType.outline,
+//           alignedDropdown: true,
+//           navigationRailUseIndicator: true,
+//           navigationRailLabelType: NavigationRailLabelType.all,
+//           elevatedButtonRadius: 16,
+//           elevatedButtonElevation: 4,
+//         ),
+//       ).copyWith(
+//         scaffoldBackgroundColor: Colors.grey[900],
+//         cardColor: Colors.grey[850],
+//         textTheme: Typography.whiteMountainView.copyWith(
+//           bodyMedium: Typography.whiteMountainView.bodyMedium?.copyWith(
+//             fontSize: 14,
+//           ),
+//           bodySmall: Typography.whiteMountainView.bodySmall?.copyWith(
+//             fontSize: 12,
+//           ),
+//           bodyLarge: Typography.whiteMountainView.bodyLarge?.copyWith(
+//             fontSize: 16,
+//           ),
+//           headlineMedium: Typography.whiteMountainView.headlineMedium?.copyWith(
+//             fontSize: 20,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           headlineSmall: Typography.whiteMountainView.headlineSmall?.copyWith(
+//             fontSize: 18,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           titleMedium: Typography.whiteMountainView.titleMedium?.copyWith(
+//             fontSize: 16,
+//             fontWeight: FontWeight.w600,
+//           ),
+//         ),
+//         appBarTheme: AppBarTheme(
+//           backgroundColor: Colors.transparent,
+//           elevation: 0,
+//           systemOverlayStyle: overlayStyle,
+//         ),
+//       ),
+//       // Home is wrapped in an AnnotatedRegion to continuously apply the overlay style.
+//       home: AnnotatedRegion<SystemUiOverlayStyle>(
+//         value: overlayStyle,
+//         child: Builder(
+//           builder:
+//               (context) => ConnectHome(
+//                 bluetoothManager: Provider.of<BluetoothManager>(
+//                   context,
+//                   listen: false,
+//                 ),
+//               ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+// Original code
+// // ignore_for_file: deprecated_member_use, textScaleFactor
+// import 'package:flutter/material.dart';
+// import 'package:flutter/services.dart';
+// import 'package:provider/provider.dart';
+// import 'package:box_sensors/ble_connection/bluetooth_manager.dart';
+// import 'package:box_sensors/widgets/connect_home.dart';
+// import 'package:box_sensors/state/timer_state.dart';
+// import 'package:box_sensors/Themes/theme_provider.dart';
+// import 'package:permission_handler/permission_handler.dart';
+// import 'package:flex_color_scheme/flex_color_scheme.dart';
+// import 'package:flutter/foundation.dart';
+
+// Future<void> requestAllPermissionsOnce() async {
+//   await [
+//     Permission.bluetooth,
+//     Permission.bluetoothScan,
+//     Permission.bluetoothConnect,
+//     Permission.location,
+//     // Permission.microphone,
+//   ].request();
+// }
+
+// void main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+
+//   // Override debugPrint in release mode
+//   if (kReleaseMode) {
+//     debugPrint = (String? message, {int? wrapWidth}) {};
+//   }
+
+//   await requestAllPermissionsOnce();
+
+//   final themeProvider = ThemeProvider();
+//   await themeProvider.initTheme();
+
+//   await SystemChrome.setPreferredOrientations([
+//     DeviceOrientation.portraitUp,
+//   ]).then((_) {
+//     runApp(
+//       MultiProvider(
+//         providers: [
+//           ChangeNotifierProvider(create: (context) => BluetoothManager()),
+//           ChangeNotifierProvider(create: (context) => TimerState()),
+//           ChangeNotifierProvider.value(value: themeProvider),
+//         ],
+//         child: const MyApp(),
+//       ),
+//     );
+//   });
+// }
+
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final themeProvider = Provider.of<ThemeProvider>(context);
+//     final isDark = themeProvider.themeMode == ThemeMode.dark;
+//     final iconBrightness = isDark ? Brightness.light : Brightness.dark;
+//     final navBarColor = isDark ? Colors.black : Colors.white;
+
+//     // Check if the current scheme is blackWhite, sepia, or greys.
+//     // (Make sure FlexScheme.blackWhite, FlexScheme.sepia, and FlexScheme.greys
+//     // is defined or matches your custom scheme)
+//     final isInversionScheme = [
+//       FlexScheme.blackWhite,
+//       FlexScheme.sepia,
+//       FlexScheme.greys,
+//     ].contains(themeProvider.currentScheme);
+
+//     // Determine the SystemUiOverlayStyle based on the scheme.
+//     // For blackwhite, sepia, greys, we invert the overlay colors to ensure proper contrast.
+//     final SystemUiOverlayStyle overlayStyle;
+//     if (isInversionScheme) {
+//       overlayStyle =
+//           isDark
+//               ? SystemUiOverlayStyle(
+//                 statusBarColor: Colors.white,
+//                 statusBarIconBrightness: Brightness.dark,
+//                 systemNavigationBarColor: Colors.white,
+//                 systemNavigationBarIconBrightness: Brightness.dark,
+//               )
+//               : SystemUiOverlayStyle(
+//                 statusBarColor: Colors.black,
+//                 statusBarIconBrightness: Brightness.light,
+//                 systemNavigationBarColor: Colors.black,
+//                 systemNavigationBarIconBrightness: Brightness.light,
+//               );
+//     } else {
+//       // For other schemes, use the default overlay style based on theme brightness.
+//       overlayStyle = SystemUiOverlayStyle(
+//         statusBarColor: Colors.transparent,
+//         statusBarIconBrightness: iconBrightness,
+//         systemNavigationBarColor: navBarColor,
+//         systemNavigationBarIconBrightness: iconBrightness,
+//       );
+//     }
+
+//     // Global call to set the overlay style.
+//     // Note: When using AnnotatedRegion below, this global call can be redundant.
+//     SystemChrome.setSystemUIOverlayStyle(overlayStyle);
+
+//     return MaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       title: 'Box Sensors',
+//       themeMode: themeProvider.themeMode,
+
+//       builder: (context, child) {
+//         return MediaQuery(
+//           data: MediaQuery.of(context).copyWith(
+//             textScaleFactor: 1.0, // Force all text to 100% size
+//           ),
+//           child: child!,
+//         );
+//       },
+
+//       theme: FlexThemeData.light(
+//         useMaterial3: true,
+//         scheme: themeProvider.currentScheme,
+//         visualDensity: FlexColorScheme.comfortablePlatformDensity,
+//         subThemesData: const FlexSubThemesData(
+//           interactionEffects: true,
+//           tintedDisabledControls: true,
+//           blendOnColors: true,
+//           useM2StyleDividerInM3: true,
+//           inputDecoratorIsFilled: true,
+//           inputDecoratorBorderType: FlexInputBorderType.outline,
+//           alignedDropdown: true,
+//           navigationRailUseIndicator: true,
+//           navigationRailLabelType: NavigationRailLabelType.all,
+//           elevatedButtonRadius: 16,
+//           elevatedButtonElevation: 4,
+//         ),
+//       ).copyWith(
+//         scaffoldBackgroundColor: Colors.grey[300],
+//         cardColor: Colors.white,
+//         textTheme: Typography.blackMountainView.copyWith(
+//           bodyMedium: Typography.blackMountainView.bodyMedium?.copyWith(
+//             fontSize: 14,
+//           ),
+//           bodySmall: Typography.blackMountainView.bodySmall?.copyWith(
+//             fontSize: 12,
+//           ),
+//           bodyLarge: Typography.blackMountainView.bodyLarge?.copyWith(
+//             fontSize: 16,
+//           ),
+//           headlineMedium: Typography.blackMountainView.headlineMedium?.copyWith(
+//             fontSize: 20,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           headlineSmall: Typography.blackMountainView.headlineSmall?.copyWith(
+//             fontSize: 18,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           titleMedium: Typography.blackMountainView.titleMedium?.copyWith(
+//             fontSize: 16,
+//             fontWeight: FontWeight.w600,
+//           ),
+//         ),
+//         appBarTheme: AppBarTheme(
+//           backgroundColor: Colors.transparent,
+//           elevation: 0,
+//           // Use the overlay style conditionally if blackwhite scheme is active.
+//           systemOverlayStyle: overlayStyle,
+//         ),
+//       ),
+
+//       darkTheme: FlexThemeData.dark(
+//         useMaterial3: true,
+//         scheme: themeProvider.currentScheme,
+//         visualDensity: FlexColorScheme.comfortablePlatformDensity,
+//         subThemesData: const FlexSubThemesData(
+//           interactionEffects: true,
+//           tintedDisabledControls: true,
+//           blendOnColors: true,
+//           useM2StyleDividerInM3: true,
+//           inputDecoratorIsFilled: true,
+//           inputDecoratorBorderType: FlexInputBorderType.outline,
+//           alignedDropdown: true,
+//           navigationRailUseIndicator: true,
+//           navigationRailLabelType: NavigationRailLabelType.all,
+//           elevatedButtonRadius: 16,
+//           elevatedButtonElevation: 4,
+//         ),
+//       ).copyWith(
+//         scaffoldBackgroundColor: Colors.grey[900],
+//         cardColor: Colors.grey[850],
+//         textTheme: Typography.whiteMountainView.copyWith(
+//           bodyMedium: Typography.whiteMountainView.bodyMedium?.copyWith(
+//             fontSize: 14,
+//           ),
+//           bodySmall: Typography.whiteMountainView.bodySmall?.copyWith(
+//             fontSize: 12,
+//           ),
+//           bodyLarge: Typography.whiteMountainView.bodyLarge?.copyWith(
+//             fontSize: 16,
+//           ),
+//           headlineMedium: Typography.whiteMountainView.headlineMedium?.copyWith(
+//             fontSize: 20,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           headlineSmall: Typography.whiteMountainView.headlineSmall?.copyWith(
+//             fontSize: 18,
+//             fontWeight: FontWeight.bold,
+//           ),
+//           titleMedium: Typography.whiteMountainView.titleMedium?.copyWith(
+//             fontSize: 16,
+//             fontWeight: FontWeight.w600,
+//           ),
+//         ),
+//         appBarTheme: AppBarTheme(
+//           backgroundColor: Colors.transparent,
+//           elevation: 0,
+//           systemOverlayStyle: overlayStyle,
+//         ),
+//       ),
+
+//       // Home is wrapped in AnnotatedRegion to continuously apply the overlay style.
+//       home: AnnotatedRegion<SystemUiOverlayStyle>(
+//         value: overlayStyle,
+//         child: Builder(
+//           builder:
+//               (context) => ConnectHome(
+//                 bluetoothManager: Provider.of<BluetoothManager>(
+//                   context,
+//                   listen: false,
+//                 ),
+//               ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
+
+
+
+
+
+curl --request GET --url https://api2.arduino.cc/iot/v2/things/c8d7dfa1-7d88-4801-b776-fa68f13ad6ba/properties/3880126f-0ad0-4ac8-85b6-09d97c19abd6 --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+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
+
+
+E (124455) BT_BTC: btc_gatts_arg_deep_copy 10, invalid length
+E (124456) BT_BTC: btc_gatts_arg_deep_copy 10, invalid length
+E (124457) BT_APPL: bta_gatts_indicate_handle, incorrect length
+E (124461) BT_APPL: bta_gatts_indicate_handle, incorrect length
+
+
+JSON Parsing Failed: InvalidInput
+Received: 
+
+
+
+
+JSON Parsing Failed:
+
+
+Raw bytes: 01 00 
+Received message: 
+Skipping: not valid JSON or too short.
+
+
+
+Raw bytes: 01 00 
+Received message: 
+Skipping control/CCC write.
+
+
+
+
+ok you write before the bellow 2 codes // code for  characteristic (for example, 20 bytes)
+#ifndef BLUETOOTH_HANDLER_H
+#define BLUETOOTH_HANDLER_H
+
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
+#include <vector>
+
+#define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
+#define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"                                  
+#define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+
+// Define a fixed length for the TX characteristic (for example, 20 bytes)
+#define TX_CHAR_LEN 100   // TX_CHAR_LEN 20
+
+class BluetoothHandler {
+  public:
+    BluetoothHandler();
+    void begin(const char* deviceName);
+    void sendMessage(const String& message);
+    // void sendMessage(const String& message, const String& deviceName);
+    String readMessage();
+    void clearMessage();
+    bool isDeviceConnected();
+
+  private:
+    BLEServer* pServer;
+    BLECharacteristic* pTxCharacteristic;
+    BLECharacteristic* pRxCharacteristic;
+    std::vector<uint16_t> connectedClients;
+    String receivedMessage;
+    // Pointer to the custom CCC descriptor (for the TX characteristic).
+    BLEDescriptor* pCustomCCC;
+    String lastMessage = "";  // Holds the last message sent In BluetoothHandler.h, add a member variable:
+
+    class ServerCallbacks : public BLEServerCallbacks {
+      private:
+        BluetoothHandler* parent;
+      public:
+        ServerCallbacks(BluetoothHandler* parentInstance);
+        void onConnect(BLEServer* pServer, esp_ble_gatts_cb_param_t *param);
+        void onDisconnect(BLEServer* pServer, esp_ble_gatts_cb_param_t *param);
+    };
+
+    class RxCallbacks : public BLECharacteristicCallbacks {
+      private:
+        BluetoothHandler* parent;
+      public:
+        RxCallbacks(BluetoothHandler* parentInstance);
+        void onWrite(BLECharacteristic* pCharacteristic);
+    };
+
+    ServerCallbacks serverCallbacks;
+    RxCallbacks rxCallbacks;
+    void cleanDisconnectedClients();
+};
+
+#endif // BLUETOOTH_HANDLER_H   and // code for  characteristic (for example, 20 bytes)
+#include "BluetoothHandler.h"
+#include <string.h>  // for memcpy
+
+BluetoothHandler::BluetoothHandler()
+  : pServer(nullptr), pTxCharacteristic(nullptr), pRxCharacteristic(nullptr),
+    serverCallbacks(this), rxCallbacks(this), pCustomCCC(nullptr) {}
+
+void BluetoothHandler::begin(const char* deviceName) {
+  // Initialize BLE with the given device name and set the MTU.
+  BLEDevice::init(deviceName);
+  BLEDevice::setMTU(512);
+
+  // Create the BLE server and assign callbacks.
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(&serverCallbacks);
+
+  // --- Main Service ---
+  BLEService* pService = pServer->createService(SERVICE_UUID);
+
+  // Create TX characteristic with NOTIFY and READ properties.
+  // PROPERTY_READ helps some clients subscribe correctly.
+  pTxCharacteristic = pService->createCharacteristic(
+      CHARACTERISTIC_UUID_TX,
+      BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ
+  );
+  
+  // Create a custom CCC descriptor (UUID 0x2902) with explicit read/write permissions.
+  static uint8_t cccValue[2] = {0x00, 0x00};  // Default: notifications disabled.
+  pCustomCCC = new BLEDescriptor(
+      BLEUUID((uint16_t)0x2902),
+      ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE
+  );
+  pCustomCCC->setValue(cccValue, 2);
+  pTxCharacteristic->addDescriptor(pCustomCCC);
+
+  // Initialize the TX characteristic with a fixed length.
+  // We use a buffer of TX_CHAR_LEN bytes (here 20) initialized to zero.
+  uint8_t initialValue[TX_CHAR_LEN] = {0};
+  pTxCharacteristic->setValue(initialValue, TX_CHAR_LEN);
+
+  // Create RX characteristic with WRITE and READ properties.
+  pRxCharacteristic = pService->createCharacteristic(
+      CHARACTERISTIC_UUID_RX,
+      BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_READ
+  );
+  pRxCharacteristic->setAccessPermissions(ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE);
+  pRxCharacteristic->setCallbacks(&rxCallbacks);
+
+  // Start the main service.
+  pService->start();
+
+  // --- Optional: Generic Attribute Service with Service Changed characteristic ---
+  // This may prompt clients to re-discover your GATT database if their cache is stale.
+  BLEService* pGattService = pServer->createService("1801");  // Generic Attribute Service.
+  BLECharacteristic* pServiceChangedCharacteristic = pGattService->createCharacteristic(
+      "2A05",
+      BLECharacteristic::PROPERTY_INDICATE
+  );
+  uint8_t svcChangedVal[4] = { 0x00, 0x00, 0xFF, 0xFF };
+  pServiceChangedCharacteristic->setValue(svcChangedVal, 4);
+  pGattService->start();
+
+  // Start advertising after all services are started.
+  pServer->getAdvertising()->start();
+  // Serial.println("Waiting for client connections...");
+}
+
+// void BluetoothHandler::sendMessage(const String& message) {
+//   pTxCharacteristic->setValue(message.c_str());
+//   pTxCharacteristic->notify();
+// }
+
+void BluetoothHandler::sendMessage(const String& message) {
+  // Prepare a fixed-size buffer.
+  uint8_t buffer[TX_CHAR_LEN] = {0};
+  size_t len = message.length();
+  if (len > TX_CHAR_LEN) {
+    len = TX_CHAR_LEN; // truncate if necessary
+  }
+  memcpy(buffer, message.c_str(), len);
+  
+  // Update the TX characteristic value using the fixed length.
+  pTxCharacteristic->setValue(buffer, TX_CHAR_LEN);
+  pTxCharacteristic->notify();
+}
+
+
+// void BluetoothHandler::sendMessage(const String& message) {
+//     // Determine the effective length (do not exceed TX_CHAR_LEN)
+//     size_t effectiveLen = min(message.length(), (size_t)TX_CHAR_LEN);
+//     // Create the truncated version that will actually be sent
+//     String truncatedMessage = message.substring(0, effectiveLen);
+
+//     // Check if the truncated message is identical to the last one sent.
+//     if (truncatedMessage.equals(lastMessage)) {
+//         Serial.println("Skipping duplicate message: " + truncatedMessage);
+//         return;
+//     }
+
+//     // Update lastMessage to the truncated version
+//     lastMessage = truncatedMessage;
+
+//     // Prepare a fixed-size buffer initialized to zero.
+//     uint8_t buffer[TX_CHAR_LEN] = {0};
+//     // Copy only the effective number of bytes into the buffer.
+//     memcpy(buffer, truncatedMessage.c_str(), effectiveLen);
+
+
+//     // Update the TX characteristic value using the fixed length.
+//     pTxCharacteristic->setValue(buffer, TX_CHAR_LEN);
+//     pTxCharacteristic->notify();
+//     //Serial.println("Sent message: " + truncatedMessage);
+// }
+
+
+// void BluetoothHandler::sendMessage(const String& message, const String& deviceName) {
+//     // Prefix message with device name (e.g., "RedBoxer: sensorData")
+//     String fullMessage = deviceName + ": " + message;
+
+//     // Determine the effective length (do not exceed TX_CHAR_LEN)
+//     size_t effectiveLen = min(fullMessage.length(), (size_t)TX_CHAR_LEN);
+//     // Create the truncated version that will actually be sent
+//     String truncatedMessage = fullMessage.substring(0, effectiveLen);
+
+//     // Check if the truncated message is identical to the last one sent.
+//     if (truncatedMessage.equals(lastMessage)) {
+//         Serial.println("Skipping duplicate message: " + truncatedMessage);
+//         return;
+//     }
+
+//     // Update lastMessage to the truncated version
+//     lastMessage = truncatedMessage;
+
+//     // Prepare a fixed-size buffer initialized to zero.
+//     uint8_t buffer[TX_CHAR_LEN] = {0};
+//     // Copy only the effective number of bytes into the buffer.
+//     memcpy(buffer, truncatedMessage.c_str(), effectiveLen);
+
+//     // Update the TX characteristic value using the fixed length.
+//     pTxCharacteristic->setValue(buffer, TX_CHAR_LEN);
+//     pTxCharacteristic->notify();
+
+//     Serial.println("Sent message: " + truncatedMessage);
+// }
+
+
+
+
+String BluetoothHandler::readMessage() {
+  return receivedMessage;
+}
+
+void BluetoothHandler::clearMessage() {
+  receivedMessage = "";
+}
+
+bool BluetoothHandler::isDeviceConnected() {
+  return !connectedClients.empty();
+}
+
+void BluetoothHandler::cleanDisconnectedClients() {
+  connectedClients.erase(
+    std::remove_if(connectedClients.begin(), connectedClients.end(),
+                   [&](uint16_t handle) {
+                     return pServer->getConnectedCount() == 0;
+                   }),
+    connectedClients.end()
+  );
+}
+
+BluetoothHandler::ServerCallbacks::ServerCallbacks(BluetoothHandler* parentInstance)
+  : parent(parentInstance) {}
+
+void BluetoothHandler::ServerCallbacks::onConnect(BLEServer* pServer, esp_ble_gatts_cb_param_t* param) {
+  uint16_t connId = param->connect.conn_id;
+  parent->connectedClients.push_back(connId);
+  Serial.println("Device connected. Total connections: " + String(parent->connectedClients.size()));
+  
+  // Clear any residual TX value.
+  uint8_t clearBuf[TX_CHAR_LEN] = {0};
+  parent->pTxCharacteristic->setValue(clearBuf, TX_CHAR_LEN);
+  
+  // Force the CCC descriptor to enable notifications by setting its value.
+  if (parent->pCustomCCC != nullptr) {
+    uint8_t subValue[2] = { 0x01, 0x00 }; // 0x01 = enable notifications.
+    parent->pCustomCCC->setValue(subValue, 2);
+  }
+  
+  // Send an initial notification to the new client.
+  parent->pTxCharacteristic->notify(connId);
+
+  // Restart advertising if we allow multiple connections.
+  if (pServer->getConnectedCount() < 2) {
+    pServer->getAdvertising()->start();
+  }
+}
+
+void BluetoothHandler::ServerCallbacks::onDisconnect(BLEServer* pServer, esp_ble_gatts_cb_param_t* param) {
+  uint16_t connId = param->disconnect.conn_id;
+  auto it = std::remove(parent->connectedClients.begin(), parent->connectedClients.end(), connId);
+  parent->connectedClients.erase(it, parent->connectedClients.end());
+  
+  // Allow time for BLE stack cleanup.
+  delay(150);
+  
+  Serial.println("Device disconnected. Remaining connections: " + String(parent->connectedClients.size()));
+  pServer->startAdvertising();
+}
+
+BluetoothHandler::RxCallbacks::RxCallbacks(BluetoothHandler* parentInstance)
+  : parent(parentInstance) {}
+
+// void BluetoothHandler::RxCallbacks::onWrite(BLECharacteristic* pCharacteristic) {
+//   parent->receivedMessage = pCharacteristic->getValue().c_str();
+//   parent->receivedMessage.trim();
+//   Serial.println("Received message: " + parent->receivedMessage);
+// }
+
+void BluetoothHandler::RxCallbacks::onWrite(BLECharacteristic* pCharacteristic) {
+  // Get the value as an Arduino String.
+  String rxValue = pCharacteristic->getValue();
+  
+  // Debug-print raw bytes in HEX to see what's actually being received.
+  Serial.print("Raw bytes: ");
+  for (size_t i = 0; i < rxValue.length(); i++) {
+    Serial.printf("%02X ", (uint8_t)rxValue.charAt(i));
+  }
+  Serial.println();
+
+  // Trim the message.
+  rxValue.trim();
+
+  Serial.println("Received message: " + rxValue);
+
+  // Check if the message is long enough and starts with a JSON object.
+  if (rxValue.length() < 2 || !rxValue.startsWith("{")) {
+    Serial.println("Skipping: not valid JSON or too short.");
+    return;
+  }
+
+  // Attempt JSON parse (pseudo-code). Uncomment and use your actual parser.
+  // if (!myJsonParser.parse(rxValue)) {
+  //    Serial.println("JSON Parsing Failed: InvalidInput");
+  //    return;
+  // }
+
+  // If parse succeeded (or if you're not parsing), store the JSON data.
+  parent->receivedMessage = rxValue;
+} and with this 2 code you fixed errors like  this one E (XXXXX) BT_GATT: gatts_write_attr_perm_check - GATT_WRITE_NOT_PERMIT, handle 002b, perm 0001
+
