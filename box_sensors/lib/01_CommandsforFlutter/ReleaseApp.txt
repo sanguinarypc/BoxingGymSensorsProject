@@ -1,0 +1,74 @@
+dart run flutter_launcher_icons:generate            dart run flutter_launcher_icons:generate --no-pub
+
+keytool -genkey -v -keystore $env:USERPROFILE\upload-keystore.jks `
+        -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 `
+        -alias upload    
+
+
+1) dart run flutter_launcher_icons
+
+2) keytool -genkey -v -keystore upload-keystore.jks `                 
+>>         -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 `
+>>         -alias upload
+
+password: Zebra##Zarkadi##skylos##
+
+What is your first and last name?
+  [Unknown]:  Nick Dimitrakarakos
+What is the name of your organizational unit?
+  [Unknown]:  sanguinarypc
+What is the name of your organization?
+  [Unknown]:  sanguinarypc
+What is the name of your City or Locality?
+  [Unknown]:  Athens
+What is the name of your State or Province?
+  [Unknown]:  Attiki
+What is the two-letter country code for this unit?
+  [Unknown]:  GR
+Is CN=Nick Dimitrakarakos, OU=sanguinarypc, O=sanguinarypc, L=Athens, ST=Attiki, C=GR correct?
+
+Enter key password for <upload>
+        (RETURN if same as keystore password):         i will keep the same Zebra##Zarkadi##skylos##
+
+
+The JKS keystore uses a proprietary format.
+It is recommended to migrate to PKCS12 which is an industry standard format using
+
+4) keytool -importkeystore -srckeystore upload-keystore.jks -destkeystore upload-keystore.jks -deststoretype pkcs12
+
+
+Entry for alias upload successfully imported.
+Import command completed:  1 entries successfully imported, 0 entries failed or cancelled
+
+Warning:
+Migrated "upload-keystore.jks" to PKCS12. The JKS keystore is backed up as "upload-keystore.jks.old".
+
+
+5) 
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+            storePassword = keystoreProperties["storePassword"] as String
+        }
+    }
+
+
+
+ signingConfig = signingConfigs.getByName("release")
+
+
+
+ 6) flutter clean
+
+ 7) flutter build appbundle
+
+ 
