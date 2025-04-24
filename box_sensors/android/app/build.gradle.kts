@@ -27,12 +27,10 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = "17"  // jvmTarget = "11"
-    }
-
-    kotlinOptions {
+        // jvmTarget = "17"  // jvmTarget = "11"
         jvmTarget = JavaVersion.VERSION_17.toString()  // JavaVersion.VERSION_11.toString()
     }
+
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
@@ -45,14 +43,31 @@ android {
         versionName =  "1.0.1"   // flutter.versionName  // "1.0.1"
     }
 
-    signingConfigs {
+//    signingConfigs {
+//        create("release") {
+//            keyAlias = keystoreProperties["keyAlias"] as String
+//            keyPassword = keystoreProperties["keyPassword"] as String
+//            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+//            storePassword = keystoreProperties["storePassword"] as String
+//        }
+//    }
+
+     signingConfigs {
         create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String
+            // Ensure your key.properties file has these entries
+            // Use null-safe access and provide defaults or handle missing properties gracefully
+            keyAlias = keystoreProperties["keyAlias"] as? String ?: ""
+            keyPassword = keystoreProperties["keyPassword"] as? String ?: ""
+            storeFile = keystoreProperties["storeFile"]?.let { rootProject.file(it) } // Use rootProject.file for consistency
+            storePassword = keystoreProperties["storePassword"] as? String ?: ""
+
+            // It's recommended to check if the storeFile exists before assigning
+            // if (storeFile?.exists() == false) {
+            //     throw GradleException("Keystore file not found: ${storeFile?.absolutePath}")
+            // }
         }
     }
+
 
     buildTypes {
     getByName("release") {
@@ -74,7 +89,17 @@ android {
         // signingConfig = signingConfigs.getByName("debug")   // the debug one
         signingConfig = signingConfigs.getByName("release")
 
-        // android.buildTypes.release.ndk.debugSymbolLevel = { SYMBOL_TABLE | FULL }
+
+        // Configure NDK options within the release build type
+        ndk {
+            // Workaround: Use string literal instead of enum reference
+            debugSymbolLevel = "FULL"
+        }
+
+        // You can configure other build types like debug here if needed
+        // getByName("debug") {
+        //     // Debug specific settings
+        // }
 
 
     }
