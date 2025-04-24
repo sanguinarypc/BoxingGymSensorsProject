@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.sanguinarypc.box_sensors"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = flutter.compileSdkVersion   // 35
     ndkVersion = "27.0.12077973" // flutter.ndkVersion
     
 
@@ -39,10 +39,9 @@ android {
         applicationId = "com.sanguinarypc.box_sensors"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = flutter.minSdkVersion  // 28
+        targetSdk = flutter.targetSdkVersion  // 35
         versionCode = flutter.versionCode
-
         versionName = flutter.versionName
     }
 
