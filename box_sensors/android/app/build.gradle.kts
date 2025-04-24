@@ -41,8 +41,8 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion  // 28
         targetSdk = flutter.targetSdkVersion  // 35
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode =  2 // flutter.versionCode  // 2
+        versionName =  "1.0.1"   // flutter.versionName  // "1.0.1"
     }
 
     signingConfigs {
@@ -73,6 +73,10 @@ android {
   
         // signingConfig = signingConfigs.getByName("debug")   // the debug one
         signingConfig = signingConfigs.getByName("release")
+
+        // android.buildTypes.release.ndk.debugSymbolLevel = { SYMBOL_TABLE | FULL }
+
+
     }
 }
 
@@ -81,6 +85,7 @@ android {
 flutter {
     source = "../.."
 }
+
 
 // Force Java 11 for all JavaCompile tasks and enable unchecked warnings
 //tasks.withType<JavaCompile> {
