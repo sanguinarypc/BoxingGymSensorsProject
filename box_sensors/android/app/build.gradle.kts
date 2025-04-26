@@ -18,6 +18,7 @@ android {
     namespace = "com.sanguinarypc.box_sensors"
     compileSdk = flutter.compileSdkVersion   // 35
     ndkVersion = "27.0.12077973" // flutter.ndkVersion
+    //ndkVersion = "26.1.10909125" // Βάλτε την έκδοση που εγκαταστήσατε
     
 
     compileOptions {
@@ -93,13 +94,15 @@ android {
         // Configure NDK options within the release build type
         ndk {
             // Workaround: Use string literal instead of enum reference
-            debugSymbolLevel = "FULL"
+            debugSymbolLevel = "full"   // "FULL"  "NONE" "SYMBOL_TABLE"
+            // abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86"))
+
         }
 
         // You can configure other build types like debug here if needed
-        // getByName("debug") {
-        //     // Debug specific settings
-        // }
+        getByName("debug") {
+             // Debug specific settings
+        }
 
 
     }

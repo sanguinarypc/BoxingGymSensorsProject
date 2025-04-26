@@ -80,3 +80,9 @@ signingConfigs {
 
     flutter build appbundle
     powershell -ExecutionPolicy Bypass -File make-symbols.ps1
+
+
+
+    inside app-release.aab in the folders
+    base/lib/   creat a zip file with name symbols.zip that ibludes the
+    4 folders arm64-v8a  armeabi-v7a  x86  x86_64

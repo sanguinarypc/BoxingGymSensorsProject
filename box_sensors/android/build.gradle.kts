@@ -5,7 +5,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.8.0")
+        classpath("com.android.tools.build:gradle:8.8.0")   // 8.7.0  8.8.0
+        // classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20") // 2.1.20  1.8.22
     }
 }
 
@@ -24,6 +25,8 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+
+
 subprojects {
     project.evaluationDependsOn(":app")
 }
