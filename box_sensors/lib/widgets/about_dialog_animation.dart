@@ -54,7 +54,7 @@ class AboutDialogAnimation extends StatelessWidget {
                 speed: const Duration(milliseconds: 500),
               ),
               ColorizeAnimatedText(
-                'Nick Dimitrakarakos',
+                '          Nick Dimitrakarakos',
                 textStyle: colorizeTextStyle,
                 colors: colorizeColors,
                 speed: const Duration(milliseconds: 500),
