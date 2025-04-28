@@ -8,7 +8,8 @@ static const String BLUEBOXER_MACS[] = {
   "f0:f5:bd:2c:10:72",
   "f0:f5:bd:2c:1a:32",
   "f0:f5:bd:2c:0b:ee",
-  "f0:f5:bd:2c:16:3a"
+  "f0:f5:bd:2c:16:3a",
+  "54:32:04:3f:e8:8e"
 
 };
 static const int NUM_BLUEBOXER_MACS = sizeof(BLUEBOXER_MACS) / sizeof(BLUEBOXER_MACS[0]);
