@@ -189,8 +189,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _insertSampleData() async {
     try {
-      // await dbHelper.insertSampleMatches();
-      await dbHelper.insertComprehensiveSampleData();
+      await dbHelper.insertSampleMatches();
+      // await dbHelper.insertComprehensiveSampleData();
       if (!mounted) return;
       _showSnackBar('Sample data inserted successfully.');
     } catch (e) {
