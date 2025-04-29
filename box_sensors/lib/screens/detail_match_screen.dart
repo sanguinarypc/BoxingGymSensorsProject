@@ -42,8 +42,7 @@ class _DetailMatchScreenState extends State<DetailMatchScreen> {
             actions: [
               IconButton(
                 icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
-                // return the updated matchData so the caller can refresh
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop<bool>(context, true), // or false if you want to indicate no changes
               ),
             ],
           ),

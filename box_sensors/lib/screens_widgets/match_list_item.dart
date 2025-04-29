@@ -11,12 +11,12 @@ class MatchListItem extends StatelessWidget {
   final Map<String, dynamic> match;
   final DatabaseHelper dbHelper;
   final VoidCallback onRefresh;
-
+ 
   const MatchListItem({
     super.key,
     required this.match,
     required this.dbHelper,
-    required this.onRefresh,
+    required this.onRefresh, 
   });
 
   @override
