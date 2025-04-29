@@ -20,7 +20,7 @@ BoxingApp::BoxingApp()
 {
   bluetoothHandler = new BluetoothHandler();
   // fsrHandler = new FSRPunchDetector(6, fsrSensitivity);
-  // new: watch pins 6, 7, and 8
+  // new: watch pins 4, 5, and 6
   fsrHandler = new FSRPunchDetector({ 4, 5, 6 },
                                     fsrSensitivity,
                                     fsrThreshold);
