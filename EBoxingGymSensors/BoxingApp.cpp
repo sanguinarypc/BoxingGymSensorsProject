@@ -19,7 +19,12 @@ BoxingApp::BoxingApp()
     duplicatePunchCount(0)  // Initialize duplicate counter
 {
   bluetoothHandler = new BluetoothHandler();
-  fsrHandler = new FSRPunchDetector(6, fsrSensitivity);
+  // fsrHandler = new FSRPunchDetector(6, fsrSensitivity);
+  // new: watch pins 6, 7, and 8
+  fsrHandler = new FSRPunchDetector({ 4, 5, 6 },
+                                    fsrSensitivity,
+                                    fsrThreshold);
+
   timeHandler = new TimeHandler();
 }
 
