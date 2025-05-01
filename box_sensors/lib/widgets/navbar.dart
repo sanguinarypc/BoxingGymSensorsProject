@@ -175,7 +175,7 @@ class NavBar extends StatelessWidget {
                     },
                   ),
                   ListTile(
-                    leading: Icon(Icons.info, color: theme.colorScheme.primary),
+                    leading: Icon(Icons.animation, color: theme.colorScheme.primary),
                     title: Text(
                       'Animation',
                       style: TextStyle(color: theme.colorScheme.onSurface),
