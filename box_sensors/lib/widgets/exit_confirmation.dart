@@ -6,53 +6,43 @@ enum _ExitAction { exit, minimize, cancel }
 class ExitConfirmation {
   static const MethodChannel _channel = MethodChannel('app.exit.channel');
 
-  static Future<void> show(BuildContext context) async {
-    final choice = await showDialog<_ExitAction>(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(
-              'What now?',
-              style: const TextStyle(
-                fontSize: 22, // ← your desired size
-                fontWeight: FontWeight.bold, // optional
-              ),
-            ),
+static Future<void> show(BuildContext context) async {
+  final choice = await showDialog<_ExitAction>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      // ① Add a shape with both radius and a side border:
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(
+          color: Colors.grey.shade400,
+          width: 6,
+        ),
+      ),
 
-            // tighten up the default padding so your items sit nicely
-            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-            // build the entire list in the content area
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch, // full width
-              children: [
-                const Text(
-                  'Exit app, minimize it, or stay?',
-                  style: TextStyle(
-                    fontSize: 16, // ← your desired size
-                    fontWeight: FontWeight.bold, // optional
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // A helper row for each choice
-                _buildOption(
-                  ctx,
-                  Icons.exit_to_app,
-                  'Exit App',
-                  _ExitAction.exit,
-                ),
-                _buildOption(
-                  ctx,
-                  Icons.arrow_circle_down_outlined, //minimize
-                  'Minimize App',
-                  _ExitAction.minimize,
-                ),
-                _buildOption(ctx, Icons.cancel, 'Cancel', _ExitAction.cancel),
-              ],
-            ),
+      title: Text(
+        'What now?',
+        style: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Exit app, minimize it, or stay?',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-    );
+          const SizedBox(height: 16),
+          _buildOption(ctx, Icons.exit_to_app, 'Exit App', _ExitAction.exit),
+          _buildOption(ctx, Icons.arrow_circle_down_outlined, 'Minimize App', _ExitAction.minimize),
+          _buildOption(ctx, Icons.cancel, 'Cancel', _ExitAction.cancel),
+        ],
+      ),
+    ),
+  );
 
     switch (choice) {
       case _ExitAction.exit:
