@@ -77,53 +77,6 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
     });
   }
 
-  // void onTabTapped(int index) {
-  //   // Save the current tab index.
-  //   final int previousIndex = _currentIndex;
-
-  //   // Update _currentIndex for the visible tab.
-  //   _safeSetState(() {
-  //     _currentIndex = index;
-  //   });
-
-  //   Widget nextScreen;
-  //   switch (index) {
-  //     case 0:
-  //       nextScreen = ConnectHomeWidgets(
-  //         deviceOptions: deviceOptions,
-  //       );
-  //       break;
-  //     case 1:
-  //       nextScreen = const MatchesScreen();
-  //       break;
-  //     case 2:
-  //       nextScreen = const AddMatchScreen();
-  //       break;
-  //     case 3:
-  //       nextScreen = SettingsScreen(onTabChange: _updateTabIndex);
-  //       break;
-
-  //     default:
-  //       throw Exception("Invalid tab index: $index");
-  //   }
-
-  //   // Push the new route and, when it is popped, restore the previous index.
-  //   if (mounted && _navigatorKey.currentState != null) {
-  //     try {
-  //       _navigatorKey.currentState!
-  //           .push<int>(MaterialPageRoute(builder: (context) => nextScreen))
-  //           .then((returnedIndex) {
-  //         _safeSetState(() {
-  //           _currentIndex = returnedIndex ?? previousIndex;
-  //         });
-  //       });
-  //     } catch (e, stackTrace) {
-  //       debugPrint("Error pushing route: $e\n$stackTrace");
-  //       Sentry.captureException(e, stackTrace: stackTrace);
-  //     }
-  //   }
-  // }
-
   void onTabTapped(int index) {
     const exitIndex = 4; // ← position of your “Exit” tab
 
