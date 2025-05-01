@@ -628,6 +628,8 @@ android.enableJetifier=true
 
 rd /s /q "C:\Users\nick\.gradle"
 
+flutter devices
+
 flutter clean
 flutter pub get
 flutter run

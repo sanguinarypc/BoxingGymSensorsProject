@@ -135,8 +135,9 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
 
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (bool didPop, dynamic result) {
+      onPopInvokedWithResult: (bool didPop, dynamic result)  {
         if (didPop) return;
+        // await ExitConfirmation.show(context); // show your 3-button dialog
       },
       child: Scaffold(
         // Wrap NavBar in IgnorePointer based on timer state.
