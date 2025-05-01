@@ -1,5 +1,6 @@
 // connect_home.dart
 import 'dart:async';
+import 'package:box_sensors/widgets/exit_confirmation.dart';
 import 'package:flutter/material.dart';
 import 'package:box_sensors/services/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,7 +52,9 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
     super.initState();
     // Listen for Bluetooth disconnections.
     final bluetoothManager = ref.read(bluetoothManagerProvider);
-    _disconnectionSub = bluetoothManager.disconnectionStream.listen((String? deviceName) {
+    _disconnectionSub = bluetoothManager.disconnectionStream.listen((
+      String? deviceName,
+    ) {
       if (deviceName != null && deviceName == selectedDevice) {
         _safeSetState(() {
           selectedDevice = null; // Reset DropdownButton to placeholder.
@@ -74,11 +77,65 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
     });
   }
 
+  // void onTabTapped(int index) {
+  //   // Save the current tab index.
+  //   final int previousIndex = _currentIndex;
+
+  //   // Update _currentIndex for the visible tab.
+  //   _safeSetState(() {
+  //     _currentIndex = index;
+  //   });
+
+  //   Widget nextScreen;
+  //   switch (index) {
+  //     case 0:
+  //       nextScreen = ConnectHomeWidgets(
+  //         deviceOptions: deviceOptions,
+  //       );
+  //       break;
+  //     case 1:
+  //       nextScreen = const MatchesScreen();
+  //       break;
+  //     case 2:
+  //       nextScreen = const AddMatchScreen();
+  //       break;
+  //     case 3:
+  //       nextScreen = SettingsScreen(onTabChange: _updateTabIndex);
+  //       break;
+
+  //     default:
+  //       throw Exception("Invalid tab index: $index");
+  //   }
+
+  //   // Push the new route and, when it is popped, restore the previous index.
+  //   if (mounted && _navigatorKey.currentState != null) {
+  //     try {
+  //       _navigatorKey.currentState!
+  //           .push<int>(MaterialPageRoute(builder: (context) => nextScreen))
+  //           .then((returnedIndex) {
+  //         _safeSetState(() {
+  //           _currentIndex = returnedIndex ?? previousIndex;
+  //         });
+  //       });
+  //     } catch (e, stackTrace) {
+  //       debugPrint("Error pushing route: $e\n$stackTrace");
+  //       Sentry.captureException(e, stackTrace: stackTrace);
+  //     }
+  //   }
+  // }
+
   void onTabTapped(int index) {
-    // Save the current tab index.
+    const exitIndex = 4; // ← position of your “Exit” tab
+
+    // ① ExitConfirmation dialog
+    if (index == exitIndex) {
+      ExitConfirmation.show(context);
+      return;
+    }
+
+    // ② Otherwise, proceed with your existing logic:
     final int previousIndex = _currentIndex;
 
-    // Update _currentIndex for the visible tab.
     _safeSetState(() {
       _currentIndex = index;
     });
@@ -86,9 +143,7 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
     Widget nextScreen;
     switch (index) {
       case 0:
-        nextScreen = ConnectHomeWidgets(
-          deviceOptions: deviceOptions,
-        );
+        nextScreen = ConnectHomeWidgets(deviceOptions: deviceOptions);
         break;
       case 1:
         nextScreen = const MatchesScreen();
@@ -103,16 +158,15 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
         throw Exception("Invalid tab index: $index");
     }
 
-    // Push the new route and, when it is popped, restore the previous index.
     if (mounted && _navigatorKey.currentState != null) {
       try {
         _navigatorKey.currentState!
             .push<int>(MaterialPageRoute(builder: (context) => nextScreen))
             .then((returnedIndex) {
-          _safeSetState(() {
-            _currentIndex = returnedIndex ?? previousIndex;
-          });
-        });
+              _safeSetState(() {
+                _currentIndex = returnedIndex ?? previousIndex;
+              });
+            });
       } catch (e, stackTrace) {
         debugPrint("Error pushing route: $e\n$stackTrace");
         Sentry.captureException(e, stackTrace: stackTrace);
@@ -135,9 +189,7 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
         // Wrap NavBar in IgnorePointer based on timer state.
         drawer: IgnorePointer(
           ignoring: timerState.isStartButtonDisabled,
-          child: NavBar(
-            onTabTapped: onTabTapped,
-          ),
+          child: NavBar(onTabTapped: onTabTapped),
         ),
         drawerEnableOpenDragGesture: !timerState.isStartButtonDisabled,
         appBar: PreferredSize(
@@ -149,11 +201,12 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
         ),
         body: Navigator(
           key: _navigatorKey,
-          onGenerateRoute: (_) => MaterialPageRoute(
-            builder: (context) => ConnectHomeWidgets(
-              deviceOptions: deviceOptions,
-            ),
-          ),
+          onGenerateRoute:
+              (_) => MaterialPageRoute(
+                builder:
+                    (context) =>
+                        ConnectHomeWidgets(deviceOptions: deviceOptions),
+              ),
         ),
         bottomNavigationBar: IgnorePointer(
           ignoring: timerState.isStartButtonDisabled,
@@ -162,9 +215,15 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
             children: [
               Footer(onTabTapped: onTabTapped, currentIndex: _currentIndex),
               StatusBarIndicator(
-                isConnectedDevice1: bluetoothManager.isDeviceConnected('BlueBoxer'),
-                isConnectedDevice2: bluetoothManager.isDeviceConnected('RedBoxer'),
-                isConnectedDevice3: bluetoothManager.isDeviceConnected('BoxerServer'),
+                isConnectedDevice1: bluetoothManager.isDeviceConnected(
+                  'BlueBoxer',
+                ),
+                isConnectedDevice2: bluetoothManager.isDeviceConnected(
+                  'RedBoxer',
+                ),
+                isConnectedDevice3: bluetoothManager.isDeviceConnected(
+                  'BoxerServer',
+                ),
               ),
             ],
           ),
@@ -173,12 +232,6 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
     );
   }
 }
-
-
-
-
-
-
 
 // // connect_home.dart
 // import 'dart:async';

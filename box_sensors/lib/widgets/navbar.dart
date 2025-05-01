@@ -1,7 +1,9 @@
+import 'package:box_sensors/widgets/exit_confirmation.dart';
 import 'package:flutter/material.dart';
 import 'package:box_sensors/widgets/about_dialog_animation.dart';
 import 'package:box_sensors/widgets/about_dialog_app.dart';
 import 'package:box_sensors/Themes/theme_selection.dart';
+// import 'package:flutter/services.dart';
 
 /// A simple widget that merges two icons into one.
 class MergedIcon extends StatelessWidget {
@@ -25,11 +27,7 @@ class MergedIcon extends StatelessWidget {
           Positioned(
             top: 0,
             left: -10,
-            child: Icon(
-              Icons.add,
-              size: 18,
-              color: theme.colorScheme.primary,
-            ),
+            child: Icon(Icons.add, size: 18, color: theme.colorScheme.primary),
           ),
         ],
       ),
@@ -41,10 +39,9 @@ class MergedIcon extends StatelessWidget {
 class NavBar extends StatelessWidget {
   final Function(int) onTabTapped;
 
-  const NavBar({
-    super.key,
-    required this.onTabTapped,
-  });
+  const NavBar({super.key, required this.onTabTapped});
+
+
 
   // A helper method to safely perform an action.
   void _safeAction(BuildContext context, VoidCallback action) {
@@ -60,9 +57,10 @@ class NavBar extends StatelessWidget {
     final theme = Theme.of(context);
     return Drawer(
       width: 260,
-      backgroundColor: theme.brightness == Brightness.dark
-          ? theme.colorScheme.surface
-          : theme.colorScheme.inversePrimary,
+      backgroundColor:
+          theme.brightness == Brightness.dark
+              ? theme.colorScheme.surface
+              : theme.colorScheme.inversePrimary,
       child: Column(
         children: [
           Container(
@@ -70,9 +68,7 @@ class NavBar extends StatelessWidget {
             width: double.infinity,
             alignment: Alignment.bottomLeft,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary,
-            ),
+            decoration: BoxDecoration(color: theme.colorScheme.primary),
             child: Row(
               children: [
                 Icon(
@@ -94,83 +90,122 @@ class NavBar extends StatelessWidget {
           ),
           const ThemeSelection(),
           const Divider(),
-          ListTile(
-            leading: Icon(Icons.bluetooth, color: theme.colorScheme.primary),
-            title: Text(
-              'Connect',
-              style: TextStyle(color: theme.colorScheme.onSurface),
+
+          // ↓ wrap all the ListTiles below inside an Expanded→ListView
+          Expanded(
+            child: ListTileTheme(
+              dense: true,
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  ListTile(
+                    //visualDensity: VisualDensity(vertical: -2),
+                    // visualDensity: VisualDensity(horizontal: -1, vertical: -2),
+                    leading: Icon(
+                      Icons.bluetooth,
+                      color: theme.colorScheme.primary,
+                    ),
+                    title: Text(
+                      'Connect',
+                      style: TextStyle(color: theme.colorScheme.onSurface),
+                    ),
+                    onTap: () {
+                      _safeAction(context, () {
+                        Navigator.pop(context);
+                        onTabTapped(0);
+                      });
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      Icons.sports_kabaddi,
+                      color: theme.colorScheme.primary,
+                    ),
+                    title: Text(
+                      'Games',
+                      style: TextStyle(color: theme.colorScheme.onSurface),
+                    ),
+                    onTap: () {
+                      _safeAction(context, () {
+                        Navigator.pop(context);
+                        onTabTapped(1);
+                      });
+                    },
+                  ),
+                  ListTile(
+                    leading: const MergedIcon(),
+                    title: Text(
+                      'Add Game',
+                      style: TextStyle(color: theme.colorScheme.onSurface),
+                    ),
+                    onTap: () {
+                      _safeAction(context, () {
+                        Navigator.pop(context);
+                        onTabTapped(2);
+                      });
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      Icons.settings,
+                      color: theme.colorScheme.primary,
+                    ),
+                    title: Text(
+                      'Settings',
+                      style: TextStyle(color: theme.colorScheme.onSurface),
+                    ),
+                    onTap: () {
+                      _safeAction(context, () {
+                        Navigator.pop(context);
+                        onTabTapped(3);
+                      });
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.info, color: theme.colorScheme.primary),
+                    title: Text(
+                      'About',
+                      style: TextStyle(color: theme.colorScheme.onSurface),
+                    ),
+                    onTap: () {
+                      _safeAction(context, () {
+                        Navigator.pop(context);
+                        AboutDialogApp.show(context);
+                      });
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.info, color: theme.colorScheme.primary),
+                    title: Text(
+                      'Animation',
+                      style: TextStyle(color: theme.colorScheme.onSurface),
+                    ),
+                    onTap: () {
+                      _safeAction(context, () {
+                        Navigator.pop(context);
+                        showAboutDialogAnimation(context);
+                      });
+                    },
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: Icon(
+                      Icons.exit_to_app,
+                      color: theme.colorScheme.primary,
+                    ),
+                    title: Text(
+                      'Exit',
+                      style: TextStyle(color: theme.colorScheme.onSurface),
+                    ),
+                    onTap: () {
+                      _safeAction(context, () {
+                        ExitConfirmation.show(context);
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
-            onTap: () {
-              _safeAction(context, () {
-                Navigator.pop(context);
-                onTabTapped(0);
-              });
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.sports_kabaddi, color: theme.colorScheme.primary),
-            title: Text(
-              'Games',
-              style: TextStyle(color: theme.colorScheme.onSurface),
-            ),
-            onTap: () {
-              _safeAction(context, () {
-                Navigator.pop(context);
-                onTabTapped(1);
-              });
-            },
-          ),
-          ListTile(
-            leading: const MergedIcon(),
-            title: Text(
-              'Add Game',
-              style: TextStyle(color: theme.colorScheme.onSurface),
-            ),
-            onTap: () {
-              _safeAction(context, () {
-                Navigator.pop(context);
-                onTabTapped(2);
-              });
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.settings, color: theme.colorScheme.primary),
-            title: Text(
-              'Settings',
-              style: TextStyle(color: theme.colorScheme.onSurface),
-            ),
-            onTap: () {
-              _safeAction(context, () {
-                Navigator.pop(context);
-                onTabTapped(3);
-              });
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.info, color: theme.colorScheme.primary),
-            title: Text(
-              'About',
-              style: TextStyle(color: theme.colorScheme.onSurface),
-            ),
-            onTap: () {
-              _safeAction(context, () {
-                Navigator.pop(context);
-                AboutDialogApp.show(context);
-              });
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.info, color: theme.colorScheme.primary),
-            title: Text(
-              'Animation',
-              style: TextStyle(color: theme.colorScheme.onSurface),
-            ),
-            onTap: () {
-              _safeAction(context, () {
-                Navigator.pop(context);
-                 showAboutDialogAnimation(context);            
-              });
-            },
           ),
         ],
       ),
@@ -185,6 +220,8 @@ void showAboutDialogAnimation(BuildContext context) {
     builder: (context) => const AboutDialogAnimation(),
   );
 }
+
+
 
 
 // import 'package:box_sensors/widgets/about_dialog_animation.dart';

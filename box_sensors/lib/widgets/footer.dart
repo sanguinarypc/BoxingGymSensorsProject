@@ -76,6 +76,10 @@ class _FooterState extends State<Footer> {
             icon: Icon(Icons.settings),
             label: 'Settings',
           ),
+          const NavigationDestination(           
+            icon: Icon(Icons.exit_to_app),  //← exit_to_app  power_settings_new logout  login power_off
+            label: 'Exit',
+          ),
         ],
       ),
     );
