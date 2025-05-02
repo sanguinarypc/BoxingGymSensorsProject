@@ -199,7 +199,7 @@ class NavBar extends StatelessWidget {
                     ),
                     onTap: () {
                       _safeAction(context, () {
-                        ExitConfirmation.show(context);
+                       ExitConfirmation.show(context);
                       });
                     },
                   ),

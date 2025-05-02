@@ -11,6 +11,43 @@ class MainActivity: FlutterActivity() {
 
   override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
     super.configureFlutterEngine(flutterEngine)
+    MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+      .setMethodCallHandler { call, result ->
+        when (call.method) {
+          "minimizeApp" -> {
+            moveTaskToBack(true)   // <— just background the Activity
+            result.success(null)
+          }
+          "minimizeAppNoBT" -> {
+            finishAffinity() // <— just background the Activity without BT            
+            result.success(null)
+          }
+          "exitApp" -> {
+            doExit()               // your existing finishAndRemoveTask()
+            result.success(null)
+          }
+          else -> result.notImplemented()
+        }
+      }
+  }
+
+  private fun doExit() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+      finishAndRemoveTask()
+    } else {
+      finishAffinity()
+    }
+  }
+}
+
+
+
+/*
+class MainActivity: FlutterActivity() {
+  private val CHANNEL = "app.exit.channel"
+
+  override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
+    super.configureFlutterEngine(flutterEngine)
     MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
       if (call.method == "exitApp") {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -26,6 +63,8 @@ class MainActivity: FlutterActivity() {
     }
   }
 }
+
+*/ 
 
 // package com.sanguinarypc.box_sensors
 
