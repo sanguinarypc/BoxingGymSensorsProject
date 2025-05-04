@@ -90,7 +90,7 @@
     <!-- foregroundServiceType: remoteMessaging -->
     <!-- <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" /> -->
 
-    <!-- Microphone permission for speech recognition -->
+    <!-- Microphone permission for speech recognition -->   <!-- Microphone access -->
     <!-- <uses-permission android:name="android.permission.RECORD_AUDIO" />  -->
 
     <application
