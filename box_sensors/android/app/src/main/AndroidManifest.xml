@@ -84,6 +84,10 @@
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
+    <!-- which takes the user to the system screen where they can whitelist your app against Doze-mode battery optimizations -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+
+
     <!-- foregroundServiceType: dataSync -->
     <!-- <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" /> -->
 
