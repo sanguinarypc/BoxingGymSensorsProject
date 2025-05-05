@@ -153,15 +153,17 @@ class _ConnectHomeWidgetsState extends ConsumerState<ConnectHomeWidgets> {
           ),
 
           Expanded(
-            child: DeviceListView(
-              devices: mergedDevices,
-              rssiValues: bluetoothManager.rssiValues,
-              calculateDistance: bluetoothManager.calculateDistance,
-              getRSSIColor: bluetoothManager.getRSSIColor,
-              onConnect: bluetoothManager.connectToDeviceByName,
-              connectionNotifiers: bluetoothManager.deviceConnectionNotifiers,
-              isDeviceConnected: bluetoothManager.isDeviceConnected,
-              onDisconnect: bluetoothManager.handleDisconnectDevice,
+            child: Scrollbar(
+              child: DeviceListView(
+                devices: mergedDevices,
+                rssiValues: bluetoothManager.rssiValues,
+                calculateDistance: bluetoothManager.calculateDistance,
+                getRSSIColor: bluetoothManager.getRSSIColor,
+                onConnect: bluetoothManager.connectToDeviceByName,
+                connectionNotifiers: bluetoothManager.deviceConnectionNotifiers,
+                isDeviceConnected: bluetoothManager.isDeviceConnected,
+                onDisconnect: bluetoothManager.handleDisconnectDevice,
+              ),
             ),
           ),
 
