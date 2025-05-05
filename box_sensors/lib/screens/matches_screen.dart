@@ -69,12 +69,14 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                   );
                 }
                 final matches = snap.data!;
-                return ListView.builder(
-                  itemCount: matches.length,
-                  itemBuilder: (_, i) => MatchListItem(
-                    match: matches[i],
-                    dbHelper: dbHelper,
-                    onRefresh: _refreshMatches,
+                return Scrollbar(
+                  child: ListView.builder(
+                    itemCount: matches.length,
+                    itemBuilder: (_, i) => MatchListItem(
+                      match: matches[i],
+                      dbHelper: dbHelper,
+                      onRefresh: _refreshMatches,
+                    ),
                   ),
                 );
               },

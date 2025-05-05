@@ -120,84 +120,86 @@ class _MatchEventTypesScreenState
                 if (events.isEmpty) {
                   return const Center(child: Text('No events found'));
                 }
-                return ListView.builder(
-                  itemCount: events.length,
-                  itemBuilder: (context, index) {
-                    final event = events[index];
-                    final date = DateTime.fromMillisecondsSinceEpoch(event['timestamp']);
-                    final formattedDate =
-                        '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} '
-                        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
-                    final counts = event['punchCounts'] as Map<String, int>?;
-
-                    return Card(
-                      color: theme.cardColor,
-                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-                      elevation: 6,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: theme.colorScheme.outline, width: 1),
-                      ),
-                      child: ListTile(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => RoundsOfMatchScreen(
-                                match: widget.match,
-                                eventId: event['id'],
-                              ),
-                            ),
-                          );
-                        },
-                        title: Text(
-                          'Match Game played:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
+                return Scrollbar(
+                  child: ListView.builder(
+                    itemCount: events.length,
+                    itemBuilder: (context, index) {
+                      final event = events[index];
+                      final date = DateTime.fromMillisecondsSinceEpoch(event['timestamp']);
+                      final formattedDate =
+                          '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} '
+                          '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
+                      final counts = event['punchCounts'] as Map<String, int>?;
+                  
+                      return Card(
+                        color: theme.cardColor,
+                        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: theme.colorScheme.outline, width: 1),
                         ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Time played: $formattedDate',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: theme.colorScheme.onSurface,
+                        child: ListTile(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => RoundsOfMatchScreen(
+                                  match: widget.match,
+                                  eventId: event['id'],
+                                ),
                               ),
+                            );
+                          },
+                          title: Text(
+                            'Match Game played:',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
                             ),
-                            RichText(
-                              text: TextSpan(
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                children: [
-                                  TextSpan(
-                                    text: 'Winner:  ',
-                                    style: TextStyle(color: theme.colorScheme.primary),
-                                  ),
-                                  TextSpan(
-                                    text: "${event['winner'] ?? 'No winner yet'}",
-                                    style: TextStyle(color: theme.colorScheme.surfaceTint),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (counts != null)
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                               Text(
-                                'Punches ➜ BlueBoxer: ${counts['BlueBoxer'] ?? 0} - '
-                                'RedBoxer: ${counts['RedBoxer'] ?? 0}',
+                                'Time played: $formattedDate',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 16,
                                   color: theme.colorScheme.onSurface,
                                 ),
                               ),
-                          ],
+                              RichText(
+                                text: TextSpan(
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  children: [
+                                    TextSpan(
+                                      text: 'Winner:  ',
+                                      style: TextStyle(color: theme.colorScheme.primary),
+                                    ),
+                                    TextSpan(
+                                      text: "${event['winner'] ?? 'No winner yet'}",
+                                      style: TextStyle(color: theme.colorScheme.surfaceTint),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (counts != null)
+                                Text(
+                                  'Punches ➜ BlueBoxer: ${counts['BlueBoxer'] ?? 0} - '
+                                  'RedBoxer: ${counts['RedBoxer'] ?? 0}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 );
               },
             ),

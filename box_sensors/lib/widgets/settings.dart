@@ -1,4 +1,5 @@
 // lib/widgets/settings.dart
+import 'package:box_sensors/widgets/android_battery_setting_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:box_sensors/services/database_helper.dart';
@@ -17,23 +18,28 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // controllers and dbHelper same as before…
-  final TextEditingController fsrSensitivityController =
-      TextEditingController(text: '800');
-  final TextEditingController fsrThresholdController =
-      TextEditingController(text: '200');
-  final TextEditingController roundsController =
-      TextEditingController(text: '1');
-  final TextEditingController roundTimeController =
-      TextEditingController(text: '3');
-  final TextEditingController breakTimeController =
-      TextEditingController(text: '120');
+  final TextEditingController fsrSensitivityController = TextEditingController(
+    text: '800',
+  );
+  final TextEditingController fsrThresholdController = TextEditingController(
+    text: '200',
+  );
+  final TextEditingController roundsController = TextEditingController(
+    text: '1',
+  );
+  final TextEditingController roundTimeController = TextEditingController(
+    text: '3',
+  );
+  final TextEditingController breakTimeController = TextEditingController(
+    text: '120',
+  );
   final TextEditingController secondsBeforeRoundBeginsController =
       TextEditingController(text: '5');
   late final DatabaseHelper dbHelper;
   bool isLoading = false;
   bool _disposed = false;
 
-    /// Helper method to safely call setState.
+  /// Helper method to safely call setState.
   void _safeSetState(VoidCallback fn) {
     if (!_disposed && mounted) {
       setState(fn);
@@ -44,8 +50,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _showSnackBar(String message) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     });
   }
@@ -58,7 +65,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   // ... _loadExistingSettings, _saveSettings, _insertSampleData, _safeSetState, _showSnackBar, dispose()
-    Future<void> _loadExistingSettings() async {
+  Future<void> _loadExistingSettings() async {
     _safeSetState(() {
       isLoading = true;
     });
@@ -211,7 +218,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -220,41 +226,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         data: theme.copyWith(
           inputDecorationTheme: const InputDecorationTheme(
             isDense: true,
-            contentPadding:
-                EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+            contentPadding: EdgeInsets.symmetric(
+              vertical: 8.0,
+              horizontal: 12.0,
+            ),
           ),
         ),
         child: Column(
           children: [
             SettingsHeader(onBack: () => Navigator.pop(context)),
             Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(4.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          SettingsFormCard(
-                            theme: theme,
-                            fsrSensitivityController:
-                                fsrSensitivityController,
-                            fsrThresholdController: fsrThresholdController,
-                            roundsController: roundsController,
-                            roundTimeController: roundTimeController,
-                            breakTimeController: breakTimeController,
-                            secondsBeforeRoundBeginsController:
-                                secondsBeforeRoundBeginsController,
-                            isLoading: isLoading,
-                            onSave: _saveSettings,
+              child:
+                  isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : Scrollbar(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SettingsFormCard(
+                                theme: theme,
+                                fsrSensitivityController:
+                                    fsrSensitivityController,
+                                fsrThresholdController: fsrThresholdController,
+                                roundsController: roundsController,
+                                roundTimeController: roundTimeController,
+                                breakTimeController: breakTimeController,
+                                secondsBeforeRoundBeginsController:
+                                    secondsBeforeRoundBeginsController,
+                                isLoading: isLoading,
+                                onSave: _saveSettings,
+                              ),
+                              SampleDataCard(
+                                theme: theme,
+                                onInsert: _insertSampleData,
+                              ),
+                              AndroidBatterySettingCard(),
+                              
+                            ],
                           ),
-                          SampleDataCard(
-                            theme: theme,
-                            onInsert: _insertSampleData,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
             ),
           ],
         ),
@@ -262,18 +275,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 // // lib/widgets/settings.dart
 // import 'package:box_sensors/widgets/display_row.dart';
