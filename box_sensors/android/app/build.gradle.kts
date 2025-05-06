@@ -18,7 +18,6 @@ android {
     namespace = "com.sanguinarypc.box_sensors"
     compileSdk = flutter.compileSdkVersion   // 35
     ndkVersion = "27.0.12077973" // flutter.ndkVersion
-    //ndkVersion = "26.1.10909125" // Βάλτε την έκδοση που εγκαταστήσατε
     
 
     compileOptions {
