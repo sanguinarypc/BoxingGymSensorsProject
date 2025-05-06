@@ -147,150 +147,152 @@ class _EditMatchScreenState extends ConsumerState<EditMatchScreen> {
               padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
               child: Form(
                 key: _formKey,
-                child: ListView(
-                  children: [
-                    // Match Info Card
-                    Card(
-                      color: theme.cardColor,
-                      elevation: 6,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: theme.colorScheme.outline, width: 1),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Match Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
-                            const SizedBox(height: 12),
-                            CustomTextFormField(
-                              controller: matchNameController,
-                              label: 'Match Name',
-                              validator: (v) => v==null||v.isEmpty?'Please enter a match name':null,
-                            ),
-                            const SizedBox(height: 16),
-                            GestureDetector(
-                              onTap: _selectMatchDate,
-                              child: AbsorbPointer(
-                                child: TextFormField(
-                                  controller: matchDateController,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    filled: true,
-                                    fillColor: theme.colorScheme.surface,
-                                    labelText: 'Match Date (DD/MM/YYYY)',
-                                    suffixIcon: Icon(Icons.calendar_today),
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                child: Scrollbar(
+                  child: ListView(
+                    children: [
+                      // Match Info Card
+                      Card(
+                        color: theme.cardColor,
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: theme.colorScheme.outline, width: 1),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Match Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                              const SizedBox(height: 12),
+                              CustomTextFormField(
+                                controller: matchNameController,
+                                label: 'Match Name',
+                                validator: (v) => v==null||v.isEmpty?'Please enter a match name':null,
+                              ),
+                              const SizedBox(height: 16),
+                              GestureDetector(
+                                onTap: _selectMatchDate,
+                                child: AbsorbPointer(
+                                  child: TextFormField(
+                                    controller: matchDateController,
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      filled: true,
+                                      fillColor: theme.colorScheme.surface,
+                                      labelText: 'Match Date (DD/MM/YYYY)',
+                                      suffixIcon: Icon(Icons.calendar_today),
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            CustomTextFormField(
-                              controller: roundsController,
-                              label: 'Rounds (1-15)',
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) return 'Please enter the number of rounds';
-                                final v = int.tryParse(value);
-                                if (v == null) return 'Enter a valid integer';
-                                if (v < 1 || v > 15) return 'Rounds must be 1–15';
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    // Timings Card
-                    Card(
-                      color: theme.cardColor,
-                      elevation: 6,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: theme.colorScheme.outline, width: 1),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Timings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
-                            const SizedBox(height: 16),
-                            CustomTextFormField(
-                              controller: roundTimeController,
-                              label: 'Round Time (1-20) in minutes',
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) return 'Please enter the round time in minutes';
-                                final v=int.tryParse(value);
-                                if (v==null) return 'Enter a valid integer';
-                                if (v<1||v>20) return 'Round time must be 1–20 minutes';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            CustomTextFormField(
-                              controller: breakTimeController,
-                              label: 'Break Time (10-600) in seconds',
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) return 'Please enter the break time in seconds';
-                                final v=int.tryParse(value);
-                                if (v==null) return 'Enter a valid integer';
-                                if (v<10||v>600) return 'Break time must be 10–600 seconds';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            CustomTextFormField(
-                              controller: finishedAtRoundController,
-                              label: 'Finished at Round',
-                              keyboardType: TextInputType.number,
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: totalTimeController,
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(),
-                                filled: true,
-                                fillColor: theme.colorScheme.surface,
-                                labelText: 'Total Time (MM:SS)',
-                                hintText: 'MM:SS',
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                              const SizedBox(height: 16),
+                              CustomTextFormField(
+                                controller: roundsController,
+                                label: 'Rounds (1-15)',
+                                keyboardType: TextInputType.number,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) return 'Please enter the number of rounds';
+                                  final v = int.tryParse(value);
+                                  if (v == null) return 'Enter a valid integer';
+                                  if (v < 1 || v > 15) return 'Rounds must be 1–15';
+                                  return null;
+                                },
                               ),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [CustomTimeInputFormatter()],
-                              validator: (value) {
-                                if (value == null || value.isEmpty) return 'Please enter total time';
-                                if (!RegExp(r'^\d{2}:\d{2}\$').hasMatch(value)) return 'Invalid format! Use MM:SS';
-                                final parts=value.split(':');
-                                final m=int.tryParse(parts[0])??-1;
-                                final s=int.tryParse(parts[1])??-1;
-                                if (m<0||s<0||s>=60) return 'Minutes:0–99, Seconds:0–59';
-                                return null;
-                              },
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    ElevatedButton(
-                      onPressed: _updateMatch,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: theme.colorScheme.onPrimary,
+                      const SizedBox(height: 2),
+                      // Timings Card
+                      Card(
+                        color: theme.cardColor,
                         elevation: 6,
-                        fixedSize: const Size.fromHeight(40),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: theme.colorScheme.outline, width: 1),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Timings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                              const SizedBox(height: 16),
+                              CustomTextFormField(
+                                controller: roundTimeController,
+                                label: 'Round Time (1-20) in minutes',
+                                keyboardType: TextInputType.number,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) return 'Please enter the round time in minutes';
+                                  final v=int.tryParse(value);
+                                  if (v==null) return 'Enter a valid integer';
+                                  if (v<1||v>20) return 'Round time must be 1–20 minutes';
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              CustomTextFormField(
+                                controller: breakTimeController,
+                                label: 'Break Time (10-600) in seconds',
+                                keyboardType: TextInputType.number,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) return 'Please enter the break time in seconds';
+                                  final v=int.tryParse(value);
+                                  if (v==null) return 'Enter a valid integer';
+                                  if (v<10||v>600) return 'Break time must be 10–600 seconds';
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              CustomTextFormField(
+                                controller: finishedAtRoundController,
+                                label: 'Finished at Round',
+                                keyboardType: TextInputType.number,
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: totalTimeController,
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  filled: true,
+                                  fillColor: theme.colorScheme.surface,
+                                  labelText: 'Total Time (MM:SS)',
+                                  hintText: 'MM:SS',
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [CustomTimeInputFormatter()],
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) return 'Please enter total time';
+                                  if (!RegExp(r'^\d{2}:\d{2}\$').hasMatch(value)) return 'Invalid format! Use MM:SS';
+                                  final parts=value.split(':');
+                                  final m=int.tryParse(parts[0])??-1;
+                                  final s=int.tryParse(parts[1])??-1;
+                                  if (m<0||s<0||s>=60) return 'Minutes:0–99, Seconds:0–59';
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      child: Text('Update Game', style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      ElevatedButton(
+                        onPressed: _updateMatch,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
+                          elevation: 6,
+                          fixedSize: const Size.fromHeight(40),
+                        ),
+                        child: Text('Update Game', style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
