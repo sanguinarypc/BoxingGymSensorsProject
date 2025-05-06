@@ -71,59 +71,6 @@ class _AddMatchScreenState extends ConsumerState<AddMatchScreen> {
     }
   }
 
-  // Future<void> _saveMatch() async {
-  //   if (!_formKey.currentState!.validate()) return;
-
-  //   // 1) parse the text to ints
-  //   final roundsVal = int.tryParse(_roundsCtrl.text.trim());
-  //   final roundTimeVal = int.tryParse(_roundTimeCtrl.text.trim());
-  //   final breakTimeVal = int.tryParse(_breakTimeCtrl.text.trim());
-
-  //   // 2) ensure they parsed
-  //   if (roundsVal == null || roundTimeVal == null || breakTimeVal == null) {
-  //     _showSnackBar('Please enter valid numbers for rounds/times.');
-  //     return;
-  //   }
-
-  //   // 3) range‐checks exactly like SettingsScreen
-  //   if (roundsVal < 1 || roundsVal > 15) {
-  //     _showSnackBar('Rounds must be between 1 and 15.');
-  //     return;
-  //   }
-  //   if (roundTimeVal < 1 || roundTimeVal > 20) {
-  //     _showSnackBar('Round time must be between 1 and 20 minutes.');
-  //     return;
-  //   }
-  //   if (breakTimeVal < 10 || breakTimeVal > 600) {
-  //     _showSnackBar('Break time must be between 10 and 600 seconds.');
-  //     return;
-  //   }
-
-  //   // 4) all clear—go ahead insert
-  //   try {
-  //     await _dbHelper.insertMatch(
-  //       matchName: _matchNameCtrl.text,
-  //       rounds: roundsVal,
-  //       matchDate: _matchDateCtrl.text,
-  //       roundTime: roundTimeVal,
-  //       breakTime: breakTimeVal,
-  //     );
-
-  //     if (!mounted) return;
-  //     _showSnackBar('Match added successfully.');
-
-  //     // 🔄 refresh your MatchesScreen’s provider:
-  //     // ignore: unused_result
-  //     ref.refresh(matchesFutureProvider);
-
-  //     // switch to Games tab:
-  //     widget.onTabChange?.call(1);
-  //   } catch (e) {
-  //     if (!mounted) return;
-  //     _showSnackBar('Failed to add match: $e');
-  //   }
-  // }
-
   Future<void> _saveMatch() async {
     if (!_formKey.currentState!.validate()) return;
 
