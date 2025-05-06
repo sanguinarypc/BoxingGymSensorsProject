@@ -60,7 +60,10 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                   onPressed: _refreshMatches,
                 ),
                 IconButton(
-                  icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
+                  icon: Icon(
+                    Icons.arrow_back,
+                    color: theme.colorScheme.onSurface,
+                  ),
                   onPressed: () {
                     widget.onTabChange?.call(0);
                   },
@@ -89,11 +92,12 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                   return Scrollbar(
                     child: ListView.builder(
                       itemCount: matches.length,
-                      itemBuilder: (_, i) => MatchListItem(
-                        match: matches[i],
-                        dbHelper: dbHelper,
-                        onRefresh: _refreshMatches,
-                      ),
+                      itemBuilder:
+                          (_, i) => MatchListItem(
+                            match: matches[i],
+                            dbHelper: dbHelper,
+                            onRefresh: _refreshMatches,
+                          ),
                     ),
                   );
                 },
