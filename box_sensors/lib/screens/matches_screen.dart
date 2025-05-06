@@ -1,53 +1,24 @@
 // lib/screens/matches_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:box_sensors/services/database_helper.dart';
 import 'package:box_sensors/services/providers.dart';
 import 'package:box_sensors/widgets/display_row.dart';
 import 'package:box_sensors/screens_widgets/match_list_item.dart';
 
-class MatchesScreen extends ConsumerStatefulWidget {
+class MatchesScreen extends ConsumerWidget {
   final void Function(int)? onTabChange;
   const MatchesScreen({super.key, this.onTabChange});
 
   @override
-  ConsumerState<MatchesScreen> createState() => _MatchesScreenState();
-}
-
-class _MatchesScreenState extends ConsumerState<MatchesScreen> {
-  late final DatabaseHelper dbHelper;
-  late Future<List<Map<String, dynamic>>> _matchesFuture;
-  bool _disposed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    dbHelper = ref.read(databaseHelperProvider);
-    _matchesFuture = dbHelper.fetchMatches();
-  }
-
-  @override
-  void dispose() {
-    _disposed = true;
-    super.dispose();
-  }
-
-  void _refreshMatches() {
-    if (!_disposed && mounted) {
-      setState(() {
-        _matchesFuture = dbHelper.fetchMatches();
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    // ① watch the matches provider
+    final asyncMatches = ref.watch(matchesFutureProvider);
 
     return PopScope(
       canPop: true,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) widget.onTabChange?.call(0);
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) onTabChange?.call(0);
       },
       child: SafeArea(
         child: Column(
@@ -57,29 +28,25 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
               actions: [
                 IconButton(
                   icon: Icon(Icons.refresh, color: theme.colorScheme.onSurface),
-                  onPressed: _refreshMatches,
+                  onPressed: () {
+                    // ② invalidate & re-fetch;
+                    // ignore: unused_result
+                    ref.refresh(matchesFutureProvider);
+                  },
                 ),
                 IconButton(
-                  icon: Icon(
-                    Icons.arrow_back,
-                    color: theme.colorScheme.onSurface,
-                  ),
+                  icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
                   onPressed: () {
-                    widget.onTabChange?.call(0);
+                    onTabChange?.call(0);
                   },
                 ),
               ],
             ),
             Expanded(
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _matchesFuture,
-                builder: (context, snap) {
-                  if (snap.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (snap.hasError) {
-                    return Center(child: Text('Error: \${snap.error}'));
-                  }
-                  final matches = snap.data!;
+              child: asyncMatches.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
+                data: (matches) {
                   if (matches.isEmpty) {
                     return const Center(
                       child: Text(
@@ -92,12 +59,11 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                   return Scrollbar(
                     child: ListView.builder(
                       itemCount: matches.length,
-                      itemBuilder:
-                          (_, i) => MatchListItem(
-                            match: matches[i],
-                            dbHelper: dbHelper,
-                            onRefresh: _refreshMatches,
-                          ),
+                      itemBuilder: (_, i) => MatchListItem(
+                        match: matches[i],
+                        dbHelper: ref.read(databaseHelperProvider),
+                        onRefresh: () => ref.refresh(matchesFutureProvider),
+                      ),
                     ),
                   );
                 },
@@ -109,6 +75,125 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
     );
   }
 }
+
+
+
+
+// // lib/screens/matches_screen.dart
+// import 'package:flutter/material.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:box_sensors/services/database_helper.dart';
+// import 'package:box_sensors/services/providers.dart';
+// import 'package:box_sensors/widgets/display_row.dart';
+// import 'package:box_sensors/screens_widgets/match_list_item.dart';
+
+// class MatchesScreen extends ConsumerStatefulWidget {
+//   final void Function(int)? onTabChange;
+//   const MatchesScreen({super.key, this.onTabChange});
+
+//   @override
+//   ConsumerState<MatchesScreen> createState() => _MatchesScreenState();
+// }
+
+// class _MatchesScreenState extends ConsumerState<MatchesScreen> {
+//   late final DatabaseHelper dbHelper;
+  
+//   late Future<List<Map<String, dynamic>>> _matchesFuture;
+//   bool _disposed = false;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     dbHelper = ref.read(databaseHelperProvider);
+//     _matchesFuture = dbHelper.fetchMatches();
+//   }
+
+//   @override
+//   void dispose() {
+//     _disposed = true;
+//     super.dispose();
+//   }
+
+//   void _refreshMatches() {
+//     if (!_disposed && mounted) {
+//       setState(() {
+//         _matchesFuture = dbHelper.fetchMatches();
+//       });
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final theme = Theme.of(context);
+
+//     // ① watch the matches provider
+//     final asyncMatches = ref.watch(matchesFutureProvider);
+
+//     return PopScope(
+//       canPop: true,
+//       onPopInvokedWithResult: (didPop, result) {
+//         if (!didPop) widget.onTabChange?.call(0);
+//       },
+//       child: SafeArea(
+//         child: Column(
+//           children: [
+//             DisplayRow(
+//               title: 'Games',
+//               actions: [
+//                 IconButton(
+//                   icon: Icon(Icons.refresh, color: theme.colorScheme.onSurface),
+//                   onPressed: _refreshMatches,
+//                 ),
+//                 IconButton(
+//                   icon: Icon(
+//                     Icons.arrow_back,
+//                     color: theme.colorScheme.onSurface,
+//                   ),
+//                   onPressed: () {
+//                     widget.onTabChange?.call(0);
+//                   },
+//                 ),
+//               ],
+//             ),
+//             Expanded(
+//               child: FutureBuilder<List<Map<String, dynamic>>>(
+//                 future: _matchesFuture,
+//                 builder: (context, snap) {
+//                   if (snap.connectionState == ConnectionState.waiting) {
+//                     return const Center(child: CircularProgressIndicator());
+//                   } else if (snap.hasError) {
+//                     return Center(child: Text('Error: \${snap.error}'));
+//                   }
+//                   final matches = snap.data!;
+//                   if (matches.isEmpty) {
+//                     return const Center(
+//                       child: Text(
+//                         'No matches found.\nPlease add a match to continue.',
+//                         textAlign: TextAlign.center,
+//                         style: TextStyle(fontSize: 20),
+//                       ),
+//                     );
+//                   }
+//                   return Scrollbar(
+//                     child: ListView.builder(
+//                       itemCount: matches.length,
+//                       itemBuilder:
+//                           (_, i) => MatchListItem(
+//                             match: matches[i],
+//                             dbHelper: dbHelper,
+//                             onRefresh: _refreshMatches,
+//                           ),
+//                     ),
+//                   );
+//                 },
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
 
 
 

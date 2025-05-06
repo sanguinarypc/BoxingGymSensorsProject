@@ -8,7 +8,7 @@ import 'package:box_sensors/services/providers.dart';
 import 'package:box_sensors/screens_widgets/match_info_card.dart';
 import 'package:box_sensors/screens_widgets/timings_card.dart';
 import 'package:box_sensors/screens_widgets/add_game_button.dart';
-import 'package:box_sensors/screens/matches_screen.dart';
+// import 'package:box_sensors/screens/matches_screen.dart';
 
 class AddMatchScreen extends ConsumerStatefulWidget {
   final void Function(int)? onTabChange;
@@ -71,6 +71,59 @@ class _AddMatchScreenState extends ConsumerState<AddMatchScreen> {
     }
   }
 
+  // Future<void> _saveMatch() async {
+  //   if (!_formKey.currentState!.validate()) return;
+
+  //   // 1) parse the text to ints
+  //   final roundsVal = int.tryParse(_roundsCtrl.text.trim());
+  //   final roundTimeVal = int.tryParse(_roundTimeCtrl.text.trim());
+  //   final breakTimeVal = int.tryParse(_breakTimeCtrl.text.trim());
+
+  //   // 2) ensure they parsed
+  //   if (roundsVal == null || roundTimeVal == null || breakTimeVal == null) {
+  //     _showSnackBar('Please enter valid numbers for rounds/times.');
+  //     return;
+  //   }
+
+  //   // 3) range‐checks exactly like SettingsScreen
+  //   if (roundsVal < 1 || roundsVal > 15) {
+  //     _showSnackBar('Rounds must be between 1 and 15.');
+  //     return;
+  //   }
+  //   if (roundTimeVal < 1 || roundTimeVal > 20) {
+  //     _showSnackBar('Round time must be between 1 and 20 minutes.');
+  //     return;
+  //   }
+  //   if (breakTimeVal < 10 || breakTimeVal > 600) {
+  //     _showSnackBar('Break time must be between 10 and 600 seconds.');
+  //     return;
+  //   }
+
+  //   // 4) all clear—go ahead insert
+  //   try {
+  //     await _dbHelper.insertMatch(
+  //       matchName: _matchNameCtrl.text,
+  //       rounds: roundsVal,
+  //       matchDate: _matchDateCtrl.text,
+  //       roundTime: roundTimeVal,
+  //       breakTime: breakTimeVal,
+  //     );
+
+  //     if (!mounted) return;
+  //     _showSnackBar('Match added successfully.');
+
+  //     // 🔄 refresh your MatchesScreen’s provider:
+  //     // ignore: unused_result
+  //     ref.refresh(matchesFutureProvider);
+
+  //     // switch to Games tab:
+  //     widget.onTabChange?.call(1);
+  //   } catch (e) {
+  //     if (!mounted) return;
+  //     _showSnackBar('Failed to add match: $e');
+  //   }
+  // }
+
   Future<void> _saveMatch() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -85,7 +138,7 @@ class _AddMatchScreenState extends ConsumerState<AddMatchScreen> {
       return;
     }
 
-    // 3) range‐checks exactly like SettingsScreen
+    // 3) range-checks
     if (roundsVal < 1 || roundsVal > 15) {
       _showSnackBar('Rounds must be between 1 and 15.');
       return;
@@ -99,7 +152,7 @@ class _AddMatchScreenState extends ConsumerState<AddMatchScreen> {
       return;
     }
 
-    // 4) all clear—go ahead insert
+    // 4) all clear—insert
     try {
       await _dbHelper.insertMatch(
         matchName: _matchNameCtrl.text,
@@ -112,15 +165,17 @@ class _AddMatchScreenState extends ConsumerState<AddMatchScreen> {
       if (!mounted) return;
       _showSnackBar('Match added successfully.');
 
-      // ① tell parent “switch to tab 1”
-      widget.onTabChange?.call(1);
+      // ALWAYS refresh the matches list:
+      // ignore: unused_result
+      ref.refresh(matchesFutureProvider);
 
-      // ② then replace this screen with MatchesScreen
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => MatchesScreen(onTabChange: widget.onTabChange),
-        ),
-      );
+      if (widget.onTabChange != null) {
+        // bottom-nav flow: switch to Games tab
+        widget.onTabChange!(1);
+      } else {
+        // pushed route flow: pop back
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       if (!mounted) return;
       _showSnackBar('Failed to add match: $e');
@@ -166,8 +221,13 @@ class _AddMatchScreenState extends ConsumerState<AddMatchScreen> {
                       color: theme.colorScheme.onSurface,
                     ),
                     onPressed: () {
-                      widget.onTabChange?.call(0);
-                      Navigator.of(context).pop();
+                      if (widget.onTabChange != null) {
+                        // we’re in the bottom-nav flow: just switch tabs
+                        widget.onTabChange!(0);
+                      } else {
+                        // we were pushed onto the Navigator stack: pop
+                        Navigator.of(context).pop();
+                      }
                     },
                   ),
                 ],

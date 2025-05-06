@@ -35,6 +35,15 @@ final themeProviderProvider =
 final databaseHelperProvider =
     Provider<DatabaseHelper>((ref) => DatabaseHelper());
 
+// right below your databaseHelperProvider:
+/// Holds the current list of matches; can be invalidated to re-fetch.
+final matchesFutureProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) {
+  final db = ref.read(databaseHelperProvider);
+  return db.fetchMatches();
+});
+
+
 
 
 
