@@ -1,3 +1,4 @@
+// lib/screens/matches_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:box_sensors/services/database_helper.dart';
@@ -6,7 +7,8 @@ import 'package:box_sensors/widgets/display_row.dart';
 import 'package:box_sensors/screens_widgets/match_list_item.dart';
 
 class MatchesScreen extends ConsumerStatefulWidget {
-  const MatchesScreen({super.key});
+  final void Function(int)? onTabChange;
+  const MatchesScreen({super.key, this.onTabChange});
 
   @override
   ConsumerState<MatchesScreen> createState() => _MatchesScreenState();
@@ -14,79 +16,207 @@ class MatchesScreen extends ConsumerStatefulWidget {
 
 class _MatchesScreenState extends ConsumerState<MatchesScreen> {
   late final DatabaseHelper dbHelper;
+  late Future<List<Map<String, dynamic>>> _matchesFuture;
+  bool _disposed = false;
 
   @override
   void initState() {
     super.initState();
     dbHelper = ref.read(databaseHelperProvider);
+    _matchesFuture = dbHelper.fetchMatches();
   }
 
-  Future<List<Map<String, dynamic>>> _loadMatches() {
-    return dbHelper.fetchMatches();
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   void _refreshMatches() {
-    if (mounted) {
-      // simple empty setState to re-trigger FutureBuilder
-      setState(() {});
+    if (!_disposed && mounted) {
+      setState(() {
+        _matchesFuture = dbHelper.fetchMatches();
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      body: Column(
-        children: [
-          DisplayRow(
-            title: 'Games',
-            actions: [
-              IconButton(
-                icon: Icon(Icons.refresh, color: theme.colorScheme.onSurface),
-                onPressed: _refreshMatches,
-              ),
-              IconButton(
-                icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _loadMatches(),
-              builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snap.hasError) {
-                  return Center(child: Text('Error: ${snap.error}'));
-                } else if (snap.data == null || snap.data!.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No matches found.\nPlease add a match to continue.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 20),
+
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) widget.onTabChange?.call(0);
+      },
+      child: SafeArea(
+        child: Column(
+          children: [
+            DisplayRow(
+              title: 'Games',
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.refresh, color: theme.colorScheme.onSurface),
+                  onPressed: _refreshMatches,
+                ),
+                IconButton(
+                  icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
+                  onPressed: () {
+                    widget.onTabChange?.call(0);
+                  },
+                ),
+              ],
+            ),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _matchesFuture,
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snap.hasError) {
+                    return Center(child: Text('Error: \${snap.error}'));
+                  }
+                  final matches = snap.data!;
+                  if (matches.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No matches found.\nPlease add a match to continue.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                    );
+                  }
+                  return Scrollbar(
+                    child: ListView.builder(
+                      itemCount: matches.length,
+                      itemBuilder: (_, i) => MatchListItem(
+                        match: matches[i],
+                        dbHelper: dbHelper,
+                        onRefresh: _refreshMatches,
+                      ),
                     ),
                   );
-                }
-                final matches = snap.data!;
-                return Scrollbar(
-                  child: ListView.builder(
-                    itemCount: matches.length,
-                    itemBuilder: (_, i) => MatchListItem(
-                      match: matches[i],
-                      dbHelper: dbHelper,
-                      onRefresh: _refreshMatches,
-                    ),
-                  ),
-                );
-              },
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
+
+
+
+
+
+// import 'package:flutter/material.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:box_sensors/services/database_helper.dart';
+// import 'package:box_sensors/services/providers.dart';
+// import 'package:box_sensors/widgets/display_row.dart';
+// import 'package:box_sensors/screens_widgets/match_list_item.dart';
+
+// class MatchesScreen extends ConsumerStatefulWidget {
+//   final void Function(int)? onTabChange;
+
+//   const MatchesScreen({super.key, this.onTabChange});
+
+//   @override
+//   ConsumerState<MatchesScreen> createState() => _MatchesScreenState();
+// }
+
+// class _MatchesScreenState extends ConsumerState<MatchesScreen> {
+//   late final DatabaseHelper dbHelper;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     dbHelper = ref.read(databaseHelperProvider);
+//   }
+
+//   Future<List<Map<String, dynamic>>> _loadMatches() {
+//     return dbHelper.fetchMatches();
+//   }
+
+//   void _refreshMatches() {
+//     if (mounted) {
+//       // simple empty setState to re-trigger FutureBuilder
+//       setState(() {});
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final theme = Theme.of(context);
+
+//     // Wrap the whole scaffold so any Android “back” or Navigator.pop() goes through here:
+//     return PopScope(
+//       canPop: true,
+//       onPopInvokedWithResult: (didPop, result) {
+//         // only fire our callback if we haven't already popped
+//         if (!didPop) {
+//           widget.onTabChange?.call(0);
+//         }
+//       },
+
+//       child: Scaffold(
+//         body: Column(
+//           children: [
+//             DisplayRow(
+//               title: 'Games',
+//               actions: [
+//                 IconButton(
+//                   icon: Icon(Icons.refresh, color: theme.colorScheme.onSurface),
+//                   onPressed: _refreshMatches,
+//                 ),
+//                 IconButton(
+//                   icon: Icon(
+//                     Icons.arrow_back,
+//                     color: theme.colorScheme.onSurface,
+//                   ),
+//                   onPressed: () => Navigator.pop(context),
+//                 ),
+//               ],
+//             ),
+//             Expanded(
+//               child: FutureBuilder<List<Map<String, dynamic>>>(
+//                 future: _loadMatches(),
+//                 builder: (context, snap) {
+//                   if (snap.connectionState == ConnectionState.waiting) {
+//                     return const Center(child: CircularProgressIndicator());
+//                   } else if (snap.hasError) {
+//                     return Center(child: Text('Error: ${snap.error}'));
+//                   } else if (snap.data == null || snap.data!.isEmpty) {
+//                     return const Center(
+//                       child: Text(
+//                         'No matches found.\nPlease add a match to continue.',
+//                         textAlign: TextAlign.center,
+//                         style: TextStyle(fontSize: 20),
+//                       ),
+//                     );
+//                   }
+//                   final matches = snap.data!;
+//                   return Scrollbar(
+//                     child: ListView.builder(
+//                       itemCount: matches.length,
+//                       itemBuilder:
+//                           (_, i) => MatchListItem(
+//                             match: matches[i],
+//                             dbHelper: dbHelper,
+//                             onRefresh: _refreshMatches,
+//                           ),
+//                     ),
+//                   );
+//                 },
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
 
 
 

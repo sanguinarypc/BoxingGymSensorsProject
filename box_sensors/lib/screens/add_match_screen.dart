@@ -11,7 +11,9 @@ import 'package:box_sensors/screens_widgets/add_game_button.dart';
 import 'package:box_sensors/screens/matches_screen.dart';
 
 class AddMatchScreen extends ConsumerStatefulWidget {
-  const AddMatchScreen({super.key});
+  final void Function(int)? onTabChange;
+
+  const AddMatchScreen({super.key, this.onTabChange});
 
   @override
   ConsumerState<AddMatchScreen> createState() => _AddMatchScreenState();
@@ -109,9 +111,15 @@ class _AddMatchScreenState extends ConsumerState<AddMatchScreen> {
 
       if (!mounted) return;
       _showSnackBar('Match added successfully.');
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MatchesScreen()),
+
+      // ① tell parent “switch to tab 1”
+      widget.onTabChange?.call(1);
+
+      // ② then replace this screen with MatchesScreen
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => MatchesScreen(onTabChange: widget.onTabChange),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -122,73 +130,106 @@ class _AddMatchScreenState extends ConsumerState<AddMatchScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              theme.colorScheme.surface.withAlpha(5),
-              theme.colorScheme.surface.withAlpha(8),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Column(
-          children: [
-            DisplayRow(
-              title: 'Add New Game',
-              actions: [BackButton(color: theme.colorScheme.onSurface)],
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 2, 8, 0), // const EdgeInsets.all(16),
-                child: Form(
-                  key: _formKey,
-                  child: ListView(
-                    children: [
-                      MatchInfoCard(
-                        nameCtrl: _matchNameCtrl,
-                        dateCtrl: _matchDateCtrl,
-                        onDateTap: _selectMatchDate,
-                        roundsCtrl: _roundsCtrl,
-                        roundsValidator:
-                            (v) =>
-                                v == null || v.isEmpty
-                                    ? 'Enter number of rounds'
-                                    : null,
-                        nameValidator:
-                            (v) =>
-                                v == null || v.isEmpty
-                                    ? 'Enter a match name'
-                                    : null,
-                        dateValidator:
-                            (v) =>
-                                v == null || v.isEmpty ? 'Enter a date' : null,
-                      ),
-                      TimingsCard(
-                        roundTimeCtrl: _roundTimeCtrl,
-                        breakTimeCtrl: _breakTimeCtrl,
 
-                        roundTimeValidator:
-                            (v) =>
-                                v == null || v.isEmpty
-                                    ? 'Enter round time'
-                                    : null,
-                        breakTimeValidator:
-                            (v) =>
-                                v == null || v.isEmpty
-                                    ? 'Enter break time'
-                                    : null,
-                      ),
-                      const SizedBox(height: 16),
-                      AddGameButton(onSave: _saveMatch),
-                    ],
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          widget.onTabChange?.call(0);
+        }
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                theme.colorScheme.surface.withAlpha(5),
+                theme.colorScheme.surface.withAlpha(8),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: Column(
+            children: [
+              // DisplayRow(
+              //   title: 'Add New Game',
+              //   actions: [BackButton(color: theme.colorScheme.onSurface),
+              //   ],
+              // ),
+              DisplayRow(
+                title: 'Games',
+                actions: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.arrow_back,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    onPressed: () {
+                      widget.onTabChange?.call(0);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              ),
+
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    8,
+                    2,
+                    8,
+                    0,
+                  ), // const EdgeInsets.all(16),
+                  child: Form(
+                    key: _formKey,
+                    child: ListView(
+                      children: [
+                        MatchInfoCard(
+                          nameCtrl: _matchNameCtrl,
+                          dateCtrl: _matchDateCtrl,
+                          onDateTap: _selectMatchDate,
+                          roundsCtrl: _roundsCtrl,
+                          roundsValidator:
+                              (v) =>
+                                  v == null || v.isEmpty
+                                      ? 'Enter number of rounds'
+                                      : null,
+                          nameValidator:
+                              (v) =>
+                                  v == null || v.isEmpty
+                                      ? 'Enter a match name'
+                                      : null,
+                          dateValidator:
+                              (v) =>
+                                  v == null || v.isEmpty
+                                      ? 'Enter a date'
+                                      : null,
+                        ),
+                        TimingsCard(
+                          roundTimeCtrl: _roundTimeCtrl,
+                          breakTimeCtrl: _breakTimeCtrl,
+
+                          roundTimeValidator:
+                              (v) =>
+                                  v == null || v.isEmpty
+                                      ? 'Enter round time'
+                                      : null,
+                          breakTimeValidator:
+                              (v) =>
+                                  v == null || v.isEmpty
+                                      ? 'Enter break time'
+                                      : null,
+                        ),
+                        const SizedBox(height: 16),
+                        AddGameButton(onSave: _saveMatch),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
