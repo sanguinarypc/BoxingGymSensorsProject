@@ -22,10 +22,10 @@ class ExitConfirmation {
               'What now?',
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
-            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+            contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 0), //(24, 20, 24, 0)
             content: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const Text(
                   'Exit app, minimize it, or stay?',
@@ -35,14 +35,14 @@ class ExitConfirmation {
 
                 _buildOption(
                   ctx,
-                  Icons.arrow_circle_down_outlined,
-                  'Minimize (keep BT)',
+                  Icons.expand_more,  // expand_less,  // arrow_circle_down_outlined
+                  'Minimize App (keep BT)',
                   _ExitAction.minimizeKeepAlive,
                 ),
                 _buildOption(
                   ctx,
-                  Icons.arrow_circle_down_outlined,
-                  'Minimize (close BT)',
+                  Icons.expand_more ,
+                  'Minimize App (close BT)',
                   _ExitAction.minimizeCloseBT,
                 ),
                 _buildOption(
@@ -88,8 +88,8 @@ class ExitConfirmation {
         child: Row(
           children: [
             Icon(icon, size: 32, color: Theme.of(ctx).colorScheme.primary),
-            const SizedBox(width: 16),
-            Text(text, style: const TextStyle(fontSize: 20)),
+            const SizedBox(width: 8),
+            Text(text, style: const TextStyle(fontSize: 18)),
           ],
         ),
       ),
