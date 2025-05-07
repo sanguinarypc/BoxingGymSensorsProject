@@ -1,4 +1,42 @@
-
+                             // TextFormField(
+                              //   controller: totalTimeController,
+                              //   decoration: InputDecoration(
+                              //     border: OutlineInputBorder(),
+                              //     filled: true,
+                              //     fillColor: theme.colorScheme.surface,
+                              //     labelText: 'Total Time (MM:SS)',
+                              //     hintText: 'MM:SS',
+                              //     isDense: true,
+                              //     contentPadding: EdgeInsets.symmetric(
+                              //       vertical: 8,
+                              //       horizontal: 10,
+                              //     ),
+                              //   ),
+                              //   keyboardType: TextInputType.number,
+                              //   inputFormatters: [CustomTimeInputFormatter()],
+                              //   validator: (value) {
+                              //     if (value == null || value.isEmpty) {
+                              //       return 'Please enter total time';
+                              //     }
+                              //     // Fix the regex: end-of-string is "$", not "\$"
+                              //     if (!RegExp(
+                              //       r'^\d{2}:\d{2}$',
+                              //     ).hasMatch(value)) {
+                              //       return 'Invalid format! Use MM:SS';
+                              //     }
+                              //     final parts = value.split(':');
+                              //     final minutes = int.tryParse(parts[0]) ?? -1;
+                              //     final seconds = int.tryParse(parts[1]) ?? -1;
+                              //     // seconds must be 0–59, and you can cap minutes at, say, 0–99
+                              //     if (minutes < 0 ||
+                              //         minutes > 99 ||
+                              //         seconds < 0 ||
+                              //         seconds > 59) {
+                              //       return 'Minutes: 00–99, Seconds: 00–59';
+                              //     }
+                              //     return null;
+                              //   },
+                              // ),
 
 
 
