@@ -24,13 +24,67 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
   // Four Navigator keys: one for each real tab (Connect, Games, Add, Settings)
   final _navigatorKeys = List.generate(4, (_) => GlobalKey<NavigatorState>());
 
+  // void _updateTabIndex(int index) {
+  //   if (index == 4) {
+  //     // Fifth destination is “Exit”
+  //     ExitConfirmation.show(context);
+  //     return;
+  //   }
+  //   setState(() => _currentIndex = index);
+  // }
+
   void _updateTabIndex(int index) {
     if (index == 4) {
-      // Fifth destination is “Exit”
+      // Exit
       ExitConfirmation.show(context);
       return;
     }
+
     setState(() => _currentIndex = index);
+
+    if (index == 1) {
+      final nav = _navigatorKeys[1].currentState;
+      if (nav != null) {
+        // 1) pop back to the root of that tab’s stack
+        nav.popUntil((r) => r.isFirst);
+        // 2) replace it with a fresh MatchesScreen form state)
+        nav.pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => MatchesScreen( onTabChange: _updateTabIndex),
+          ),
+        );
+      }
+    }
+    
+    // If they just tapped the "Add Game" tab
+    if (index == 2) {
+      final nav = _navigatorKeys[2].currentState;
+      if (nav != null) {
+        // 1) pop back to the root of that tab’s stack
+        nav.popUntil((r) => r.isFirst);
+        // 2) replace it with a fresh AddMatchScreen (clears all form state)
+        nav.pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => AddMatchScreen(onTabChange: _updateTabIndex),
+          ),
+        );
+      }
+    }
+
+    if (index == 3){
+      final nav = _navigatorKeys[3].currentState;
+      if (nav != null) {
+        // 1) pop back to the root of that tab’s stack
+        nav.popUntil((r) => r.isFirst);
+        // 2) replace it with a fresh AddMatchScreen (clears all form state)
+        nav.pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => SettingsScreen(onTabChange: _updateTabIndex),
+          ),
+        );
+      }
+    }
+
   }
 
   @override
@@ -58,33 +112,46 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
           // Tab 0: Connect
           Navigator(
             key: _navigatorKeys[0],
-            onGenerateRoute: (_) => MaterialPageRoute(
-              builder: (_) => ConnectHomeWidgets(deviceOptions: deviceOptions),
-            ),
+            onGenerateRoute:
+                (_) => MaterialPageRoute(
+                  builder:
+                      (_) => ConnectHomeWidgets(deviceOptions: deviceOptions),
+                ),
           ),
 
           // Tab 1: Matches
           Navigator(
             key: _navigatorKeys[1],
-            onGenerateRoute: (_) => MaterialPageRoute(
-              builder: (_) => MatchesScreen(onTabChange: _updateTabIndex),
-            ),
+            onGenerateRoute:
+                (_) => MaterialPageRoute(
+                  builder: (_) => MatchesScreen(onTabChange: _updateTabIndex),
+                ),
           ),
+
+          // Tab 2: Add Match
+          // Navigator(
+          //   key: _navigatorKeys[2],
+          //   onGenerateRoute: (_) => MaterialPageRoute(
+          //     builder: (_) => AddMatchScreen(onTabChange: _updateTabIndex),
+          //   ),
+          // ),
 
           // Tab 2: Add Match
           Navigator(
             key: _navigatorKeys[2],
-            onGenerateRoute: (_) => MaterialPageRoute(
-              builder: (_) => AddMatchScreen(onTabChange: _updateTabIndex),
-            ),
+            onGenerateRoute:
+                (_) => MaterialPageRoute(
+                  builder: (_) => AddMatchScreen(onTabChange: _updateTabIndex),
+                ),
           ),
 
           // Tab 3: Settings
           Navigator(
             key: _navigatorKeys[3],
-            onGenerateRoute: (_) => MaterialPageRoute(
-              builder: (_) => SettingsScreen(onTabChange: _updateTabIndex),
-            ),
+            onGenerateRoute:
+                (_) => MaterialPageRoute(
+                  builder: (_) => SettingsScreen(onTabChange: _updateTabIndex),
+                ),
           ),
         ],
       ),
@@ -96,12 +163,15 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
           children: [
             Footer(onTabTapped: _updateTabIndex, currentIndex: _currentIndex),
             StatusBarIndicator(
-              isConnectedDevice1:
-                  bluetoothManager.isDeviceConnected('BlueBoxer'),
-              isConnectedDevice2:
-                  bluetoothManager.isDeviceConnected('RedBoxer'),
-              isConnectedDevice3:
-                  bluetoothManager.isDeviceConnected('BoxerServer'),
+              isConnectedDevice1: bluetoothManager.isDeviceConnected(
+                'BlueBoxer',
+              ),
+              isConnectedDevice2: bluetoothManager.isDeviceConnected(
+                'RedBoxer',
+              ),
+              isConnectedDevice3: bluetoothManager.isDeviceConnected(
+                'BoxerServer',
+              ),
             ),
           ],
         ),
@@ -109,8 +179,6 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
     );
   }
 }
-
-
 
 // import 'package:box_sensors/widgets/exit_confirmation.dart';
 // import 'package:flutter/material.dart';
