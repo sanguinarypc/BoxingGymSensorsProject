@@ -54,7 +54,7 @@ Future<void> main() async {
     );
   };
 
-  FlutterError.onError = (FlutterErrorDetails details) {  
+  FlutterError.onError = (FlutterErrorDetails details) {
     Sentry.captureException(details.exception, stackTrace: details.stack);
     FlutterError.presentError(details);
   };
