@@ -1,3 +1,4 @@
+// lib/widgets/connect_home.dart
 import 'package:box_sensors/widgets/exit_confirmation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,83 +22,51 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
   final List<String> deviceOptions = ['BlueBoxer', 'RedBoxer', 'BoxerServer'];
   int _currentIndex = 0;
 
-  // Four Navigator keys: one for each real tab (Connect, Games, Add, Settings)
+  // navigator keys
   final _navigatorKeys = List.generate(4, (_) => GlobalKey<NavigatorState>());
 
-  // void _updateTabIndex(int index) {
-  //   if (index == 4) {
-  //     // Fifth destination is “Exit”
-  //     ExitConfirmation.show(context);
-  //     return;
-  //   }
-  //   setState(() => _currentIndex = index);
-  // }
+  // now use the public mixin interfaces, not private State types:
+  final _addMatchKey = GlobalKey<AddMatchResettable>();
+  final _matchesKey = GlobalKey<MatchesReloadable>();
+  final _settingsKey = GlobalKey<SettingsReloadable>();
 
   void _updateTabIndex(int index) {
     if (index == 4) {
-      // Exit
       ExitConfirmation.show(context);
       return;
     }
 
-    setState(() => _currentIndex = index);
+    // ❶ Pop any nested routes in that tab’s navigator back to its root:
+    _navigatorKeys[index].currentState?.popUntil((r) => r.isFirst);
 
+    // // if re‐select “Games” tab
     if (index == 1) {
-      final nav = _navigatorKeys[1].currentState;
-      if (nav != null) {
-        // 1) pop back to the root of that tab’s stack
-        nav.popUntil((r) => r.isFirst);
-        // 2) replace it with a fresh MatchesScreen form state)
-        nav.pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => MatchesScreen( onTabChange: _updateTabIndex),
-          ),
-        );
-      }
+      (_matchesKey.currentState)?.reloadMatches();
     }
-    
-    // If they just tapped the "Add Game" tab
+
+    // if re‐select “Add Match” tab
     if (index == 2) {
-      final nav = _navigatorKeys[2].currentState;
-      if (nav != null) {
-        // 1) pop back to the root of that tab’s stack
-        nav.popUntil((r) => r.isFirst);
-        // 2) replace it with a fresh AddMatchScreen (clears all form state)
-        nav.pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => AddMatchScreen(onTabChange: _updateTabIndex),
-          ),
-        );
-      }
+      (_addMatchKey.currentState)?.resetForm();
     }
 
-    if (index == 3){
-      final nav = _navigatorKeys[3].currentState;
-      if (nav != null) {
-        // 1) pop back to the root of that tab’s stack
-        nav.popUntil((r) => r.isFirst);
-        // 2) replace it with a fresh AddMatchScreen (clears all form state)
-        nav.pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => SettingsScreen(onTabChange: _updateTabIndex),
-          ),
-        );
-      }
+    // if re‐select “Settings” tab
+    if (index == 3) {
+      (_settingsKey.currentState)?.reloadSettings();
     }
 
+    setState(() => _currentIndex = index);
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext c) {
     final timerState = ref.watch(timerStateProvider);
-    final bluetoothManager = ref.watch(bluetoothManagerProvider);
+    final bt = ref.watch(bluetoothManagerProvider);
 
     return Scaffold(
       drawer: IgnorePointer(
         ignoring: timerState.isStartButtonDisabled,
         child: NavBar(onTabTapped: _updateTabIndex),
       ),
-      drawerEnableOpenDragGesture: !timerState.isStartButtonDisabled,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(40),
         child: IgnorePointer(
@@ -124,24 +93,24 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
             key: _navigatorKeys[1],
             onGenerateRoute:
                 (_) => MaterialPageRoute(
-                  builder: (_) => MatchesScreen(onTabChange: _updateTabIndex),
+                  builder:
+                      (_) => MatchesScreen(
+                        key: _matchesKey,
+                        onTabChange: _updateTabIndex,
+                      ),
                 ),
           ),
-
-          // Tab 2: Add Match
-          // Navigator(
-          //   key: _navigatorKeys[2],
-          //   onGenerateRoute: (_) => MaterialPageRoute(
-          //     builder: (_) => AddMatchScreen(onTabChange: _updateTabIndex),
-          //   ),
-          // ),
 
           // Tab 2: Add Match
           Navigator(
             key: _navigatorKeys[2],
             onGenerateRoute:
                 (_) => MaterialPageRoute(
-                  builder: (_) => AddMatchScreen(onTabChange: _updateTabIndex),
+                  builder:
+                      (_) => AddMatchScreen(
+                        key: _addMatchKey,
+                        onTabChange: _updateTabIndex,
+                      ),
                 ),
           ),
 
@@ -150,7 +119,11 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
             key: _navigatorKeys[3],
             onGenerateRoute:
                 (_) => MaterialPageRoute(
-                  builder: (_) => SettingsScreen(onTabChange: _updateTabIndex),
+                  builder:
+                      (_) => SettingsScreen(
+                        key: _settingsKey,
+                        onTabChange: _updateTabIndex,
+                      ),
                 ),
           ),
         ],
@@ -163,15 +136,9 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
           children: [
             Footer(onTabTapped: _updateTabIndex, currentIndex: _currentIndex),
             StatusBarIndicator(
-              isConnectedDevice1: bluetoothManager.isDeviceConnected(
-                'BlueBoxer',
-              ),
-              isConnectedDevice2: bluetoothManager.isDeviceConnected(
-                'RedBoxer',
-              ),
-              isConnectedDevice3: bluetoothManager.isDeviceConnected(
-                'BoxerServer',
-              ),
+              isConnectedDevice1: bt.isDeviceConnected('BlueBoxer'),
+              isConnectedDevice2: bt.isDeviceConnected('RedBoxer'),
+              isConnectedDevice3: bt.isDeviceConnected('BoxerServer'),
             ),
           ],
         ),
@@ -179,6 +146,230 @@ class _ConnectHomeState extends ConsumerState<ConnectHome> {
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import 'package:box_sensors/widgets/exit_confirmation.dart';
+// import 'package:flutter/material.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:box_sensors/services/providers.dart';
+// import 'package:box_sensors/widgets/connect_home_widgets.dart';
+// import 'package:box_sensors/screens/matches_screen.dart';
+// import 'package:box_sensors/screens/add_match_screen.dart';
+// import 'package:box_sensors/widgets/settings.dart';
+// import 'package:box_sensors/widgets/header.dart';
+// import 'package:box_sensors/widgets/navbar.dart';
+// import 'package:box_sensors/widgets/footer.dart';
+// import 'package:box_sensors/widgets/status_bar_indicator.dart';
+
+// class ConnectHome extends ConsumerStatefulWidget {
+//   const ConnectHome({super.key});
+//   @override
+//   ConsumerState<ConnectHome> createState() => _ConnectHomeState();
+// }
+
+// class _ConnectHomeState extends ConsumerState<ConnectHome> {
+//   final List<String> deviceOptions = ['BlueBoxer', 'RedBoxer', 'BoxerServer'];
+//   int _currentIndex = 0;
+
+
+//   // Four Navigator keys: one for each real tab (Connect, Games, Add, Settings)
+//   final _navigatorKeys = List.generate(4, (_) => GlobalKey<NavigatorState>());
+
+//   void _updateTabIndex(int index) {
+//     if (index == 4) {
+//       // Fifth destination is “Exit”
+//       ExitConfirmation.show(context);
+//       return;
+//     }
+//     setState(() => _currentIndex = index);
+//   }
+
+ 
+
+//   // void _updateTabIndex(int index) {
+//   //   if (index == 4) {
+//   //     // Exit
+//   //     ExitConfirmation.show(context);
+//   //     return;
+//   //   }
+
+//   //   setState(() => _currentIndex = index);
+
+//   //   if (index == 1) {
+//   //     final nav = _navigatorKeys[1].currentState;
+//   //     if (nav != null) {
+//   //       // 1) pop back to the root of that tab’s stack
+//   //       nav.popUntil((r) => r.isFirst);
+//   //       // 2) replace it with a fresh MatchesScreen form state)
+//   //       nav.pushReplacement(
+//   //         MaterialPageRoute(
+//   //           builder: (_) => MatchesScreen( onTabChange: _updateTabIndex),
+//   //         ),
+//   //       );
+//   //     }
+//   //   }
+
+//   //   // If they just tapped the "Add Game" tab
+//   //   if (index == 2) {
+//   //     final nav = _navigatorKeys[2].currentState;
+//   //     if (nav != null) {
+//   //       // 1) pop back to the root of that tab’s stack
+//   //       nav.popUntil((r) => r.isFirst);
+//   //       // 2) replace it with a fresh AddMatchScreen (clears all form state)
+//   //       nav.pushReplacement(
+//   //         MaterialPageRoute(
+//   //           builder: (_) => AddMatchScreen(onTabChange: _updateTabIndex),
+//   //         ),
+//   //       );
+//   //     }
+//   //   }
+
+//   //   if (index == 3){
+//   //     final nav = _navigatorKeys[3].currentState;
+//   //     if (nav != null) {
+//   //       // 1) pop back to the root of that tab’s stack
+//   //       nav.popUntil((r) => r.isFirst);
+//   //       // 2) replace it with a fresh AddMatchScreen (clears all form state)
+//   //       nav.pushReplacement(
+//   //         MaterialPageRoute(
+//   //           builder: (_) => SettingsScreen(onTabChange: _updateTabIndex),
+//   //         ),
+//   //       );
+//   //     }
+//   //   }
+
+//   // }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final timerState = ref.watch(timerStateProvider);
+//     final bluetoothManager = ref.watch(bluetoothManagerProvider);
+
+//     return Scaffold(
+//       drawer: IgnorePointer(
+//         ignoring: timerState.isStartButtonDisabled,
+//         child: NavBar(onTabTapped: _updateTabIndex),
+//       ),
+//       drawerEnableOpenDragGesture: !timerState.isStartButtonDisabled,
+//       appBar: PreferredSize(
+//         preferredSize: const Size.fromHeight(40),
+//         child: IgnorePointer(
+//           ignoring: timerState.isStartButtonDisabled,
+//           child: Header(title: 'Box Sensors'),
+//         ),
+//       ),
+
+//       body: IndexedStack(
+//         index: _currentIndex,
+//         children: [
+//           // Tab 0: Connect
+//           Navigator(
+//             key: _navigatorKeys[0],
+//             onGenerateRoute:
+//                 (_) => MaterialPageRoute(
+//                   builder:
+//                       (_) => ConnectHomeWidgets(deviceOptions: deviceOptions),
+//                 ),
+//           ),
+
+//           // Tab 1: Matches
+//           Navigator(
+//             key: _navigatorKeys[1],
+//             onGenerateRoute:
+//                 (_) => MaterialPageRoute(
+//                   builder: (_) => MatchesScreen(onTabChange: _updateTabIndex),
+//                 ),
+//           ),
+
+//           // Tab 2: Add Match
+//           // Navigator(
+//           //   key: _navigatorKeys[2],
+//           //   onGenerateRoute: (_) => MaterialPageRoute(
+//           //     builder: (_) => AddMatchScreen(onTabChange: _updateTabIndex),
+//           //   ),
+//           // ),
+
+//           //Tab 2: Add Match
+//           Navigator(
+//             key: _navigatorKeys[2],
+//             onGenerateRoute:
+//                 (_) => MaterialPageRoute(
+//                   builder: (_) => AddMatchScreen(onTabChange: _updateTabIndex),
+//                 ),
+//           ),
+          
+
+//           // Tab 3: Settings
+//           Navigator(
+//             key: _navigatorKeys[3],
+//             onGenerateRoute:
+//                 (_) => MaterialPageRoute(
+//                   builder: (_) => SettingsScreen(onTabChange: _updateTabIndex),
+//                 ),
+//           ),
+//         ],
+//       ),
+
+//       bottomNavigationBar: IgnorePointer(
+//         ignoring: timerState.isStartButtonDisabled,
+//         child: Column(
+//           mainAxisSize: MainAxisSize.min,
+//           children: [
+//             Footer(onTabTapped: _updateTabIndex, currentIndex: _currentIndex),
+//             StatusBarIndicator(
+//               isConnectedDevice1: bluetoothManager.isDeviceConnected(
+//                 'BlueBoxer',
+//               ),
+//               isConnectedDevice2: bluetoothManager.isDeviceConnected(
+//                 'RedBoxer',
+//               ),
+//               isConnectedDevice3: bluetoothManager.isDeviceConnected(
+//                 'BoxerServer',
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // import 'package:box_sensors/widgets/exit_confirmation.dart';
 // import 'package:flutter/material.dart';

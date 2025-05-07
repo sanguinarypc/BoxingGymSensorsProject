@@ -8,6 +8,11 @@ import 'package:box_sensors/widgets/settings_header.dart';
 import 'package:box_sensors/widgets/settings_form_card.dart';
 import 'package:box_sensors/widgets/sample_data_card.dart';
 
+/// implement this so ConnectHome can call reloadSettings()
+mixin SettingsReloadable on State<SettingsScreen> {
+  Future<void> reloadSettings();
+}
+
 class SettingsScreen extends ConsumerStatefulWidget {
   final Function(int) onTabChange;
   const SettingsScreen({super.key, required this.onTabChange});
