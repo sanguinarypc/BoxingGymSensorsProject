@@ -1,5 +1,4 @@
-// Code -7
-// File: bluetooth_manager.dart last modified on 2025-10-04
+// File: bluetooth_manager.dart
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;

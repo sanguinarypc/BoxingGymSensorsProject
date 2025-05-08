@@ -42,33 +42,3 @@ final matchesFutureProvider =
   final db = ref.read(databaseHelperProvider);
   return db.fetchMatches();
 });
-
-
-
-
-
-
-
-
-
-
-
-
-// // lib/services/providers.dart
-// import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:box_sensors/services/bluetooth_manager.dart';
-// import 'package:box_sensors/state/timer_state.dart';
-// import 'package:box_sensors/Themes/theme_provider.dart';
-// import 'package:box_sensors/services/database_helper.dart';
-
-// final bluetoothManagerProvider =
-//     ChangeNotifierProvider<BluetoothManager>((ref) => BluetoothManager());
-
-// final timerStateProvider =
-//     ChangeNotifierProvider<TimerState>((ref) => TimerState());
-
-// final themeProviderProvider =
-//     ChangeNotifierProvider<ThemeProvider>((ref) => ThemeProvider());
-
-// final databaseHelperProvider =
-//     Provider<DatabaseHelper>((ref) => DatabaseHelper());
