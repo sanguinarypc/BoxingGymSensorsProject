@@ -1,9 +1,0 @@
-{
-  "port": "COM3",
-  "configuration": "UploadSpeed=921600,CDCOnBoot=cdc,CPUFreq=160,FlashFreq=80,FlashMode=qio,FlashSize=4M,PartitionScheme=default,DebugLevel=none,EraseFlash=none,JTAGAdapter=default,ZigbeeMode=default",
-  "output": "build",
-  "board": "esp32:esp32:dfrobot_firebeetle2_esp32c6",
-  "programmer": "",
-  "useProgrammer": false,
-  "configurationRequired": true
-}
