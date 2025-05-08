@@ -157,28 +157,28 @@ class AboutDialogApp {
                                   fontSize: 13, // Adjust font size
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text.rich(
-                                TextSpan(
-                                  text:
-                                      'Bachelor thesis,\n'
-                                      'Hellenic Open University.\n'
-                                      'Supervisor: Professor\n'
-                                      'Dr. ',
-                                  style: TextStyle(
-                                    color: colorScheme.onSurface,
-                                    fontSize: 13,
-                                  ),
-                                  children: [
-                                    TextSpan(
-                                      text: 'Ioannis Kouretas',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              // const SizedBox(height: 4),
+                              // Text.rich(
+                              //   TextSpan(
+                              //     text:
+                              //         'Bachelor thesis,\n'
+                              //         'Hellenic Open University.\n'
+                              //         'Supervisor: Professor\n'
+                              //         'Dr. ',
+                              //     style: TextStyle(
+                              //       color: colorScheme.onSurface,
+                              //       fontSize: 13,
+                              //     ),
+                              //     children: [
+                              //       TextSpan(
+                              //         text: 'Ioannis Kouretas',
+                              //         style: TextStyle(
+                              //           fontWeight: FontWeight.bold,
+                              //         ),
+                              //       ),
+                              //     ],
+                              //   ),
+                              // ),
                             ],
                           ),
                         ),
