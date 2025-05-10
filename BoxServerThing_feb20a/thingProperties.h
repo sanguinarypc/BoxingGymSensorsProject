@@ -2,14 +2,7 @@
 #ifndef THINGPROPERTIES_H
 #define THINGPROPERTIES_H
 
-// Optional placeholders
-#ifndef SECRET_SSID
-  #define SECRET_SSID "mywifi5G"
-#endif
-#ifndef SECRET_OPTIONAL_PASS
-  #define SECRET_OPTIONAL_PASS "KaragiozisTrelaras##14##"
-#endif
-
+#include "arduino_secrets.h"      // <- SECRET_SSID & SECRET_OPTIONAL_PASS come from here
 #include <ArduinoIoTCloud.h>
 #include <Arduino_ConnectionHandler.h>
 
@@ -17,7 +10,7 @@
 const char SSID[] = SECRET_SSID;
 const char PASS[] = SECRET_OPTIONAL_PASS;
 
-// Define your Cloud variables once
+// Your Cloud variables
 CloudString deviceThatGotHit;
 CloudString boxerThatScoresThePoint;
 CloudInt    punchScore;
@@ -32,7 +25,7 @@ CloudInt    redBoxer_punchCount;
 CloudString redBoxer_timestamp;
 CloudInt    redBoxer_sensorValue;
 
-// Define initProperties() once
+// Wire up your properties
 void initProperties() {
   ArduinoCloud.addProperty(boxerThatScoresThePoint, READWRITE, ON_CHANGE, NULL);
   ArduinoCloud.addProperty(deviceThatGotHit,        READWRITE, ON_CHANGE, NULL);
@@ -47,7 +40,8 @@ void initProperties() {
   ArduinoCloud.addProperty(redBoxer_sensorValue,   READWRITE, ON_CHANGE, NULL);
 }
 
-// Define connection once
+// Single connection handler, using your SECRET_SSID / SECRET_OPTIONAL_PASS
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
 
 #endif // THINGPROPERTIES_H
+
