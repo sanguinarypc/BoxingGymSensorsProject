@@ -166,7 +166,7 @@ class _AddMatchScreenState extends AddMatchResettable {
           child: Column(
             children: [
               DisplayRow(
-                title: 'Add New Game',
+                title: 'Add Game',
                 actions: [
                   IconButton(
                     icon: Icon(
