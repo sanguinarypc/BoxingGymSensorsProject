@@ -4,17 +4,6 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart'; // Import the uuid package
 
-// 1) Add a small helper function to check if a column exists.
-Future<bool> _columnExists(Database db, String table, String columnName) async {
-  final columns = await db.rawQuery('PRAGMA table_info($table)');
-  for (final col in columns) {
-    if (col['name'] == columnName) {
-      return true;
-    }
-  }
-  return false;
-}
-
 class DatabaseHelper {
   // Singleton instance
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -43,7 +32,7 @@ class DatabaseHelper {
     return await openDatabase(
       path,
       // Bump version to 7 so onUpgrade gets called if user is on an older DB
-      version: 7,
+      version: 1,
       onOpen: (db) async {
         // Ensure foreign keys are enabled every time the database is opened
         await db.execute("PRAGMA foreign_keys = ON");
@@ -107,19 +96,6 @@ class DatabaseHelper {
           )
         ''');
 
-        // Create 'trainingdata' table exactly similar to 'messages' but without the foreign key constraint
-        await db.execute(''' 
-          CREATE TABLE trainingdata(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            device TEXT,
-            punchBy TEXT,
-            punchCount TEXT,
-            timestamp TEXT,
-            sensorValue TEXT,
-            roundId INTEGER
-          )
-        ''');
-
         // Create 'settings' table with all columns including 'rounds'
         await db.execute(''' 
           CREATE TABLE settings(
@@ -144,65 +120,18 @@ class DatabaseHelper {
           'rounds': 3,
         });
       },
-      onUpgrade: (db, oldVersion, newVersion) async {
-        // Original if block for oldVersion < 4:
-        if (oldVersion < 4) {
-          // 2) Check if 'device' column already exists before adding it
-          final hasDevice = await _columnExists(db, 'messages', 'device');
-          if (!hasDevice) {
-            await db.execute('ALTER TABLE messages ADD COLUMN device TEXT');
-          }
-        }
-
-        // If user was on version 4 or lower, add the missing columns:
-        if (oldVersion < 5) {
-          // 3) Check if each column already exists before adding
-          final hasFsrThreshold = await _columnExists(
-            db,
-            'settings',
-            'fsrThreshold',
-          );
-          if (!hasFsrThreshold) {
-            await db.execute(
-              'ALTER TABLE settings ADD COLUMN fsrThreshold INTEGER DEFAULT 200',
-            );
-          }
-
-          final hasRoundTime = await _columnExists(db, 'settings', 'roundTime');
-          if (!hasRoundTime) {
-            await db.execute(
-              'ALTER TABLE settings ADD COLUMN roundTime INTEGER DEFAULT 3',
-            );
-          }
-
-          final hasBreakTime = await _columnExists(db, 'settings', 'breakTime');
-          if (!hasBreakTime) {
-            await db.execute(
-              'ALTER TABLE settings ADD COLUMN breakTime INTEGER DEFAULT 120',
-            );
-          }
-        }
-
-        // If user was on version 5 or lower, add the new 'punchBy' column.
-        if (oldVersion < 6) {
-          final hasPunchBy = await _columnExists(db, 'messages', 'punchBy');
-          if (!hasPunchBy) {
-            await db.execute('ALTER TABLE messages ADD COLUMN punchBy TEXT');
-          }
-        }
-
-        // Now for version < 7, add the new 'rounds' column to settings if needed
-        if (oldVersion < 7) {
-          final hasRounds = await _columnExists(db, 'settings', 'rounds');
-          if (!hasRounds) {
-            await db.execute(
-              'ALTER TABLE settings ADD COLUMN rounds INTEGER DEFAULT 3',
-            );
-          }
-        }
-      },
     );
   }
+
+  /// Closes the underlying sqlite database.
+  Future<void> close() async {
+    final db = _database;
+    if (db != null) {
+      await db.close();
+      _database = null;
+    }
+  }
+
 
   // ------------------- Messages Table Methods -------------------
   /// Inserts a new message into the 'messages' table.
@@ -261,42 +190,11 @@ class DatabaseHelper {
     await db.delete('messages');
   }
 
-  // ------------------- Trainingdata Table Methods -------------------
-  /// Inserts a new record into the 'trainingdata' table.
-  Future<void> insertTrainingData(
-    String device,
-    oppositeDevice,
-    String punchCount,
-    String timestamp,
-    String sensorValue,
-  ) async {
-    final db = await database;
-    await db.insert('trainingdata', {
-      'device': device,
-      'punchBy': oppositeDevice,
-      'punchCount': punchCount,
-      'timestamp': timestamp,
-      'sensorValue': sensorValue,
-    });
-  }
-
   /// Deletes a match from the 'matches' table by ID.
   /// This will also delete all related rounds and messages due to foreign key constraints.
   Future<void> deleteMatch(int id) async {
     final db = await database;
     await db.delete('matches', where: 'id = ?', whereArgs: [id]);
-  }
-
-  /// Fetches all records from the 'trainingdata' table, ordered by descending ID.
-  Future<List<Map<String, dynamic>>> fetchTrainingData() async {
-    final db = await database;
-    return await db.query('trainingdata', orderBy: 'id DESC');
-  }
-
-  /// Clears all records from the 'trainingdata' table.
-  Future<void> clearTrainingData() async {
-    final db = await database;
-    await db.delete('trainingdata');
   }
 
   // ------------------- Settings Table Methods -------------------

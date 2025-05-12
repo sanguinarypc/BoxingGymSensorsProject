@@ -135,6 +135,19 @@ class BluetoothManager with ChangeNotifier {
     return platformName;
   }
 
+  String getDeviceKey1(BluetoothDevice device) {
+    final trimmedName = device.platformName.trim();
+    // If the device's name is one of our target names, use it.
+    if (trimmedName.isNotEmpty &&
+        (trimmedName == 'BlueBoxer' ||
+            trimmedName == 'RedBoxer' ||
+            trimmedName == 'BoxerServer')) {
+      return trimmedName;
+    }
+    // Otherwise, if name is empty, return remoteId, or else return the trimmed name.
+    return trimmedName.isEmpty ? device.remoteId.toString() : trimmedName;
+  }
+
   /// Sets the TimerState.
   void setTimerState(TimerState timerState) {
     debugPrint('setTimerState(...) called with timerState=$timerState');
@@ -675,16 +688,27 @@ class BluetoothManager with ChangeNotifier {
 
         final localRoundId = _currentRoundId;
         final localMatchId = _currentMatchId;
-        // always insert into messages; matchId can be null (will be stored as NULL)
-        _sendDataAndInsertToDatabase(
-          deviceStr,
-          oppositeDevice,
-          punchCount,
-          timestamp,
-          sensorValue,
-          localRoundId ?? 0,
-          localMatchId,
-        );
+        if (localMatchId == null) {
+          _sendDataAndInsertToDatabase(
+            deviceStr,
+            oppositeDevice,
+            punchCount,
+            timestamp,
+            sensorValue,
+            0,
+            null,
+          );
+        } else {
+          _sendDataAndInsertToDatabase(
+            deviceStr,
+            oppositeDevice,
+            punchCount,
+            timestamp,
+            sensorValue,
+            localRoundId ?? 0,
+            localMatchId,
+          );
+        }
       }
     } catch (e, stackTrace) {
       if (!_disposed) {
@@ -692,6 +716,28 @@ class BluetoothManager with ChangeNotifier {
         debugPrint(stackTrace.toString());
         Sentry.captureException(e, stackTrace: stackTrace);
       }
+    }
+  }
+
+  /// Insert training data into the database.
+  Future<void> _insertTrainingDataToDatabase(
+    String deviceStr,
+    String oppositeDevice,
+    String punchCount,
+    String timestamp,
+    String sensorValue,
+  ) async {
+    try {
+      await dbHelper.insertTrainingData(
+        deviceStr,
+        oppositeDevice,
+        punchCount,
+        timestamp,
+        sensorValue,
+      );
+    } catch (e, stackTrace) {
+      debugPrint("❌ 💾 🔴 Error inserting training data into DB: $e");
+      Sentry.captureException(e, stackTrace: stackTrace);
     }
   }
 
@@ -705,43 +751,8 @@ class BluetoothManager with ChangeNotifier {
     int roundId,
     int? matchId,
   ) {
-    // if (matchId != null) {
-    //   Future.wait([
-    //     _sendDataToBoxerServer(
-    //       deviceStr,
-    //       oppositeDevice,
-    //       punchCount,
-    //       timestamp,
-    //       sensorValue,
-    //     ),
-    //     _insertDataToDatabase(
-    //       deviceStr,
-    //       oppositeDevice,
-    //       punchCount,
-    //       timestamp,
-    //       sensorValue,
-    //       roundId,
-    //       matchId,
-    //     ),
-    //   ]);
-    // }
-
-    // Always insert into messages (with matchId == null storing as NULL)
-    final futures = <Future<void>>[
-      _insertDataToDatabase(
-        deviceStr,
-        oppositeDevice,
-        punchCount,
-        timestamp,
-        sensorValue,
-        roundId,
-        matchId,
-      ),
-    ];
-
-    // Only send to server if match is active
     if (matchId != null) {
-      futures.add(
+      Future.wait([
         _sendDataToBoxerServer(
           deviceStr,
           oppositeDevice,
@@ -749,11 +760,34 @@ class BluetoothManager with ChangeNotifier {
           timestamp,
           sensorValue,
         ),
-      );
+        _insertDataToDatabase(
+          deviceStr,
+          oppositeDevice,
+          punchCount,
+          timestamp,
+          sensorValue,
+          roundId,
+          matchId,
+        ),
+      ]);
+    } else {
+      Future.wait([
+        _sendDataToBoxerServer(
+          deviceStr,
+          oppositeDevice,
+          punchCount,
+          timestamp,
+          sensorValue,
+        ),
+        _insertTrainingDataToDatabase(
+          deviceStr,
+          oppositeDevice,
+          punchCount,
+          timestamp,
+          sensorValue,
+        ),
+      ]);
     }
-
-    // fire both off concurrently
-    Future.wait(futures);
   }
 
   /// Insert data into the database for StartMatch mode.
@@ -764,7 +798,7 @@ class BluetoothManager with ChangeNotifier {
     String timestamp,
     String sensorValue,
     int roundId,
-    int? matchId,
+    int matchId,
   ) async {
     try {
       await dbHelper.insertMessage(
@@ -1013,7 +1047,6 @@ class BluetoothManager with ChangeNotifier {
     try {
       _messageStreamController.close();
       _disconnectionStreamController.close();
-      _rawController.close();
       _notificationSubscriptions.forEach((_, subscription) {
         subscription.cancel();
       });

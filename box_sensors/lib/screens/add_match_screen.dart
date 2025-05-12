@@ -38,7 +38,6 @@ class _AddMatchScreenState extends AddMatchResettable {
     _matchDateCtrl.text = DateFormat('dd/MM/yyyy').format(DateTime.now());
   }
 
-
   @override
   void dispose() {
     _matchNameCtrl.dispose();
@@ -48,7 +47,6 @@ class _AddMatchScreenState extends AddMatchResettable {
     _breakTimeCtrl.dispose();
     super.dispose();
   }
-
 
   @override
   void resetForm() {
@@ -63,8 +61,9 @@ class _AddMatchScreenState extends AddMatchResettable {
   void _showSnackBar(String message) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     });
   }
@@ -166,13 +165,8 @@ class _AddMatchScreenState extends AddMatchResettable {
           ),
           child: Column(
             children: [
-              // DisplayRow(
-              //   title: 'Add New Game',
-              //   actions: [BackButton(color: theme.colorScheme.onSurface),
-              //   ],
-              // ),
               DisplayRow(
-                title: 'Games',
+                title: 'Add New Game',
                 actions: [
                   IconButton(
                     icon: Icon(
