@@ -1,3 +1,4 @@
+// lib/widgets/about_dialog_app.dart
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart'; // Import the package
 
@@ -156,29 +157,7 @@ class AboutDialogApp {
                                   color: colorScheme.onSurface,
                                   fontSize: 13, // Adjust font size
                                 ),
-                              ),
-                              // const SizedBox(height: 4),
-                              // Text.rich(
-                              //   TextSpan(
-                              //     text:
-                              //         'Bachelor thesis,\n'
-                              //         'Hellenic Open University.\n'
-                              //         'Supervisor: Professor\n'
-                              //         'Dr. ',
-                              //     style: TextStyle(
-                              //       color: colorScheme.onSurface,
-                              //       fontSize: 13,
-                              //     ),
-                              //     children: [
-                              //       TextSpan(
-                              //         text: 'Ioannis Kouretas',
-                              //         style: TextStyle(
-                              //           fontWeight: FontWeight.bold,
-                              //         ),
-                              //       ),
-                              //     ],
-                              //   ),
-                              // ),
+                              ),                             
                             ],
                           ),
                         ),

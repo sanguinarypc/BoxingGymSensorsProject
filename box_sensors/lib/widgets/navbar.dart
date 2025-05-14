@@ -1,3 +1,4 @@
+// lib/widgets/navbar.dart
 import 'package:box_sensors/widgets/exit_confirmation.dart';
 import 'package:flutter/material.dart';
 import 'package:box_sensors/widgets/about_dialog_animation.dart';

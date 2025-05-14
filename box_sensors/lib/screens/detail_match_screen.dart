@@ -1,4 +1,4 @@
-// lib/screens/match_detail_screen.dart
+// lib/screens/detail_match_screen.dart
 import 'package:flutter/material.dart';
 import 'package:box_sensors/widgets/display_row.dart';
 import 'package:box_sensors/screens_widgets/match_detail_info_card.dart';

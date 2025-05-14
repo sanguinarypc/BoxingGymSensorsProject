@@ -1,4 +1,4 @@
-// lib/screens/match_event_types_screen.dart
+// lib/screens/select_match_event_type_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:box_sensors/services/database_helper.dart';
@@ -53,8 +53,6 @@ class _MatchEventTypesScreenState
     return [];
   }
 }
-
-
 
   /// Safely calls setState if the widget is still mounted.
   void _safeSetState(VoidCallback fn) {

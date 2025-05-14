@@ -1,5 +1,5 @@
+// lib/widgets/animated_bluetooth_scan_indicator.dart
 import 'package:flutter/material.dart';
-
 /// A widget that shows an animated pulsating circle.
 /// When [isScanning] is true, the circle pulsates (scales in and out).
 /// When [isScanning] is false, the circle remains static.

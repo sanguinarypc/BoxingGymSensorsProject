@@ -1,4 +1,4 @@
-// File: bluetooth_manager.dart
+// lib/services/bluetooth_manager.dart
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
@@ -705,27 +705,7 @@ class BluetoothManager with ChangeNotifier {
     int roundId,
     int? matchId,
   ) {
-    // if (matchId != null) {
-    //   Future.wait([
-    //     _sendDataToBoxerServer(
-    //       deviceStr,
-    //       oppositeDevice,
-    //       punchCount,
-    //       timestamp,
-    //       sensorValue,
-    //     ),
-    //     _insertDataToDatabase(
-    //       deviceStr,
-    //       oppositeDevice,
-    //       punchCount,
-    //       timestamp,
-    //       sensorValue,
-    //       roundId,
-    //       matchId,
-    //     ),
-    //   ]);
-    // }
-
+  
     // Always insert into messages (with matchId == null storing as NULL)
     final futures = <Future<void>>[
       _insertDataToDatabase(

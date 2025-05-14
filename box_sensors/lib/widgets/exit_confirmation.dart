@@ -1,4 +1,4 @@
-// import 'package:box_sensors/services/providers.dart';
+// lib/widgets/exit_confirmation.dart
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 

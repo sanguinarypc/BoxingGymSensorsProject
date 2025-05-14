@@ -1,4 +1,4 @@
-// lib/screens/add_game_button.dart
+// lib/screens_widgets/add_game_button.dart
 import 'package:flutter/material.dart';
 import 'package:box_sensors/widgets/common_buttons.dart';
 

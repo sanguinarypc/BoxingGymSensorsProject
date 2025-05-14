@@ -1,4 +1,4 @@
-// lib/screens/timings_card.dart
+// lib/screens_widgets/timings_card.dart
 import 'package:flutter/material.dart';
 import 'package:box_sensors/widgets/custom_text_form_field.dart';
 

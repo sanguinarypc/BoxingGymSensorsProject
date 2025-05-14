@@ -1,4 +1,4 @@
-// lib/widgets/connect_home.dart
+// lib/widgets/connect_home_screen.dart
 import 'package:box_sensors/widgets/exit_confirmation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

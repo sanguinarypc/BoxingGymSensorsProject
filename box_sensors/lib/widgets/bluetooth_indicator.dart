@@ -1,3 +1,4 @@
+// lib/widgets/bluetooth_indicator.dart
 import 'package:flutter/material.dart';
 
 class BluetoothIndicator extends StatelessWidget {

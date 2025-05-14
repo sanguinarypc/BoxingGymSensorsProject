@@ -1,3 +1,4 @@
+// lib/widgets/footer.dart
 import 'package:flutter/material.dart';
 
 class Footer extends StatefulWidget {

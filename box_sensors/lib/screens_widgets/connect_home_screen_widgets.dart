@@ -1,4 +1,4 @@
-// lib/widgets/connect_home_widgets.dart
+// lib/screens_widgets/connect_home_screen_widgets.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';

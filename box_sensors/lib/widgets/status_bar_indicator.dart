@@ -1,3 +1,4 @@
+// lib/widgets/status_bar_indicator.dart
 import 'package:flutter/material.dart';
 import 'bluetooth_indicator.dart'; 
 
