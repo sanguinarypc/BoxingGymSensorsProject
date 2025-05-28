@@ -1,0 +1,2 @@
+C:/BoxingGymSensorsProject/box_sensors/android/app/.cxx/Debug/u1i3a1p5/x86_64/CMakeFiles/edit_cache.dir
+C:/BoxingGymSensorsProject/box_sensors/android/app/.cxx/Debug/u1i3a1p5/x86_64/CMakeFiles/rebuild_cache.dir

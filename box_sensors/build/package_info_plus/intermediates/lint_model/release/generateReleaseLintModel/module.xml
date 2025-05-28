@@ -1,0 +1,26 @@
+<lint-module
+    format="1"
+    dir="C:\Users\andreas\AppData\Local\Pub\Cache\hosted\pub.dev\package_info_plus-8.3.0\android"
+    name=":package_info_plus"
+    type="LIBRARY"
+    maven="dev.fluttercommunity.plus.packageinfo:package_info_plus:1.0-SNAPSHOT"
+    agpVersion="8.8.0"
+    buildFolder="C:\BoxingGymSensorsProject\box_sensors\build\package_info_plus"
+    bootClassPath="C:\Users\andreas\AppData\Local\Android\Sdk\platforms\android-34\android.jar;C:\Users\andreas\AppData\Local\Android\Sdk\build-tools\35.0.0\core-lambda-stubs.jar"
+    javaSourceLevel="17"
+    compileTarget="android-34"
+    neverShrinking="true">
+  <lintOptions
+      disable="InvalidPackage"
+      abortOnError="true"
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true">
+    <severities>
+      <severity
+        id="InvalidPackage"
+        severity="IGNORE" />
+    </severities>
+  </lintOptions>
+  <variant name="release"/>
+</lint-module>

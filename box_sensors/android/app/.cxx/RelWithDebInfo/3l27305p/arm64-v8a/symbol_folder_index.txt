@@ -1,0 +1,1 @@
+C:\BoxingGymSensorsProject\box_sensors\build\app\intermediates\cxx\RelWithDebInfo\3l27305p\obj\arm64-v8a

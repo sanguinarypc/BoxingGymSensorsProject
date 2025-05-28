@@ -1,0 +1,1 @@
+ C:\\BoxingGymSensorsProject\\box_sensors\\.dart_tool\\flutter_build\\9820b857c719696b7cf7c736d20ff915\\dart_build_result.json: 
