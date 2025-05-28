@@ -1,0 +1,376 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.sanguinarypc.box_sensors"
+4    android:versionCode="2"
+5    android:versionName="1.0.1" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="21"
+9        android:targetSdkVersion="35" />
+10    <!-- xmlns:tools="http://schemas.android.com/tools" -->
+11    <!-- Ensure the app supports all screen densities -->
+12    <supports-screens
+12-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:5:5-11:37
+13        android:anyDensity="true"
+13-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:6:9-34
+14        android:largeScreens="true"
+14-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:9:9-36
+15        android:normalScreens="true"
+15-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:8:9-37
+16        android:resizeable="true"
+16-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:11:9-34
+17        android:smallScreens="true"
+17-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:7:9-36
+18        android:xlargeScreens="true" />
+18-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:10:9-37
+19
+20    <!-- Permissions for Bluetooth functionality -->
+21    <!--
+22    <uses-permission android:name="android.permission.BLUETOOTH"/>
+23    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+24    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/>
+25    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+26    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
+27    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+28    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+29    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+30    -->
+31
+32
+33    <!--
+34    Add permissions for Android (No Location) ############################################################
+35    In the android/app/src/main/AndroidManifest.xml add:
+36    Tell Google Play Store that your app uses Bluetooth LE
+37     Set android:required="true" if bluetooth is necessary
+38    -->
+39<!--     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" /> -->
+40    <!--
+41    New Bluetooth permissions in Android 12
+42    https://developer.android.com/about/versions/12/features/bluetooth-permissions
+43    -->
+44    <!--
+45    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+46    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+47    -->
+48    <!-- legacy for Android 11 or lower -->
+49    <!--
+50    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+51    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+52    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/>
+53    -->
+54
+55
+56    <!-- legacy for Android 9 or lower -->
+57<!--     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="28" /> -->
+58
+59
+60    <!--
+61    Add permissions for Android (With Fine Location) ######################################################
+62    if you want to use Bluetooth to determine location, or support iBeacons.
+63    In the android/app/src/main/AndroidManifest.xml add:
+64    Tell Google Play Store that your app uses Bluetooth LE
+65     Set android:required="true" if bluetooth is necessary
+66    -->
+67
+68
+69    <!--
+70    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+71    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+72    -->
+73
+74    <uses-permission android:name="android.permission.INTERNET" />
+74-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:58:5-67
+74-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:58:22-64
+75    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+75-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:59:5-79
+75-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:59:22-76
+76    <!--
+77    New Bluetooth permissions in Android 12
+78    https://developer.android.com/about/versions/12/features/bluetooth-permissions
+79    -->
+80
+81    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+81-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:63:5-72
+81-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:63:22-70
+82    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+82-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:65:5-76
+82-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:65:22-73
+83
+84    <uses-feature
+84-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:67:5-90
+85        android:name="android.hardware.bluetooth_le"
+85-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:67:19-63
+86        android:required="true" />
+86-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:67:64-87
+87
+88    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+88-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:68:5-85
+88-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:68:22-82
+89    <!-- <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" /> -->
+90    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+90-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:70:5-79
+90-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:70:22-76
+91    <!-- legacy for Android 11 or lower -->
+92
+93    <uses-permission
+93-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:73:5-95
+94        android:name="android.permission.BLUETOOTH"
+94-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:73:22-65
+95        android:maxSdkVersion="30" />
+95-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:73:66-92
+96    <uses-permission
+96-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:74:5-101
+97        android:name="android.permission.BLUETOOTH_ADMIN"
+97-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:74:22-71
+98        android:maxSdkVersion="30" />
+98-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:74:72-98
+99    <!-- legacy for Android 9 or lower -->
+100
+101    <uses-permission
+101-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:77:5-108
+102        android:name="android.permission.ACCESS_COARSE_LOCATION"
+102-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:77:22-78
+103        android:maxSdkVersion="28" />
+103-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:77:79-105
+104
+105    <!--
+106         🔥 Force High-Resolution Rendering 
+107        <meta-data
+108            android:name="flutter_highres_mode"
+109            android:value="true"/>
+110    -->
+111    <!-- required -->
+112
+113    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+113-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:85:5-77
+113-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:85:22-74
+114
+115    <!-- foregroundServiceType: dataSync -->
+116    <!-- <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" /> -->
+117
+118
+119    <!-- foregroundServiceType: remoteMessaging -->
+120    <!-- <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" /> -->
+121
+122
+123    <!-- Microphone permission for speech recognition -->
+124    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+124-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:94:5-71
+124-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:94:22-68
+125
+126    <!-- Required to query activities that can process text -->
+127    <queries>
+127-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:164:5-169:15
+128        <intent>
+128-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:165:9-168:18
+129            <action android:name="android.intent.action.PROCESS_TEXT" />
+129-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:166:13-72
+129-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:166:21-70
+130
+131            <data android:mimeType="text/plain" />
+131-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:167:13-50
+131-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:167:19-48
+132        </intent>
+133    </queries>
+134
+135    <permission
+135-->[androidx.core:core:1.13.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\b61a0fe366c933602629dffbdfcef48f\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
+136        android:name="com.sanguinarypc.box_sensors.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+136-->[androidx.core:core:1.13.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\b61a0fe366c933602629dffbdfcef48f\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
+137        android:protectionLevel="signature" />
+137-->[androidx.core:core:1.13.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\b61a0fe366c933602629dffbdfcef48f\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
+138
+139    <uses-permission android:name="com.sanguinarypc.box_sensors.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+139-->[androidx.core:core:1.13.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\b61a0fe366c933602629dffbdfcef48f\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
+139-->[androidx.core:core:1.13.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\b61a0fe366c933602629dffbdfcef48f\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
+140
+141    <application
+142        android:name="android.app.Application"
+142-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:97:9-42
+143        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+143-->[androidx.core:core:1.13.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\b61a0fe366c933602629dffbdfcef48f\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
+144        android:extractNativeLibs="true"
+145        android:icon="@mipmap/ic_launcher"
+145-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:99:9-43
+146        android:label="BoxSensors" >
+146-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:98:9-35
+147        <activity
+147-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:101:5-124:16
+148            android:name="com.sanguinarypc.box_sensors.MainActivity"
+148-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:102:9-37
+149            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|screenLayout|density|uiMode"
+149-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:107:9-149
+150            android:exported="true"
+150-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:103:9-32
+151            android:hardwareAccelerated="true"
+151-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:108:9-43
+152            android:launchMode="singleTop"
+152-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:104:9-39
+153            android:lockTaskMode="always"
+153-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:111:9-38
+154            android:screenOrientation="portrait"
+154-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:110:9-45
+155            android:taskAffinity=""
+155-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:105:9-32
+156            android:theme="@style/LaunchTheme"
+156-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:106:9-43
+157            android:windowSoftInputMode="adjustResize" > <!-- "if_whitelisted" or "never" or "always" -->
+157-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:109:9-51
+158            <!-- com.sanguinarypc.box_sensors -->
+159            <!-- Add this line -->
+160            <!-- Locks the orientation to portrait,  |fontScale| -->
+161
+162
+163            <!-- Specifies an Android theme to apply to this Activity as soon as the Android process has started -->
+164            <meta-data
+164-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:116:9-118:52
+165                android:name="io.flutter.embedding.android.NormalTheme"
+165-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:117:13-68
+166                android:resource="@style/NormalTheme" />
+166-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:118:13-50
+167
+168            <intent-filter>
+168-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:120:9-123:25
+169                <action android:name="android.intent.action.MAIN" />
+169-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:121:13-64
+169-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:121:21-62
+170
+171                <category android:name="android.intent.category.LAUNCHER" />
+171-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:122:13-72
+171-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:122:23-70
+172            </intent-filter>
+173        </activity>
+174
+175        <!-- Device Admin Receiver declaration -->
+176        <!--
+177    <receiver
+178        android:name=".MyDeviceAdminReceiver"
+179        android:exported="true"
+180        android:label="@string/app_name"
+181        android:permission="android.permission.BIND_DEVICE_ADMIN">
+182        <meta-data
+183            android:name="android.app.device_admin"
+184            android:resource="@xml/device_admin_sample" />
+185        <intent-filter>
+186            <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+187        </intent-filter>
+188    </receiver>
+189        -->
+190
+191
+192        <!--
+193    Warning: Do not change service name.  Foreground service provided by flutter_foreground_task 
+194    <service 
+195        android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+196        android:foregroundServiceType="dataSync|remoteMessaging|connectedDevice|shortService|systemExempted"
+197        android:permission="android.permission.FOREGROUND_SERVICE"
+198        android:stopWithTask="false"
+199        android:exported="true" />
+200        -->
+201        <!-- android:stopWithTask="true" false -->
+202
+203
+204        <!--
+205    Your custom Bluetooth service
+206    <service
+207        android:name=".MyBluetoothService"
+208        android:foregroundServiceType="dataSync|remoteMessaging|connectedDevice|shortService|systemExempted"
+209        android:permission="android.permission.FOREGROUND_SERVICE"
+210        android:stopWithTask="true"
+211        android:exported="false" />
+212        -->
+213
+214
+215        <!-- Don't delete the meta-data below. This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+216        <meta-data
+216-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:158:9-160:32
+217            android:name="flutterEmbedding"
+217-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:159:13-44
+218            android:value="2" />
+218-->C:\BoxingGymSensorsProject\box_sensors\android\app\src\main\AndroidManifest.xml:160:13-30
+219
+220        <uses-library
+220-->[androidx.window:window:1.2.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\25d6cecacf579ab532b1ebe1b87557ce\transformed\jetified-window-1.2.0\AndroidManifest.xml:23:9-25:40
+221            android:name="androidx.window.extensions"
+221-->[androidx.window:window:1.2.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\25d6cecacf579ab532b1ebe1b87557ce\transformed\jetified-window-1.2.0\AndroidManifest.xml:24:13-54
+222            android:required="false" />
+222-->[androidx.window:window:1.2.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\25d6cecacf579ab532b1ebe1b87557ce\transformed\jetified-window-1.2.0\AndroidManifest.xml:25:13-37
+223        <uses-library
+223-->[androidx.window:window:1.2.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\25d6cecacf579ab532b1ebe1b87557ce\transformed\jetified-window-1.2.0\AndroidManifest.xml:26:9-28:40
+224            android:name="androidx.window.sidecar"
+224-->[androidx.window:window:1.2.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\25d6cecacf579ab532b1ebe1b87557ce\transformed\jetified-window-1.2.0\AndroidManifest.xml:27:13-51
+225            android:required="false" />
+225-->[androidx.window:window:1.2.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\25d6cecacf579ab532b1ebe1b87557ce\transformed\jetified-window-1.2.0\AndroidManifest.xml:28:13-37
+226
+227        <provider
+227-->[io.sentry:sentry-android-core:7.22.4] C:\Users\nick\.gradle\caches\8.10.2\transforms\4642f0ec829eb844a71cb7de9dabffbd\transformed\jetified-sentry-android-core-7.22.4\AndroidManifest.xml:16:9-20:39
+228            android:name="io.sentry.android.core.SentryPerformanceProvider"
+228-->[io.sentry:sentry-android-core:7.22.4] C:\Users\nick\.gradle\caches\8.10.2\transforms\4642f0ec829eb844a71cb7de9dabffbd\transformed\jetified-sentry-android-core-7.22.4\AndroidManifest.xml:17:13-76
+229            android:authorities="com.sanguinarypc.box_sensors.SentryPerformanceProvider"
+229-->[io.sentry:sentry-android-core:7.22.4] C:\Users\nick\.gradle\caches\8.10.2\transforms\4642f0ec829eb844a71cb7de9dabffbd\transformed\jetified-sentry-android-core-7.22.4\AndroidManifest.xml:18:13-77
+230            android:exported="false"
+230-->[io.sentry:sentry-android-core:7.22.4] C:\Users\nick\.gradle\caches\8.10.2\transforms\4642f0ec829eb844a71cb7de9dabffbd\transformed\jetified-sentry-android-core-7.22.4\AndroidManifest.xml:19:13-37
+231            android:initOrder="200" />
+231-->[io.sentry:sentry-android-core:7.22.4] C:\Users\nick\.gradle\caches\8.10.2\transforms\4642f0ec829eb844a71cb7de9dabffbd\transformed\jetified-sentry-android-core-7.22.4\AndroidManifest.xml:20:13-36
+232        <provider
+232-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\b3decf3b64031dba4064a81612a271dc\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:24:9-32:20
+233            android:name="androidx.startup.InitializationProvider"
+233-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\b3decf3b64031dba4064a81612a271dc\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:25:13-67
+234            android:authorities="com.sanguinarypc.box_sensors.androidx-startup"
+234-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\b3decf3b64031dba4064a81612a271dc\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:26:13-68
+235            android:exported="false" >
+235-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\b3decf3b64031dba4064a81612a271dc\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:27:13-37
+236            <meta-data
+236-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\b3decf3b64031dba4064a81612a271dc\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:29:13-31:52
+237                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+237-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\b3decf3b64031dba4064a81612a271dc\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:30:17-78
+238                android:value="androidx.startup" />
+238-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\nick\.gradle\caches\8.10.2\transforms\b3decf3b64031dba4064a81612a271dc\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:31:17-49
+239            <meta-data
+239-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+240                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+240-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+241                android:value="androidx.startup" />
+241-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+242        </provider>
+243
+244        <receiver
+244-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+245            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+245-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+246            android:directBootAware="false"
+246-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+247            android:enabled="true"
+247-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+248            android:exported="true"
+248-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+249            android:permission="android.permission.DUMP" >
+249-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+250            <intent-filter>
+250-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+251                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+251-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+251-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+252            </intent-filter>
+253            <intent-filter>
+253-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+254                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+254-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+254-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+255            </intent-filter>
+256            <intent-filter>
+256-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+257                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+257-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+257-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+258            </intent-filter>
+259            <intent-filter>
+259-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+260                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+260-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+260-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\nick\.gradle\caches\8.10.2\transforms\7afd8a652fcb7fdc9ebbf8fd14da9be8\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+261            </intent-filter>
+262        </receiver>
+263    </application>
+264
+265</manifest>

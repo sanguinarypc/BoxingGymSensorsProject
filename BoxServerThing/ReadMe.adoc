@@ -1,0 +1,97 @@
+:Author: nickdimitrakarakos
+:Email: [Your Email Address Here, or leave blank]
+:Date: 20/02/2025
+:Revision: 1.0
+:License: Public Domain
+:toc:
+:toclevels: 3
+:sectnums:
+
+= Project: IoT Cloud BLE Boxing Game
+
+This project implements an IoT-enabled boxing game system. It utilizes an Arduino-compatible board (e.g., ESP32) to connect to the Arduino IoT Cloud. The system communicates via Bluetooth Low Energy (BLE) using a custom handler (BluetoothHandler) to receive data, presumably from boxing sensors or gloves. This data, expected in JSON format, is processed by a JsonHandler. Based on the parsed data, relevant cloud variables are updated to reflect the game's state, such as scores, hits, timestamps, and device status. The system also synchronizes its local time with the Arduino IoT Cloud to ensure accurate timestamping of events.
+
+== Step 1: Software Installation and Setup
+
+1.  **Arduino IDE**: Ensure you have the latest version of the Arduino IDE installed from the [official Arduino website](https://www.arduino.cc/en/software).
+2.  **Board Support**: Install the appropriate board support package for your Arduino board (e.g., ESP32, Arduino Nano 33 IoT) through the Arduino IDE's Board Manager.
+3.  **Libraries**: Install the following libraries using the Arduino Library Manager:
+    * `ArduinoBLE` (for BLE communication)
+    * `ArduinoJson` (by Benoit Blanchon, for parsing JSON data)
+    * `TimeLib` (by Paul Stoffregen, for time manipulation)
+    * The specific Arduino IoT Cloud library for your board (e.g., `ArduinoIoTCloud` for ESP32, `WiFiNINA` for boards with Nina W102 modules if using WiFi for cloud connection).
+4.  **Arduino IoT Cloud Setup**:
+    * Create an account or log in to the [Arduino IoT Cloud](https://create.arduino.cc/iot/things).
+    * Create a new "Thing" for this project.
+    * Define all the Cloud Variables as used in the sketch (e.g., `deviceThatGotHit`, `boxerThatScoresThePoint`, `punchScore`, `timeStampOfThePunch`, `sensorValue`, `blueBoxer_punchCount`, etc.). Make sure their types (CloudString, CloudInt) match the sketch.
+    * Associate your physical Arduino board with this Thing.
+    * Configure your network credentials (e.g., Wi-Fi SSID and password) for the device in the IoT Cloud setup.
+    * Download the `thingProperties.h` file provided by the Arduino IoT Cloud and place it in your sketch folder, or ensure the sketch uses the auto-generated one.
+5.  **Project Files**: Clone or download all project files (the main `.ino` sketch, `BluetoothHandler.h`, `BluetoothHandler.cpp`, this `ReadMe.adoc`, etc.) into a single sketch folder.
+
+== Step 2: Assemble the Circuit (Hardware Setup)
+
+Assemble the circuit following the diagram `layout.png` (if provided and attached to the sketch folder).
+Key components will likely include:
+* Your Arduino-compatible microcontroller.
+* Any sensors used for detecting punches (e.g., accelerometers, force sensors) and their interface circuitry.
+* (Optional) LEDs or other indicators for status.
+
+Ensure all connections are secure and correct before powering up the board.
+
+== Step 3: Load the Code (Firmware Upload)
+
+1.  Open the main sketch file (e.g., `YourSketchName.ino`) in the Arduino IDE.
+2.  Select the correct board and port from the "Tools" menu in the Arduino IDE.
+3.  Verify/Compile the sketch to check for errors.
+4.  Upload the compiled code to your Arduino board.
+5.  Open the Serial Monitor (set to 9600 baud or as specified in `Serial.begin()`) to observe debugging messages and the status of the device (BLE advertising, IoT Cloud connection, time sync, incoming data).
+
+=== Folder structure
+
+An example of the typical sketch folder structure:
+
+....
+IoTBoxingGameSketch/          => Arduino sketch folder
+  ├── IoTBoxingGameSketch.ino => main Arduino file for the project
+  ├── BluetoothHandler.h      => Header file for BLE management class
+  ├── BluetoothHandler.cpp    => Implementation file for BLE management class
+  ├── thingProperties.h       => Arduino IoT Cloud generated properties file
+  ├── layout.png              => (Optional) an image of the circuit layout
+  └── ReadMe.adoc             => this file (documentation)
+....
+
+(Note: The `JsonHandler` was integrated into the main `.ino` file in the provided code, so it's not listed as separate `.h`/`.cpp` files here. If it were separate, it would be included.)
+
+=== License
+
+This project is released under a Public Domain License. You are free to use, modify, and distribute the code and documentation.
+
+=== Contributing
+
+To contribute to this project, please consider the following:
+* Reporting issues or suggesting improvements via [Preferred Channel, e.g., GitHub Issues if applicable, or contact email].
+* Forking the project and submitting pull requests (if a version control system like Git is used).
+* Contact: [Your Name/Email for contributions, e.g., nickdimitrakarakos]
+
+=== Bill of Materials (BOM) - Example
+
+This is an example Bill of Materials. Adjust according to the actual components used in your specific build.
+
+|===
+| ID | Part name                     | Part number / Specification | Quantity
+| A1 | Microcontroller Board         | e.g., ESP32 Dev Module, Arduino Nano 33 IoT | 1
+| S1 | Punch Sensor (Accelerometer)  | e.g., MPU-6050 or ADXL345   | 2 (one per boxer/glove)
+| S2 | Punch Sensor (Force Sensor)   | e.g., FSR 402               | 2 (optional, alternative or complementary)
+| R1 | Pull-up/Pull-down Resistors | e.g., 10k Ohm               | As needed by sensors
+| -  | Connecting Wires              | Jumper wires                | Various
+| -  | Power Supply                  | USB or external 3.3V/5V     | 1
+| -  | Boxing Gloves/Pads            | -                           | 2 (for mounting sensors)
+|===
+
+=== Help
+
+This document is written in the _AsciiDoc_ format, a markup language to describe documents.
+If you need help you can search the http://www.methods.co.nz/asciidoc[AsciiDoc homepage]
+or consult the http://powerman.name/doc/asciidoc[AsciiDoc cheatsheet].
+
