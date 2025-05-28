@@ -98,13 +98,17 @@ android {
 
         }
 
-        // You can configure other build types like debug here if needed
+    }
+
+            // You can configure other build types like debug here if needed
         getByName("debug") {
              // Debug specific settings
+             isDebuggable       = true
+             applicationIdSuffix= ".debug"
+             // (optional) If you really want to override the default debug keystore:
+             // signingConfig = signingConfigs.getByName("debug")
         }
 
-
-    }
 }
 
 }
