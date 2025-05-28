@@ -52,3 +52,8 @@ upload-keystore.jks
 
 # ignore Dart tool files in the box_sensors module
 /box_sensors/.dart_tool/
+
+/box_sensors/ios/
+/box_sensors/linux/
+/box_sensors/macos/
+/box_sensors/windows/
