@@ -50,3 +50,5 @@ upload-keystore.jks
 # ignore the sensors sub-project build output
 /box_sensors/build/
 
+# ignore Dart tool files in the box_sensors module
+/box_sensors/.dart_tool/
