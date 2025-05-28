@@ -47,6 +47,10 @@ app.*.map.json
 # Android keystore — keep this file private
 upload-keystore.jks
 
+# keep Android keystore passwords private
+/box_sensors/android/key.properties
+
+
 # ignore the sensors sub-project build output
 /box_sensors/build/
 
