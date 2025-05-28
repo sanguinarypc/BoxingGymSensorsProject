@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "io.sentry.flutter.sentry_flutter-release-4:/drawable/notification_bg_low.xml",
+        "source": "io.sentry.flutter.sentry_flutter-core-1.13.1-27:/drawable/notification_bg_low.xml"
+    },
+    {
+        "merged": "io.sentry.flutter.sentry_flutter-release-4:/drawable/notification_icon_background.xml",
+        "source": "io.sentry.flutter.sentry_flutter-core-1.13.1-27:/drawable/notification_icon_background.xml"
+    },
+    {
+        "merged": "io.sentry.flutter.sentry_flutter-release-4:/drawable/notification_tile_bg.xml",
+        "source": "io.sentry.flutter.sentry_flutter-core-1.13.1-27:/drawable/notification_tile_bg.xml"
+    },
+    {
+        "merged": "io.sentry.flutter.sentry_flutter-release-4:/drawable/notification_bg.xml",
+        "source": "io.sentry.flutter.sentry_flutter-core-1.13.1-27:/drawable/notification_bg.xml"
+    }
+]

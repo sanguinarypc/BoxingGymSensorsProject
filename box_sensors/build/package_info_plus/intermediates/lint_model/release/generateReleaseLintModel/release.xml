@@ -1,0 +1,31 @@
+<variant
+    name="release"
+    package="dev.fluttercommunity.plus.packageinfo"
+    minSdkVersion="19"
+    targetSdkVersion="19"
+    mergedManifest="C:\BoxingGymSensorsProject\box_sensors\build\package_info_plus\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml"
+    manifestMergeReport="C:\BoxingGymSensorsProject\box_sensors\build\package_info_plus\outputs\logs\manifest-merger-release-report.txt"
+    proguardFiles="C:\BoxingGymSensorsProject\box_sensors\build\package_info_plus\intermediates\default_proguard_files\global\proguard-android.txt-8.8.0"
+    partialResultsDir="C:\BoxingGymSensorsProject\box_sensors\build\package_info_plus\intermediates\lint_partial_results\release\lintAnalyzeRelease\out">
+  <buildFeatures
+      namespacing="REQUIRED"/>
+  <sourceProviders>
+    <sourceProvider
+        manifests="src\main\AndroidManifest.xml"
+        javaDirectories="src\main\java;src\release\java;src\main\kotlin;src\release\kotlin"
+        resDirectories="src\main\res;src\release\res"
+        assetsDirectories="src\main\assets;src\release\assets"/>
+  </sourceProviders>
+  <testSourceProviders>
+  </testSourceProviders>
+  <testFixturesSourceProviders>
+  </testFixturesSourceProviders>
+  <artifact
+      classOutputs="C:\BoxingGymSensorsProject\box_sensors\build\package_info_plus\intermediates\javac\release\compileReleaseJavaWithJavac\classes;C:\BoxingGymSensorsProject\box_sensors\build\package_info_plus\tmp\kotlin-classes\release;C:\BoxingGymSensorsProject\box_sensors\build\package_info_plus\intermediates\compile_r_class_jar\release\generateReleaseRFile\R.jar"
+      type="MAIN"
+      applicationId="dev.fluttercommunity.plus.packageinfo"
+      generatedSourceFolders="C:\BoxingGymSensorsProject\box_sensors\build\package_info_plus\generated\ap_generated_sources\release\out"
+      generatedResourceFolders="C:\BoxingGymSensorsProject\box_sensors\build\package_info_plus\generated\res\resValues\release"
+      desugaredMethodsFiles="C:\Users\andreas\.gradle\caches\8.13\transforms\82d5e218807355e79cf08743702054a5\transformed\D8BackportedDesugaredMethods.txt">
+  </artifact>
+</variant>
