@@ -53,6 +53,9 @@ upload-keystore.jks
 # ignore Dart tool files in the box_sensors module
 /box_sensors/.dart_tool/
 
+# ignore Gradle cache under box_sensors/android
+/box_sensors/android/.gradle/
+
 /box_sensors/ios/
 /box_sensors/linux/
 /box_sensors/macos/
