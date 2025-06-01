@@ -376,7 +376,7 @@
 
 [![Watch on YouTube](https://img.youtube.com/vi/TOi7IgSo4TA/maxresdefault.jpg)](https://www.youtube.com/watch?v=TOi7IgSo4TA&t=1583s)
 
-_Παρακολούθησε το βίντεο με το πληροφοριακό σύστημα που δημιούργησα στην πτυχιακή._
+_Παρακολούθησε το βίντεο με το πληροφοριακό σύστημα που δημιούργησα για την πτυχιακή._
 
 <br>
 
@@ -384,7 +384,7 @@ _Παρακολούθησε το βίντεο με το πληροφοριακό
 
 [![Watch on YouTube](https://img.youtube.com/vi/eGz2vPkHj8w/maxresdefault.jpg)](https://www.youtube.com/watch?v=eGz2vPkHj8w&t=21s)
 
-_Παρακολούθησε το βίντεο με το App BoxSensors for Android Devices που δημιούργησα στην πτυχιακή._
+_Παρακολούθησε το βίντεο με το App BoxSensors for Android Devices που δημιούργησα για την πτυχιακή._
 
 
 
