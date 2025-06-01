@@ -43,14 +43,14 @@ android {
         versionName =  flutter.versionName  // "1.0.1"
     }
 
-//    signingConfigs {
-//        create("release") {
-//            keyAlias = keystoreProperties["keyAlias"] as String
-//            keyPassword = keystoreProperties["keyPassword"] as String
-//            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-//            storePassword = keystoreProperties["storePassword"] as String
-//        }
-//    }
+    // signingConfigs {
+    //     create("release") {
+    //     keyAlias = keystoreProperties["keyAlias"] as String
+    //     keyPassword = keystoreProperties["keyPassword"] as String
+    //     storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+    //     storePassword = keystoreProperties["storePassword"] as String
+    //     }
+    //    }
 
      signingConfigs {
         create("release") {
@@ -100,14 +100,14 @@ android {
 
     }
 
-            // You can configure other build types like debug here if needed
-        getByName("debug") {
-             // Debug specific settings
-             isDebuggable       = true
-             applicationIdSuffix= ".debug"
-             // (optional) If you really want to override the default debug keystore:
-             // signingConfig = signingConfigs.getByName("debug")
-        }
+    // You can configure other build types like debug here if needed
+    getByName("debug") {
+        // Debug specific settings
+        isDebuggable       = true
+        applicationIdSuffix= ".debug"
+        // (optional) If you really want to override the default debug keystore:
+        // signingConfig = signingConfigs.getByName("debug")
+    }
 
 }
 
