@@ -128,7 +128,7 @@ class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
                 ValueListenableBuilder<int>(
                   valueListenable: _countdownNotifier,
                   builder:
-                      (_, v, __) => Text(
+                      (_, v, _) => Text(
                         '$v',
                         style: TextStyle(
                           fontSize: 48,
@@ -140,7 +140,7 @@ class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
                 const SizedBox(height: 16),
                 ValueListenableBuilder<int>(
                   valueListenable: _countdownNotifier,
-                  builder: (_, v, __) {
+                  builder: (_, v, _) {
                     final progress = (totalSecs - v) / totalSecs;
                     return LinearProgressIndicator(
                       value: progress,

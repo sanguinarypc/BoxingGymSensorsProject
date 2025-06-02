@@ -38,7 +38,7 @@ class MatchDataTable extends StatelessWidget {
                   return Scrollbar(
                     child: ListView.separated(
                       itemCount: reversed.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           const Divider(height: 1, thickness: 1),
                       itemBuilder: (ctx, i) =>
                           _buildRow(reversed[i], cellWidth),
