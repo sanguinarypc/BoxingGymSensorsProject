@@ -500,7 +500,16 @@ _Για τον πηγαίο κώδικα κάθε υποσυστήματος, α
 
 ### Στο τερματικό (Bash / PowerShell)
 
-### 1. Εκτέλεση σε debug mode (προεπιλογή είναι debug).  Ισοδυναμεί με flutter run --debug        
+### 1. Καθαρισμός προηγούμενων builds
+```bash
+flutter clean
+```
+### 2. Εγκατάσταση (ή ενημέρωση) των dependencies
+```bash
+flutter pub get
+```
+
+### 3. Εκτέλεση σε debug mode (προεπιλογή είναι debug).  Ισοδυναμεί με flutter run --debug        
 ```bash
 flutter run
 ```
