@@ -1,1 +1,68 @@
 box_sensors/build/file_picker/intermediates/lint-cache/lintVitalAnalyzeRelease/migrated-jars/androidx.lifecycle.lint.LiveDataCoreIssueRegistry-32b654e6cacc2c23..jar
+
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Android keystore — keep this file private
+upload-keystore.jks
+
+# keep Android keystore passwords private
+/box_sensors/android/key.properties
+
+
+# ignore the sensors sub-project build output
+/box_sensors/build/
+
+# ignore Dart tool files in the box_sensors module
+/box_sensors/.dart_tool/
+
+# ignore Gradle cache under box_sensors/android
+/box_sensors/android/.gradle/
+
+/box_sensors/ios/
+/box_sensors/linux/
+/box_sensors/macos/
+/box_sensors/windows/
