@@ -570,7 +570,7 @@ Links:
 │   │   ├── screens_widgets/    # Επαναχρησιμοποιήσιμα Widgets για τις Οθόνες
 │   │   ├── services/           # Bluetooth, SQLite, flutter_riverpod provider
 │   │   ├── state/              # Timer controller
-│   │   ├── Themes/             # Θέματα (αντί για Επαναχρησιμοποιήσιμα Widgets για τις Οθόνες)
+│   │   ├── Themes/             # Θέματα, Material Design (χρωματισμός των οθονών)
 │   │   └── widgets/            # Επαναχρησιμοποιήσιμα Widgets
 │   ├── assets/                 # Εικόνες, icons κ.λπ.
 │   ├── pubspec.yaml
