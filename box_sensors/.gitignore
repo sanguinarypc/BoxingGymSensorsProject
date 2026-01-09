@@ -1,0 +1,81 @@
+# -----------------------
+# Miscellaneous
+# -----------------------
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# -----------------------
+# IDEs
+# -----------------------
+*.iml
+*.ipr
+*.iws
+.idea/
+#.vscode/
+
+# -----------------------
+# Flutter / Dart / Pub
+# -----------------------
+**/doc/api/
+**/ios/Flutter/.last_build_id
+**/.dart_tool/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+
+# -----------------------
+# Android / Gradle / Kotlin
+# -----------------------
+**/.gradle/
+**/.kotlin/
+**/android/.kotlin/
+**/android/**/.cxx/
+**/android/**/local.properties
+**/android/**/key.properties
+**/*.salive
+
+# Outputs we never commit
+**/*.apk
+**/*.aab
+
+# -----------------------
+# Flutter generated plugin registrants (noise reducers)
+# -----------------------
+**/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/windows/flutter/generated_plugin_registrant.*
+**/windows/flutter/generated_plugins.cmake
+**/linux/flutter/generated_plugin_registrant.*
+**/linux/flutter/generated_plugins.cmake
+
+# -----------------------
+# Symbolication / obfuscation
+# -----------------------
+app.*.symbols
+app.*.map.json
+
+# -----------------------
+# Secrets / keystore
+# -----------------------
+*.jks
+*.keystore
+upload-keystore.jks
+
+# -----------------------
+# Environment files
+# -----------------------
+.env*
+!.env.example
