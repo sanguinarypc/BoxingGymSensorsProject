@@ -9,6 +9,11 @@ import 'package:box_sensors/state/timer_state.dart'; // Custom class for managin
 import 'package:box_sensors/services/database_helper.dart'; // Custom class for SQLite database operations.
 import 'package:sentry_flutter/sentry_flutter.dart'; // Sentry SDK for error reporting and performance monitoring.
 
+void _captureSentryException(Object error, {StackTrace? stackTrace}) {
+  if (!Sentry.isEnabled) return;
+  Sentry.captureException(error, stackTrace: stackTrace);
+}
+
 // Manages all Bluetooth-related operations, including scanning, connecting,
 // data transmission, and state management for connected devices.
 // It uses ChangeNotifier to notify UI elements of state changes.
@@ -304,7 +309,7 @@ class BluetoothManager with ChangeNotifier {
       debugPrint("Scan finished");
     } catch (e) { // Catch any errors during the scan process.
       debugPrint("Error scanning for devices: $e");
-      Sentry.captureException(e); // Report error to Sentry.
+      _captureSentryException(e); // Report error to Sentry.
     } finally { // This block executes regardless of errors.
       isScanning = false; // Ensure scanning state is reset.
       _safeNotifyListeners(); // Notify UI about the end of scanning (final update).
@@ -344,7 +349,7 @@ class BluetoothManager with ChangeNotifier {
           debugPrint("Updated RSSI for $deviceName: $rssi");
         } catch (e) { // Handle errors during RSSI read.
           debugPrint("Error reading RSSI for $deviceName: $e");
-          Sentry.captureException(e); // Report error to Sentry.
+          _captureSentryException(e); // Report error to Sentry.
         }
       }
     }
@@ -377,7 +382,7 @@ class BluetoothManager with ChangeNotifier {
         );
       } catch (e, stackTrace) { // Handle errors during the disconnect call.
         debugPrint("Error disconnecting $deviceName: $e");
-        Sentry.captureException(e, stackTrace: stackTrace); // Report error to Sentry.
+        _captureSentryException(e, stackTrace: stackTrace); // Report error to Sentry.
       }
       // Clear the connection and update states.
       connectedBluetoothDevices[deviceName] = null; // Remove device object.
@@ -428,7 +433,7 @@ class BluetoothManager with ChangeNotifier {
               debugPrint("Connected to $deviceName successfully.");
             } catch (e, st) { // Handle connection failure.
               debugPrint("Failed to connect to $deviceName: $e");
-              Sentry.captureException(e, stackTrace: st); // Report to Sentry.
+              _captureSentryException(e, stackTrace: st); // Report to Sentry.
             }
             debugPrint("Stopping scan for $deviceName early.");
             await FlutterBluePlus.stopScan(); // Stop scan as device is found.
@@ -527,7 +532,7 @@ class BluetoothManager with ChangeNotifier {
       }
     } catch (e, st) { // Handles connection errors.
       debugPrint("Failed to connect to $name: $e");
-      Sentry.captureException(e, stackTrace: st); // Reports error to Sentry.
+      _captureSentryException(e, stackTrace: st); // Reports error to Sentry.
     }
   }
 
@@ -598,7 +603,7 @@ class BluetoothManager with ChangeNotifier {
               debugPrint("Attempting to reconnect to $deviceKey...");
               connectToDevice(device).catchError((e, stackTrace) { // Attempts reconnection.
                 debugPrint("Reconnection to $deviceKey failed: $e");
-                Sentry.captureException(e, stackTrace: stackTrace); // Reports reconnection failure to Sentry.
+                _captureSentryException(e, stackTrace: stackTrace); // Reports reconnection failure to Sentry.
               });
             }
           });
@@ -612,7 +617,7 @@ class BluetoothManager with ChangeNotifier {
           debugPrint('Requested MTU = 247, actually set to: $newMtu');
         } catch (mtuError, stackTrace) { // Handles MTU request errors.
           debugPrint('Error requesting MTU: $mtuError'); // Corrected string interpolation
-          Sentry.captureException(mtuError, stackTrace: stackTrace); // Reports error to Sentry.
+          _captureSentryException(mtuError, stackTrace: stackTrace); // Reports error to Sentry.
         }
       }
       await discoverServices(); // Discovers services and characteristics on the connected device.
@@ -620,7 +625,7 @@ class BluetoothManager with ChangeNotifier {
       debugPrint("Error connecting to device: $e"); // Corrected string interpolation
       _updateDeviceConnectionStatus(deviceKey, false); // Updates connection status to disconnected.
       _safeNotifyListeners(); // Notifies listeners.
-      Sentry.captureException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
     }
   }
 
@@ -719,7 +724,7 @@ class BluetoothManager with ChangeNotifier {
                             "❌ Error in notification stream for $deviceName: $error",
                         );
                         debugPrint(stackTrace.toString());
-                        Sentry.captureException(error, stackTrace: stackTrace); // Reports error to Sentry.
+                        _captureSentryException(error, stackTrace: stackTrace); // Reports error to Sentry.
                       },
                     );
                     // Stores the subscription.
@@ -732,7 +737,7 @@ class BluetoothManager with ChangeNotifier {
               }
             } catch (e, stackTrace) { // Handles errors during service discovery for a specific device.
               debugPrint("❌ Error discovering services for $deviceName: $e");
-              Sentry.captureException(e, stackTrace: stackTrace); // Reports error to Sentry.
+              _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
             }
           }).toList();
       // Waits for all service discovery futures to complete.
@@ -820,7 +825,7 @@ class BluetoothManager with ChangeNotifier {
       if (!_disposed) { // Checks if not disposed before logging.
         debugPrint("❌ 🔴 Error processing notification from $deviceName: $e");
         debugPrint(stackTrace.toString());
-        Sentry.captureException(e, stackTrace: stackTrace); // Reports error to Sentry.
+        _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
       }
     }
   }
@@ -893,7 +898,7 @@ class BluetoothManager with ChangeNotifier {
       );
     } catch (e, stackTrace) { // Handles errors during database insertion.
       debugPrint("❌ 💾 🔴 Error inserting message into DB: $e");
-      Sentry.captureException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
     }
   }
 
@@ -976,7 +981,7 @@ class BluetoothManager with ChangeNotifier {
       );
     } catch (e, stackTrace) { // Handles errors during sending.
       debugPrint("➡️ ❌ 🔴 Error sending data to BoxerServer: $e");
-      Sentry.captureException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
     }
   }
 
@@ -999,7 +1004,7 @@ class BluetoothManager with ChangeNotifier {
         return; // Exits after successful send.
       } catch (e, stackTrace) { // Handles errors sending via cached characteristic.
         debugPrint("Error sending message via cached characteristic: $e");
-        Sentry.captureException(e, stackTrace: stackTrace); // Reports error to Sentry.
+        _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
         debugPrint("Falling back to service discovery.");
         // No return here, will fall through to service discovery.
       }
@@ -1035,7 +1040,7 @@ class BluetoothManager with ChangeNotifier {
       );
     } catch (e, stackTrace) { // Handles errors during fallback send.
       debugPrint("Error sending message via service discovery: $e");
-      Sentry.captureException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
     }
   }
 
@@ -1067,7 +1072,7 @@ class BluetoothManager with ChangeNotifier {
                     debugPrint(
                         "Error sending message via ${characteristic.uuid} on $deviceName: $error",
                     );
-                    Sentry.captureException(error, stackTrace: stackTrace); // Reports error to Sentry.
+                    _captureSentryException(error, stackTrace: stackTrace); // Reports error to Sentry.
                   }),
             );
           }
@@ -1083,7 +1088,7 @@ class BluetoothManager with ChangeNotifier {
       }
     } catch (e, stackTrace) { // Handles errors during service discovery or message sending.
       debugPrint("Error in _sendMessageToDevice for $deviceName: $e");
-      Sentry.captureException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
     }
   }
 
@@ -1107,7 +1112,7 @@ class BluetoothManager with ChangeNotifier {
             stackTrace,
           ) { // Handles errors for individual device sends.
             debugPrint("Error sending message to $deviceName: $e");
-            Sentry.captureException(e, stackTrace: stackTrace); // Reports error to Sentry.
+            _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
           }),
         );
       } else { // If device object is null.
@@ -1152,7 +1157,7 @@ class BluetoothManager with ChangeNotifier {
       debugPrint("📤 ➡️ Data sent to BoxerServer successfully.");
     } catch (e, stackTrace) { // Handles errors during sending.
       debugPrint("❌ Error sending data to BoxerServer: $e");
-      Sentry.captureException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
     }
   }
 
@@ -1172,7 +1177,7 @@ class BluetoothManager with ChangeNotifier {
       _notificationSubscriptions.clear(); // Clears the map of subscriptions.
     } catch (e, stackTrace) { // Handles errors during resource cleanup.
       debugPrint("Error during BluetoothManager dispose: $e");
-      Sentry.captureException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
     }
     // Disposes all device connection ValueNotifiers.
     _deviceConnectionNotifiers.forEach((_, notifier) => notifier.dispose());
@@ -1182,3 +1187,4 @@ class BluetoothManager with ChangeNotifier {
     super.dispose(); // Calls the dispose method of the superclass (ChangeNotifier).
   }
 }
+

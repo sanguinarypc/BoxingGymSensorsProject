@@ -35,6 +35,10 @@ class _RoundsOfMatchScreenState extends ConsumerState<RoundsOfMatchScreen> {
     _loadRounds();
   }
 
+  void _captureSentryException(Object error, {StackTrace? stackTrace}) {
+    if (!Sentry.isEnabled) return;
+    Sentry.captureException(error, stackTrace: stackTrace);
+  }
   Future<void> _loadRounds() async {
     try {
       final allRounds = await dbHelper.fetchRounds();
@@ -58,7 +62,7 @@ class _RoundsOfMatchScreenState extends ConsumerState<RoundsOfMatchScreen> {
                 : Future.value([]);
       });
     } catch (e, stackTrace) {
-      Sentry.captureException(e, stackTrace: stackTrace);
+      _captureSentryException(e, stackTrace: stackTrace);
       if (!mounted) return;
       setState(() {
         roundsList = [];
@@ -228,3 +232,5 @@ class _RoundsOfMatchScreenState extends ConsumerState<RoundsOfMatchScreen> {
     );
   }
 }
+
+

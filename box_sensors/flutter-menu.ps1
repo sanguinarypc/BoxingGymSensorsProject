@@ -586,7 +586,7 @@ function Install-ReleaseApk_SentryOff {
     Write-Host "Δεν βρήκα Release APK: $($p.ApkPath)"
     $buildIt = Get-YesNoChoice "Θες να κάνω πρώτα build Release APK (Sentry OFF) για να υπάρχει;" "Y"
     if ($buildIt) {
-      $ok = Invoke-BuildAndOpen "Build Release APK (Sentry OFF) πριν το Install" @("build","apk","--release") "APK"
+      $ok = Invoke-BuildAndOpen "Build Release APK (Sentry OFF) πριν το Install" @("build","apk","--release","--dart-define=SENTRY_DSN=") "APK"
       if (-not $ok) { return }
     } else {
       Write-Host "Ακύρωση."
@@ -886,11 +886,11 @@ try {
       }
 
       "2" {
-        Invoke-BuildAndOpen "Release AAB (Sentry OFF)" @("build","appbundle","--release") "AAB" | Out-Null
+        Invoke-BuildAndOpen "Release AAB (Sentry OFF)" @("build","appbundle","--release","--dart-define=SENTRY_DSN=") "AAB" | Out-Null
         Wait-Menu
       }
 
-      "3" { Invoke-Cmd "Debug Run (Sentry OFF)" @("run") | Out-Null; Wait-Menu }
+      "3" { Invoke-Cmd "Debug Run (Sentry OFF)" @("run","--dart-define=SENTRY_DSN=") | Out-Null; Wait-Menu }
 
       "4" {
         $dsn = Get-SentryDsn
@@ -923,7 +923,7 @@ try {
       }
 
       "8" {
-        Invoke-BuildAndOpen "Release APK (Sentry OFF)" @("build","apk","--release") "APK" | Out-Null
+        Invoke-BuildAndOpen "Release APK (Sentry OFF)" @("build","apk","--release","--dart-define=SENTRY_DSN=") "APK" | Out-Null
         Wait-Menu
       }
 

@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.31+31
+version: 1.0.33+33
 
 environment:
   sdk: ^3.10.4
@@ -72,13 +72,14 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
-dependency_overrides:
+# ✅ Must be a map (like dependencies). Leaving it empty as null triggers the VS Code schema error.
+dependency_overrides: {}
   # material_color_utilities: ^0.13.0
   # meta: ^1.17.0
   # vector_math: ^2.2.0
   # characters: ^1.4.1
   # Πατάμε το transitive 'jni' στο νεότερο (διορθώσεις/συμβατότητες Gradle/AGP)
-  # jni: ^0.15.0
+  # jni: ^0.15.2
   
 # Add your flutter_launcher_icons configuration here, at the root level
 flutter_launcher_icons:

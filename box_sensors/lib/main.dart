@@ -95,6 +95,22 @@ Future<void> main() async {
    
   final bool sentryEnabled = effectiveDsn.trim().isNotEmpty;
 
+  void runAppWithProviders() {
+    runApp(
+      ProviderScope(
+        retry: (_, _) => null,
+        overrides: [
+          themeProviderProvider.overrideWith((_) => themeProvider),
+        ],
+        child: SentryWidget(
+          child: OrientationGate(
+            child: const MyApp(),
+          ),
+        ),
+      ),
+    );
+  }
+
   // Error UI + Sentry Override error widget.
   ErrorWidget.builder = (FlutterErrorDetails details) {
     if (sentryEnabled) {
@@ -127,8 +143,9 @@ Future<void> main() async {
     FlutterError.presentError(details);
   };
 
-  await SentryFlutter.init(
-    (options) {
+  try {
+    await SentryFlutter.init(
+      (options) {
       // ✅ Αν δεν υπάρχει DSN, το Sentry μένει OFF χωρίς crash.
       options.dsn = sentryEnabled ? effectiveDsn.trim() : null;
 
@@ -152,30 +169,27 @@ Future<void> main() async {
           '${dsnFromDefines.isNotEmpty ? 'dart-define' : 'none'}',
         );
       }
-    },
-    appRunner: () {
+      },
+      appRunner: () {
       runZonedGuarded(
-        () => runApp(
-          ProviderScope(
-            retry: (_, _) => null,
-            overrides: [
-              themeProviderProvider.overrideWith((_) => themeProvider),
-            ],
-            child: SentryWidget(
-              child: OrientationGate(
-                child: const MyApp(),
-              ),
-            ),
-          ),
-        ),
+        () => runAppWithProviders(),
         (error, stack) {
           if (sentryEnabled) {
             Sentry.captureException(error, stackTrace: stack);
           }
         },
       );
-    },
-  );
+      },
+    );
+  } catch (e, stack) {
+    if (!kReleaseMode) {
+      debugPrint('Sentry init failed, continuing without it: $e');
+    }
+    if (sentryEnabled) {
+      Sentry.captureException(e, stackTrace: stack);
+    }
+    runAppWithProviders();
+  }
 }
 
 

@@ -52,6 +52,11 @@ class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
     setState(fn);
   }
 
+  void _captureSentryException(Object error, {StackTrace? stackTrace}) {
+    if (!Sentry.isEnabled) return;
+    Sentry.captureException(error, stackTrace: stackTrace);
+  }
+
   // … rest of your methods (_loadSettings, _showCountdown, etc.) stay unchanged …
   Future<void> _loadSettings() async {
     try {
@@ -59,7 +64,7 @@ class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
       settings = fetched;
       _safeSetState(() {});
     } catch (e, st) {
-      Sentry.captureException(e, stackTrace: st);
+      _captureSentryException(e, stackTrace: st);
     }
   }
 
@@ -75,7 +80,7 @@ class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
       final eventId = await dbHelper.insertEvent(matchId: current?['id'] ?? 0);
       timerState.initialize(dbHelper, mgr, current?['id'], eventId);
     } catch (e, st) {
-      Sentry.captureException(e, stackTrace: st);
+      _captureSentryException(e, stackTrace: st);
     }
 
     // must await to get a String
@@ -239,7 +244,7 @@ class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
                     await _loadSettings();
                     await _loadMatchAndStart(bluetoothManager);
                   } catch (e, st) {
-                    Sentry.captureException(e, stackTrace: st);
+                    _captureSentryException(e, stackTrace: st);
                   }
                 },
                 onEnd: () {
@@ -299,3 +304,8 @@ class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
     );
   }
 }
+
+
+
+
+
