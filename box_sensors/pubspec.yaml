@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.33+33
+version: 1.0.35+35
 
 environment:
   sdk: ^3.10.4
@@ -81,12 +81,18 @@ dependency_overrides: {}
   # Πατάμε το transitive 'jni' στο νεότερο (διορθώσεις/συμβατότητες Gradle/AGP)
   # jni: ^0.15.2
   
-# Add your flutter_launcher_icons configuration here, at the root level
 flutter_launcher_icons:
   android: true
   ios: false
-  remove_alpha_ios: true # false optional but recommended for iOS 
-  image_path: "assets/icons/boxer.png"
+  remove_alpha_ios: true
+  
+  # Legacy launcher icon (fallback)
+  image_path: "assets/icons/launcher_512_white.png"
+
+  # Adaptive icon (Android 8+)
+  adaptive_icon_foreground: "assets/icons/adaptive_foreground_512.png"
+  adaptive_icon_background: "#FFFFFF"
+
   
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
