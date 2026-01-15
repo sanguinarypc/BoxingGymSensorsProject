@@ -64,30 +64,37 @@ class _MatchEventTypesScreenState
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: Column(
-        children: [
-          DisplayRow(
-            title: 'Game Events',
-            actions: [
-              IconButton(
-                icon: Icon(Icons.refresh, color: theme.colorScheme.onSurface),
-                onPressed: () {
-                  _safeSetState(() {
-                    _futureEvents = _fetchEvents();
-                  });
-                },
-              ),
-              IconButton(
-                icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          DisplayRow(fontSize: 14, title: '${widget.match['matchName']} Event'),
-          Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _futureEvents,
-              builder: (context, snapshot) {
+      body: SafeArea(
+        child: Column(
+          children: [
+            DisplayRow(
+              title: 'Game Events',
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.refresh, color: theme.colorScheme.onSurface),
+                  onPressed: () {
+                    _safeSetState(() {
+                      _futureEvents = _fetchEvents();
+                    });
+                  },
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.arrow_back,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            DisplayRow(
+              fontSize: 14,
+              title: '${widget.match['matchName']} Event',
+            ),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _futureEvents,
+                builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
@@ -187,8 +194,9 @@ class _MatchEventTypesScreenState
                 );
               },
             ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
