@@ -2,11 +2,20 @@ param(
   [string]$ProjectPath = (Get-Location).Path
 )
 
+# --- Force UTF-8 for external tool output (flutter/adb) ---
+try {
+  chcp 65001 | Out-Null
+  [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+  $OutputEncoding = [System.Text.Encoding]::UTF8
+} catch {}
+
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 # ✅ FIX (StrictMode): πρέπει να υπάρχει, αλλιώς "cannot be retrieved because it has not been set"
 $script:LastDeviceId = ""
+$script:LastEmulatorId = ""
 
 # App package name (Android applicationId) - used by uninstall/check info
 $script:AndroidPackageName = "com.sanguinarypc.box_sensors"
@@ -17,6 +26,71 @@ function Write-Header($text) {
   Write-Host $text
   Write-Host "============================================================"
 }
+
+function Mask-Dsn([string]$dsn) {
+  if ([string]::IsNullOrWhiteSpace($dsn)) { return "" }
+  if ($dsn -match "^(https?://)([^@]+)@(.+)$") {
+    return "$($matches[1])***@$($matches[3])"
+  }
+  return "***"
+}
+
+function Resolve-AdbExe {
+  $candidates = @()
+
+  if ($env:ANDROID_SDK_ROOT) {
+    $candidates += (Join-Path $env:ANDROID_SDK_ROOT "platform-tools\adb.exe")
+  }
+  if ($env:ANDROID_HOME) {
+    $candidates += (Join-Path $env:ANDROID_HOME "platform-tools\adb.exe")
+  }
+
+  foreach ($p in $candidates) {
+    if (Test-Path -LiteralPath $p) { return $p }
+  }
+
+  $cmd = Get-Command adb -ErrorAction SilentlyContinue
+  if ($cmd) { return $cmd.Source }
+
+  return ""
+}
+
+function Invoke-AdbWithTimeout([string[]]$adbArgs, [int]$timeoutSec = 12) {
+  $adbExe = Resolve-AdbExe
+  if ([string]::IsNullOrWhiteSpace($adbExe) -or -not (Test-Path -LiteralPath $adbExe)) {
+    throw "Δεν βρήκα adb.exe. Βεβαιώσου ότι έχεις Android SDK platform-tools και ANDROID_SDK_ROOT/ANDROID_HOME."
+  }
+
+  $psi = New-Object System.Diagnostics.ProcessStartInfo
+  $psi.FileName = $adbExe
+  $psi.Arguments = ($adbArgs -join " ")
+  $psi.RedirectStandardOutput = $true
+  $psi.RedirectStandardError  = $true
+  $psi.UseShellExecute = $false
+  $psi.CreateNoWindow = $true
+
+  $p = New-Object System.Diagnostics.Process
+  $p.StartInfo = $psi
+  [void]$p.Start()
+
+  if (-not $p.WaitForExit($timeoutSec * 1000)) {
+    try { $p.Kill() } catch {}
+    throw "ADB timeout: adb $($adbArgs -join ' ')"
+  }
+
+  $stdout = $p.StandardOutput.ReadToEnd()
+  $stderr = $p.StandardError.ReadToEnd()
+  if ($stdout) { Write-Host $stdout.TrimEnd() }
+  if ($stderr) { Write-Host $stderr.TrimEnd() }
+
+  return $p.ExitCode
+}
+
+function Stop-AdbHard {
+  # “τελευταία λύση” αν κάτι μένει zombie
+  Get-Process adb -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+}
+
 
 function Confirm-ProjectPath {
   if (-not (Test-Path -LiteralPath $ProjectPath)) {
@@ -204,7 +278,6 @@ function Write-ArtifactInfo([string]$artifactPath) {
   $sizeText = Format-Bytes $fi.Length
   $ts = $fi.LastWriteTime.ToString("dd/MM/yyyy HH:mm:ss")
 
-
   Write-Host "✅ Artifact:"
   Write-Host "   Path : $($fi.FullName)"
   Write-Host "   Size : $sizeText"
@@ -216,7 +289,7 @@ function Write-ArtifactInfo([string]$artifactPath) {
 # ---------------------------
 
 function Invoke-Cmd([string]$title, [string[]]$flutterArgs) {
-  Write-Header $title
+  Write-Header($title)
   Write-Host "-> flutter $($flutterArgs -join ' ')"
   Write-Host ""
 
@@ -250,7 +323,7 @@ function Invoke-BuildAndOpen(
   if (-not [string]::IsNullOrWhiteSpace($artifact) -and (Test-Path -LiteralPath $artifact)) {
     Write-ArtifactInfo $artifact
     Write-Host "Άνοιγμα στον Explorer (select artifact)..."
-  [void](Open-ArtifactInExplorer $artifact)
+    [void](Open-ArtifactInExplorer $artifact)
   } else {
     Write-Host "⚠️ Build OK, αλλά δεν βρήκα με σιγουριά $openKind artifact κάτω από build\app\outputs."
     Write-Host "   Θα ανοίξω το outputs root για να το δεις χειροκίνητα."
@@ -259,7 +332,6 @@ function Invoke-BuildAndOpen(
 
   return $true
 }
-
 
 function Wait-Menu {
   Write-Host ""
@@ -367,7 +439,7 @@ function Get-AndroidBrandModel([string]$deviceId) {
 }
 
 function Select-DeviceIdFromList {
-  $devices = Get-FlutterDevices
+  $devices = @(Get-FlutterDevices)
 
   Write-Header "Select Android device"
   if ($devices.Count -eq 0) {
@@ -841,6 +913,345 @@ function Test-KeystoreSanity {
   Write-Host "Σημείωση: Δεν εμφανίζω passwords. Μόνο structure/paths."
 }
 
+# ============================================================
+# ✅ NEW: Emulator helpers (added menus 17-22)
+# ============================================================
+
+function Get-LastEmulatorFilePath {
+  $dir = Join-Path $ProjectPath "build"
+  if (-not (Test-Path -LiteralPath $dir)) {
+    New-Item -ItemType Directory -Path $dir | Out-Null
+  }
+  return (Join-Path $dir ".flutter_menu_last_emulator.txt")
+}
+
+function Get-LastEmulatorId {
+  if (-not [string]::IsNullOrWhiteSpace($script:LastEmulatorId)) {
+    return $script:LastEmulatorId.Trim()
+  }
+
+  $f = Get-LastEmulatorFilePath
+  if (Test-Path -LiteralPath $f) {
+    $id = (Get-Content -LiteralPath $f -ErrorAction SilentlyContinue | Select-Object -First 1)
+    if ($id) {
+      $id = $id.Trim()
+      if (-not [string]::IsNullOrWhiteSpace($id)) {
+        $script:LastEmulatorId = $id
+        return $id
+      }
+    }
+  }
+  return ""
+}
+
+function Set-LastEmulatorId([string]$emuId) {
+  $emuId = $emuId.Trim()
+  if ([string]::IsNullOrWhiteSpace($emuId)) { return }
+  $script:LastEmulatorId = $emuId
+
+  $f = Get-LastEmulatorFilePath
+  Set-Content -LiteralPath $f -Value $emuId -Encoding UTF8
+}
+
+function Clear-LastEmulatorId {
+  $script:LastEmulatorId = ""
+  $f = Get-LastEmulatorFilePath
+  if (Test-Path -LiteralPath $f) {
+    Remove-Item -LiteralPath $f -Force
+    Write-Host "✅ Default emulator καθαρίστηκε (διέγραψα: $f)"
+  } else {
+    Write-Host "ℹ️ Δεν υπήρχε αποθηκευμένο default emulator."
+  }
+}
+
+function Get-FlutterEmulators {
+  $out = & flutter emulators 2>$null | Out-String
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($out)) { return @() }
+
+  # normalize common mojibake for bullet (UTF-8 "•" shown as "â€¢")
+  $out = $out -replace "â€¢", "•"
+
+  # early exit
+  if ($out -match "(?im)no emulators available") { return @() }
+
+  $lines = $out -split "(`r`n|`n|`r)"
+  $items = @()
+  $inTable = $false
+  $useBullet = $false
+
+  foreach ($l in $lines) {
+    $t = $l.TrimEnd()
+
+    if (-not $inTable) {
+      # Header line (works with or without bullets)
+      if ($t -match "^\s*Id\b.*\bName\b.*\bManufacturer\b.*\bPlatform\b") {
+        $inTable = $true
+        $useBullet = ($t -match "•")
+        continue
+      }
+      continue
+    }
+
+    $trim = $t.Trim()
+    if ([string]::IsNullOrWhiteSpace($trim)) { continue }
+
+    # stop when instructions start
+    if ($trim -match "^(To run an emulator|To create a new emulator|You can find more information)") { break }
+
+    $parts = @()
+    if ($useBullet -and ($trim -match "•")) {
+      $parts = $trim -split "•" | ForEach-Object { $_.Trim() }
+    } else {
+      # fallback: columns separated by 2+ spaces
+      $parts = $trim -split "\s{2,}" | ForEach-Object { $_.Trim() }
+    }
+
+    if ($parts.Count -ge 4) {
+      $items += [pscustomobject]@{
+        Id = $parts[0]
+        Name = $parts[1]
+        Manufacturer = $parts[2]
+        Platform = $parts[3]
+      }
+    }
+  }
+
+  return @($items)
+}
+
+
+function Show-EmulatorsList {
+  Write-Header "Flutter Emulators (available AVDs)"
+  $emus = @(Get-FlutterEmulators)
+
+  if ($emus.Count -eq 0) {
+    Write-Host "❌ Δεν βρήκα emulators από: flutter emulators"
+    Write-Host ""
+    Write-Host "----- RAW flutter emulators OUTPUT -----"
+    & flutter emulators
+    Write-Host "----------------------------------------"
+    return
+  }
+
+
+  $default = Get-LastEmulatorId
+  for ($i = 0; $i -lt $emus.Count; $i++) {
+    $n = $i + 1
+    $e = $emus[$i]
+    $defText = if ($default -and $e.Id -eq $default) { "  (default)" } else { "" }
+    Write-Host ("{0}) {1}{2}" -f $n, $e.Name, $defText)
+    Write-Host ("    id: {0} | {1} | {2}" -f $e.Id, $e.Manufacturer, $e.Platform)
+  }
+}
+
+function Select-EmulatorIdFromList {
+  $emus = @(Get-FlutterEmulators)
+
+  Write-Header "Select Emulator (AVD)"
+  if ($emus.Count -eq 0) {
+    Write-Host "❌ Δεν βρήκα emulators. Δοκίμασε: flutter emulators"
+    return ""
+  }
+
+  $defaultId = Get-LastEmulatorId
+  $defaultIndex = -1
+  if (-not [string]::IsNullOrWhiteSpace($defaultId)) {
+    for ($i = 0; $i -lt $emus.Count; $i++) {
+      if ($emus[$i].Id -eq $defaultId) { $defaultIndex = $i; break }
+    }
+  }
+
+  Write-Host "Βρέθηκαν emulators:"
+  Write-Host ""
+
+  for ($i = 0; $i -lt $emus.Count; $i++) {
+    $n = $i + 1
+    $e = $emus[$i]
+    $defText = if ($i -eq $defaultIndex) { "  (default)" } else { "" }
+    Write-Host ("{0}) {1}{2}" -f $n, $e.Name, $defText)
+    Write-Host ("    id: {0} | {1} | {2}" -f $e.Id, $e.Manufacturer, $e.Platform)
+  }
+
+  Write-Host ""
+
+  if ($defaultIndex -ge 0) {
+    $defaultNumber = $defaultIndex + 1
+    $pick = Read-Host ("Διάλεξε emulator (1-{0}) ή Enter για default: {1}" -f $emus.Count, $defaultNumber)
+    $pick = $pick.Trim()
+    if ([string]::IsNullOrWhiteSpace($pick)) {
+      $chosenId = $emus[$defaultIndex].Id
+      Set-LastEmulatorId $chosenId
+      return $chosenId
+    }
+  } else {
+    $pick = Read-Host ("Διάλεξε emulator (1-{0}) ή Enter για ακύρωση" -f $emus.Count)
+    $pick = $pick.Trim()
+    if ([string]::IsNullOrWhiteSpace($pick)) { return "" }
+  }
+
+  $num = 0
+  if (-not [int]::TryParse($pick, [ref]$num)) {
+    Write-Host "❌ Μη έγκυρος αριθμός."
+    return ""
+  }
+  if ($num -lt 1 -or $num -gt $emus.Count) {
+    Write-Host "❌ Εκτός ορίων."
+    return ""
+  }
+
+  $chosen = $emus[$num - 1].Id
+  Set-LastEmulatorId $chosen
+  return $chosen
+}
+
+function Start-EmulatorById([string]$emuId) {
+  if ([string]::IsNullOrWhiteSpace($emuId)) { return $false }
+  $emuId = $emuId.Trim()
+
+  # Το flutter εδώ συνήθως επιστρέφει γρήγορα αφού δώσει εντολή στο emulator να ανοίξει.
+  return (Invoke-Cmd ("Launch Emulator: $emuId") @("emulators","--launch",$emuId))
+}
+
+function Invoke-ToolWithTimeout([string]$exe, [string[]]$toolArgs, [int]$timeoutSec = 15) {
+  $psi = New-Object System.Diagnostics.ProcessStartInfo
+  $psi.FileName = $exe
+  $psi.Arguments = ($toolArgs -join " ")
+  $psi.RedirectStandardOutput = $true
+  $psi.RedirectStandardError  = $true
+  $psi.UseShellExecute = $false
+  $psi.CreateNoWindow = $true
+
+  $p = New-Object System.Diagnostics.Process
+  $p.StartInfo = $psi
+  [void]$p.Start()
+
+  if (-not $p.WaitForExit($timeoutSec * 1000)) {
+    try { $p.Kill() } catch {}
+    throw "Timeout: $exe $($toolArgs -join ' ')"
+  }
+
+  $stdout = $p.StandardOutput.ReadToEnd()
+  $stderr = $p.StandardError.ReadToEnd()
+  if ($stdout) { Write-Host $stdout.TrimEnd() }
+  if ($stderr) { Write-Host $stderr.TrimEnd() }
+  return $p.ExitCode
+}
+
+
+function Update-AdbAndFlutterDevices {
+  Write-Header "Refresh devices (ADB + Flutter) (SAFE: no freeze)"
+
+  $adbExe = Resolve-AdbExe
+  if ([string]::IsNullOrWhiteSpace($adbExe)) {
+    Write-Host "⚠️ Δεν βρήκα adb. (ANDROID_SDK_ROOT/ANDROID_HOME ή PATH)"
+  } else {
+    Write-Host "adb: $adbExe"
+
+    try {
+      Write-Host "-> adb kill-server"
+      [void](Invoke-AdbWithTimeout @("kill-server") 8)
+    } catch {
+      Write-Host "⚠️ Το adb kill-server κόλλησε/timeout. Θα κάνω hard stop και θα συνεχίσω."
+      Stop-AdbHard
+    }
+
+    try {
+      Write-Host ""
+      Write-Host "-> adb devices -l"
+      [void](Invoke-AdbWithTimeout @("devices","-l") 12)
+    } catch {
+      Write-Host "❌ adb devices κόλλησε/timeout."
+      Write-Host "   Τρέχεις πιθανόν λάθος adb (Chocolatey) ή έχει μπλοκάρει το port 5037."
+      Write-Host "   Έκανα hard stop στο adb."
+      Stop-AdbHard
+      return $false
+    }
+  }
+
+  Write-Host ""
+  $flutterCmd = Get-Command flutter -ErrorAction SilentlyContinue
+  if ($null -eq $flutterCmd) {
+    Write-Host "❌ Δεν βρέθηκε flutter στο PATH."
+    return $false
+  }
+
+  Write-Host "flutter: $($flutterCmd.Source)"
+  Write-Host "-> flutter devices"
+  & flutter devices 2>&1 | ForEach-Object { $_ }
+
+  return $true
+}
+
+
+function Wait-ForEmulatorInFlutterDevices([int]$timeoutSec = 60) {
+  $start = Get-Date
+  while ( ((Get-Date) - $start).TotalSeconds -lt $timeoutSec ) {
+    $devices = @(Get-FlutterDevices)
+    $emu = @(
+      $devices |
+        Where-Object { $_.isSupported -eq $true } |
+        Where-Object { $_.targetPlatform -like "android-*" } |
+        Where-Object { $_.emulator -eq $true }
+    )
+
+    if ($emu.Count -gt 0) {
+      return $true
+    }
+
+    Start-Sleep -Seconds 2
+  }
+  return $false
+}
+
+function Start-EmulatorAndEnsureVisibleFlow {
+  $emuId = Select-EmulatorIdFromList
+  if ([string]::IsNullOrWhiteSpace($emuId)) {
+    Write-Host "Ακύρωση (δεν επιλέχθηκε emulator)."
+    return
+  }
+
+  $ok = Start-EmulatorById $emuId
+  if (-not $ok) {
+    Write-Host "❌ Δεν μπόρεσα να ξεκινήσω τον emulator."
+    return
+  }
+
+  Write-Host ""
+  Write-Host "⏳ Περιμένω να εμφανιστεί στα 'flutter devices'..."
+  $seen = Wait-ForEmulatorInFlutterDevices -timeoutSec 60
+
+  if ($seen) {
+    Write-Host "✅ Emulator εμφανίστηκε στα Flutter devices."
+    Write-Host ""
+    & flutter devices
+    return
+  }
+
+  Write-Host ""
+  Write-Host "⚠️ Ο emulator άνοιξε, αλλά ΔΕΝ εμφανίστηκε στα Flutter devices μέσα σε 60s."
+  Write-Host "➡️ Θα τρέξω αυτόματα το fix: adb restart + devices refresh"
+  Write-Host ""
+
+  [void](Update-AdbAndFlutterDevices)
+
+  Write-Host ""
+  Write-Host "⏳ Ξαναπεριμένω λίγο..."
+  $seen2 = Wait-ForEmulatorInFlutterDevices -timeoutSec 45
+  if ($seen2) {
+    Write-Host "✅ Τώρα εμφανίστηκε."
+    Write-Host ""
+    & flutter devices
+  } else {
+    Write-Host "❌ Ακόμα δεν εμφανίζεται. (Πιθανό θέμα ADB/SDK/Emulator instance.)"
+    Write-Host "   Δοκίμασε να κλείσεις/ξανανοίξεις τον emulator ή κάνε restart Android Studio/PC."
+    Write-Host ""
+    Write-Host "Για διάγνωση τρέξε χειροκίνητα:"
+    Write-Host "  adb devices"
+    Write-Host "  flutter devices"
+    Write-Host "  flutter doctor -v"
+  }
+}
+
 # ---------------- MAIN ----------------
 try {
   Confirm-ProjectPath
@@ -851,6 +1262,7 @@ try {
     Write-Host "Project: $ProjectPath"
     Write-Host "SENTRY_DSN (session): $($env:SENTRY_DSN)"
     Write-Host "Last Android device (default): $(Get-LastDeviceId)"
+    Write-Host "Last Emulator (default): $(Get-LastEmulatorId)"
     Write-Host ""
     Write-Host "1)  Build Release AAB (Sentry ON)  + Open Output Folder (Explorer)"
     Write-Host "2)  Build Release AAB (Sentry OFF) + Open Output Folder (Explorer)"
@@ -868,10 +1280,19 @@ try {
     Write-Host "14) Uninstall app from Android device (fix signature mismatch)"
     Write-Host "15) Check installed app info (Play Store vs APK hint)"
     Write-Host "16) Keystore sanity check (Android signing config)"
+    Write-Host ""
+    Write-Host "---------------- Emulator / Devices ----------------"
+    Write-Host "17) Show Flutter emulators (list available AVDs)"
+    Write-Host "18) Launch Emulator (picker) (simple)"
+    Write-Host "19) Launch Emulator + Ensure it appears in 'flutter devices' (auto-fix if missing)"
+    Write-Host "20) Refresh devices now (adb restart + adb devices + flutter devices)"
+    Write-Host "21) Set default Emulator (picker)"
+    Write-Host "22) Clear Default Emulator"
+    Write-Host ""
     Write-Host "0)  Exit"
     Write-Host ""
 
-    $choice = Read-Host "Δώσε επιλογή (0-16)"
+    $choice = Read-Host "Δώσε επιλογή (0-22)"
     switch ($choice) {
 
       "1" {
@@ -949,6 +1370,53 @@ try {
 
       "16" {
         Test-KeystoreSanity
+        Wait-Menu
+      }
+
+      # ---------------- NEW MENU ITEMS 17-22 ----------------
+
+      "17" {
+        Show-EmulatorsList
+        Wait-Menu
+      }
+
+      "18" {
+        $emuId = Select-EmulatorIdFromList
+        if ([string]::IsNullOrWhiteSpace($emuId)) {
+          Write-Host "Ακύρωση."
+          Wait-Menu
+          break
+        }
+        Start-EmulatorById $emuId | Out-Null
+        Write-Host ""
+        Write-Host "ℹ️ Αν θέλεις να τρέξεις app, μετά κάνε: flutter devices -> flutter run -d <emulator-id>"
+        Wait-Menu
+      }
+
+      "19" {
+        Start-EmulatorAndEnsureVisibleFlow
+        Wait-Menu
+      }
+
+      "20" {
+        [void](Update-AdbAndFlutterDevices)
+        Wait-Menu
+      }
+
+      "21" {
+        $emuId = Select-EmulatorIdFromList
+        if ([string]::IsNullOrWhiteSpace($emuId)) {
+          Write-Host "Ακύρωση."
+        } else {
+          Set-LastEmulatorId $emuId
+          Write-Host "✅ Έθεσα default emulator: $emuId"
+        }
+        Wait-Menu
+      }
+
+      "22" {
+        Write-Header "Clear Default Emulator"
+        Clear-LastEmulatorId
         Wait-Menu
       }
 

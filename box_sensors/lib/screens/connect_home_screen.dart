@@ -106,6 +106,7 @@ class _ConnectHomeState extends ConsumerState<ConnectHomeScreen> {
               builder: (_) => AddMatchScreen(
                 key: _addMatchKey,
                 onTabChange: _updateTabIndex,
+                useSafeArea: false,
               ),
             ),
           ),

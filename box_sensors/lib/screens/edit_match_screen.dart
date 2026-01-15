@@ -133,28 +133,29 @@ class _EditMatchScreenState extends ConsumerState<EditMatchScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      body: Column(
-        children: [
-          DisplayRow(
-            title: 'Edit/Update Game',
-            actions: [
-              IconButton(
-                icon: Icon(
-                  Icons.arrow_back,
-                  color: theme.colorScheme.onSurface,
+      body: SafeArea(
+        child: Column(
+          children: [
+            DisplayRow(
+              title: 'Edit/Update Game',
+              actions: [
+                IconButton(
+                  icon: Icon(
+                    Icons.arrow_back,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  onPressed: () => Navigator.pop(context, matchData),
                 ),
-                onPressed: () => Navigator.pop(context, matchData),
-              ),
-            ],
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-              child: Form(
-                key: _formKey,
-                child: Scrollbar(
-                  child: ListView(
-                    children: [
+              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                child: Form(
+                  key: _formKey,
+                  child: Scrollbar(
+                    child: ListView(
+                      children: [
                       // Match Info Card
                       Card(
                         color: theme.cardColor,
@@ -364,7 +365,8 @@ class _EditMatchScreenState extends ConsumerState<EditMatchScreen> {
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

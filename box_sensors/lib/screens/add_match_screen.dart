@@ -17,7 +17,12 @@ abstract class AddMatchResettable extends ConsumerState<AddMatchScreen> {
 
 class AddMatchScreen extends ConsumerStatefulWidget {
   final void Function(int)? onTabChange;
-  const AddMatchScreen({super.key, this.onTabChange});
+  final bool useSafeArea;
+  const AddMatchScreen({
+    super.key,
+    this.onTabChange,
+    this.useSafeArea = true,
+  });
 
   @override
   AddMatchResettable createState() => _AddMatchScreenState();
@@ -156,19 +161,24 @@ class _AddMatchScreenState extends AddMatchResettable {
         }
       },
       child: Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                theme.colorScheme.surface.withAlpha(5),
-                theme.colorScheme.surface.withAlpha(8),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+        body: SafeArea(
+          top: widget.useSafeArea,
+          bottom: widget.useSafeArea,
+          left: widget.useSafeArea,
+          right: widget.useSafeArea,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  theme.colorScheme.surface.withAlpha(5),
+                  theme.colorScheme.surface.withAlpha(8),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
-          ),
-          child: Column(
-            children: [
+            child: Column(
+              children: [
               DisplayRow(
                 title: 'Add Game',
                 actions: [
@@ -245,7 +255,8 @@ class _AddMatchScreenState extends AddMatchResettable {
                   ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -35,66 +35,79 @@ class _DetailMatchScreenState extends State<DetailMatchScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: Column(
-        children: [
-          DisplayRow(
-            title: 'Game Details',
-            actions: [
-              IconButton(
-                icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
-                onPressed: () => Navigator.pop<bool>(context, true), // or false if you want to indicate no changes
-              ),
-            ],
-          ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            DisplayRow(
+              title: 'Game Details',
+              actions: [
+                IconButton(
+                  icon: Icon(
+                    Icons.arrow_back,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  onPressed: () => Navigator.pop<bool>(
+                    context,
+                    true,
+                  ), // or false if you want to indicate no changes
+                ),
+              ],
+            ),
 
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                // keep your 12px horizontal gutter
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    MatchDetailInfoCard(matchData: matchData),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  // keep your 12px horizontal gutter
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      MatchDetailInfoCard(matchData: matchData),
 
-                    MatchDetailActions(
-                      onEdit: () async {
-                        final updated = await Navigator.push<Map<String, dynamic>>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => EditMatchScreen(match: matchData),
-                          ),
-                        );
-                        if (updated != null) {
-                          _safeSetState(() => matchData = updated);
-                        }
-                      },
-                      onAdd: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const AddMatchScreen()),
-                        ).then((_) {
-                          _safeSetState(() {});
-                        });
-                      },
-                      onStart: () async {
-                        final updated = await Navigator.push<Map<String, dynamic>>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => StartMatchScreen(match: matchData),
-                          ),
-                        );
-                        if (updated != null) {
-                          _safeSetState(() => matchData = updated);
-                        }
-                      },
-                    ),
-                  ],
+                      MatchDetailActions(
+                        onEdit: () async {
+                          final updated =
+                              await Navigator.push<Map<String, dynamic>>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EditMatchScreen(match: matchData),
+                            ),
+                          );
+                          if (updated != null) {
+                            _safeSetState(() => matchData = updated);
+                          }
+                        },
+                        onAdd: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AddMatchScreen(),
+                            ),
+                          ).then((_) {
+                            _safeSetState(() {});
+                          });
+                        },
+                        onStart: () async {
+                          final updated =
+                              await Navigator.push<Map<String, dynamic>>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  StartMatchScreen(match: matchData),
+                            ),
+                          );
+                          if (updated != null) {
+                            _safeSetState(() => matchData = updated);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
