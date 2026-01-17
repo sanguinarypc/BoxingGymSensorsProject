@@ -6,6 +6,8 @@ import 'package:box_sensors/services/providers.dart';
 import 'package:box_sensors/widgets/display_row.dart';
 import 'package:box_sensors/widgets/match_data_table.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:box_sensors/utils/device_config.dart';
+import 'package:box_sensors/models/sensor_data.dart';
 
 class RoundsOfMatchScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> match;
@@ -39,6 +41,7 @@ class _RoundsOfMatchScreenState extends ConsumerState<RoundsOfMatchScreen> {
     if (!Sentry.isEnabled) return;
     Sentry.captureException(error, stackTrace: stackTrace);
   }
+
   Future<void> _loadRounds() async {
     try {
       final allRounds = await dbHelper.fetchRounds();
@@ -56,10 +59,9 @@ class _RoundsOfMatchScreenState extends ConsumerState<RoundsOfMatchScreen> {
       setState(() {
         roundsList = filtered;
         selectedRound = filtered.isNotEmpty ? filtered.first : null;
-        _futureMessages =
-            selectedRound != null
-                ? dbHelper.fetchMessagesByRoundId(selectedRound!['id'])
-                : Future.value([]);
+        _futureMessages = selectedRound != null
+            ? dbHelper.fetchMessagesByRoundId(selectedRound!['id'])
+            : Future.value([]);
       });
     } catch (e, stackTrace) {
       _captureSentryException(e, stackTrace: stackTrace);
@@ -119,14 +121,12 @@ class _RoundsOfMatchScreenState extends ConsumerState<RoundsOfMatchScreen> {
                     padding: const EdgeInsets.all(4.0),
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            isSelected
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.surface,
-                        foregroundColor:
-                            isSelected
-                                ? theme.colorScheme.onPrimary
-                                : theme.colorScheme.onSurface,
+                        backgroundColor: isSelected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.surface,
+                        foregroundColor: isSelected
+                            ? theme.colorScheme.onPrimary
+                            : theme.colorScheme.onSurface,
                       ),
                       onPressed: () {
                         if (!mounted) return;
@@ -140,8 +140,9 @@ class _RoundsOfMatchScreenState extends ConsumerState<RoundsOfMatchScreen> {
                       child: Text(
                         'Round ${round['round']}',
                         style: TextStyle(
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                     ),
@@ -150,81 +151,59 @@ class _RoundsOfMatchScreenState extends ConsumerState<RoundsOfMatchScreen> {
               ),
             ),
             Expanded(
-              child:
-                  _futureMessages == null
-                      ? const Center(child: CircularProgressIndicator())
-                      : FutureBuilder<List<Map<String, dynamic>>>(
-                        future: _futureMessages,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-                          final data = snapshot.data ?? [];
-
-                          // ── NEW: compute per‑round punch counts ──
-                          final counts = <String, int>{
-                            'BlueBoxer': 0,
-                            'RedBoxer': 0,
-                          };
-                          for (var msg in data) {
-                            final who = msg['punchBy'] as String?;
-                            if (who == 'BlueBoxer') {
-                              counts['BlueBoxer'] = counts['BlueBoxer']! + 1;
-                            } else if (who == 'RedBoxer') {
-                              counts['RedBoxer'] = counts['RedBoxer']! + 1;
-                            }
-                          }
-
-                          final rows =
-                              data.reversed
-                                  .map(
-                                    (message) => DataRow(
-                                      cells: [
-                                        DataCell(Text(message['device'] ?? '')),
-                                        DataCell(
-                                          Text(message['punchBy'] ?? ''),
-                                        ),
-                                        DataCell(
-                                          Text(
-                                            '${message['punchCount'] ?? ''}',
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Text(message['timestamp'] ?? ''),
-                                        ),
-                                        DataCell(
-                                          Text(
-                                            '${message['sensorValue'] ?? ''}',
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                  .toList();
-
-                          // ── INSERTED: show per‑round punch summary ──
-                          return Column(
-                            children: [                              
-                                DisplayRow(
-                                  fontSize: 14,
-                                  title:
-                                      'Punches ➜ '
-                                      'BlueBoxer: ${counts['BlueBoxer']} - '
-                                      'RedBoxer: ${counts['RedBoxer']}',
-                                ),
-                              Expanded(
-                                child: MatchDataTable(
-                                  tableStream: Stream.value(rows),
-                                  tableWidthProvider: () => tableWidth,
-                                ),
-                              ),
-                            ],
+              child: _futureMessages == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : FutureBuilder<List<Map<String, dynamic>>>(
+                      future: _futureMessages,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
                           );
-                        },
-                      ),
+                        }
+                        final data = snapshot.data ?? [];
+
+                        // ── NEW: compute per‑round punch counts ──
+                        final counts = <String, int>{
+                          'BlueBoxer': 0,
+                          'RedBoxer': 0,
+                        };
+                        for (var msg in data) {
+                          final who = msg['punchBy'] as String?;
+                          if (who == 'BlueBoxer') {
+                            counts[DeviceConfig.blueBoxer] =
+                                counts[DeviceConfig.blueBoxer]! + 1;
+                          } else if (who == DeviceConfig.redBoxer) {
+                            counts[DeviceConfig.redBoxer] =
+                                counts[DeviceConfig.redBoxer]! + 1;
+                          }
+                        }
+
+                        final sensorDataList = data.reversed
+                            .map((message) => SensorData.fromMap(message))
+                            .toList();
+
+                        // ── INSERTED: show per‑round punch summary ──
+                        return Column(
+                          children: [
+                            DisplayRow(
+                              fontSize: 14,
+                              title:
+                                  'Punches ➜ '
+                                  'BlueBoxer: ${counts['BlueBoxer']} - '
+                                  'RedBoxer: ${counts['RedBoxer']}',
+                            ),
+                            Expanded(
+                              child: MatchDataTable(
+                                rows: sensorDataList,
+                                tableWidthProvider: () => tableWidth,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -232,5 +211,3 @@ class _RoundsOfMatchScreenState extends ConsumerState<RoundsOfMatchScreen> {
     );
   }
 }
-
-

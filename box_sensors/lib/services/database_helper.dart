@@ -4,6 +4,7 @@ import 'package:sqflite/sqflite.dart'; // The sqflite plugin for SQLite database
 import 'package:path/path.dart'; // Provides utilities for manipulating file paths.
 import 'package:path_provider/path_provider.dart'; // Plugin for finding commonly used locations on the filesystem.
 import 'package:uuid/uuid.dart'; // Plugin for generating UUIDs (Universally Unique Identifiers).
+import 'package:box_sensors/utils/device_config.dart';
 
 // Helper class for managing SQLite database operations.
 // Implements a singleton pattern to ensure only one instance handles the database.
@@ -16,8 +17,8 @@ class DatabaseHelper {
   // Static Database object, lazily initialized.
   static Database? _database;
   // Stores the current date and time in ISO 8601 format. (Note: this value is set once at class initialization and does not update automatically afterwards)
-  String currentDateTime =
-      DateTime.now().toIso8601String(); // e.g., "2024-06-08T12:45:00.000"
+  String currentDateTime = DateTime.now()
+      .toIso8601String(); // e.g., "2024-06-08T12:45:00.000"
 
   // Private internal constructor for the singleton pattern.
   DatabaseHelper._internal();
@@ -106,8 +107,8 @@ class DatabaseHelper {
         await db.execute(''' 
           CREATE TABLE messages(
             id INTEGER PRIMARY KEY AUTOINCREMENT,      /* Unique identifier for each message/punch */
-            device TEXT,                               /* Identifier of the device that sent the message (e.g., 'BlueBoxer', 'RedBoxer') */
-            punchBy TEXT,                              /* Identifier of the boxer who was punched (e.g., 'RedBoxer', 'BlueBoxer') */
+            device TEXT,                               /* Identifier of the device that sent the message (e.g., DeviceConfig.blueBoxer, DeviceConfig.redBoxer) */
+            punchBy TEXT,                              /* Identifier of the boxer who was punched (e.g., DeviceConfig.redBoxer, DeviceConfig.blueBoxer) */
             punchCount TEXT,                           /* Punch count at the time of this message (could be cumulative for the device or round) */
             timestamp TEXT,                            /* Timestamp of the message/punch, often from the device */
             sensorValue TEXT,                          /* Raw sensor value associated with the punch/event */
@@ -136,10 +137,10 @@ class DatabaseHelper {
           'id': 1,
           'fsrSensitivity': 800,
           'fsrThreshold': 200,
-          'roundTime': 3,       // Example: 3 minutes per round
-          'breakTime': 120,     // Example: 120 seconds (2 minutes) break
+          'roundTime': 3, // Example: 3 minutes per round
+          'breakTime': 120, // Example: 120 seconds (2 minutes) break
           'secondsBeforeRoundBegins': 5,
-          'rounds': 3,          // Default to 3 rounds
+          'rounds': 3, // Default to 3 rounds
         });
       },
     );
@@ -152,7 +153,8 @@ class DatabaseHelper {
     // Check if the database instance exists and is currently open.
     if (db != null && db.isOpen) {
       await db.close(); // Close the database.
-      _database = null; // Set to null so it can be re-initialized by the getter if needed.
+      _database =
+          null; // Set to null so it can be re-initialized by the getter if needed.
     } else if (db != null && !db.isOpen) {
       // If the database object exists but is already closed, just ensure _database is null for consistency.
       _database = null;
@@ -164,13 +166,14 @@ class DatabaseHelper {
   /// Inserts a new message into the 'messages' table.
   // Each message typically represents a punch event or sensor reading from a device.
   Future<void> insertMessage(
-    String device,      // Name of the device sending the data (e.g., 'BlueBoxer').
-    oppositeDevice,     // Name of the device/boxer being punched (e.g., 'RedBoxer'). Implicitly dynamic.
-    String punchCount,  // Current punch count string as reported by the device.
-    String timestamp,   // Timestamp of the message, usually from the device.
+    String
+    device, // Name of the device sending the data (e.g., DeviceConfig.blueBoxer).
+    oppositeDevice, // Name of the device/boxer being punched (e.g., DeviceConfig.redBoxer). Implicitly dynamic.
+    String punchCount, // Current punch count string as reported by the device.
+    String timestamp, // Timestamp of the message, usually from the device.
     String sensorValue, // Sensor reading string.
-    roundId,            // ID of the round this message belongs to. Implicitly dynamic.
-    matchId,            // ID of the match this message belongs to. Implicitly dynamic.
+    roundId, // ID of the round this message belongs to. Implicitly dynamic.
+    matchId, // ID of the match this message belongs to. Implicitly dynamic.
   ) async {
     final db = await database; // Get a reference to the database.
     // Insert the new message record into the 'messages' table.
@@ -244,14 +247,16 @@ class DatabaseHelper {
     required int rounds, // Number of rounds.
     required int roundTime, // Duration of each round.
     required int breakTime, // Duration of breaks between rounds.
-    required int secondsBeforeRoundBegins, // Countdown duration before a round starts.
+    required int
+    secondsBeforeRoundBegins, // Countdown duration before a round starts.
   }) async {
     final db = await database; // Get a reference to the database.
 
     // Attempt to update the settings row where id=1.
     int count = await db.update(
       'settings', // Table name.
-      { // Data to update.
+      {
+        // Data to update.
         'fsrSensitivity': fsrSensitivity,
         'fsrThreshold': fsrThreshold,
         'rounds': rounds,
@@ -330,8 +335,10 @@ class DatabaseHelper {
     required String matchName,
     required String matchDate,
     required int rounds,
-    required int finishedAtRound, // The round number at which the match concluded.
-    required String totalTime, // Total duration of the match (e.g., formatted string).
+    required int
+    finishedAtRound, // The round number at which the match concluded.
+    required String
+    totalTime, // Total duration of the match (e.g., formatted string).
     required int roundTime,
     required int breakTime,
     required int id, // The ID of the match to be updated.
@@ -341,7 +348,8 @@ class DatabaseHelper {
     // Update the specified match record in the 'matches' table.
     await db.update(
       'matches', // Table name.
-      { // Data to update.
+      {
+        // Data to update.
         'matchName': matchName,
         'matchDate': matchDate,
         'rounds': rounds,
@@ -350,7 +358,8 @@ class DatabaseHelper {
         'roundTime': roundTime,
         'breakTime': breakTime,
       },
-      where: 'id = ?', // Condition for the update: target the row with the given id.
+      where:
+          'id = ?', // Condition for the update: target the row with the given id.
       whereArgs: [id], // Argument for the condition.
     );
   }
@@ -361,7 +370,8 @@ class DatabaseHelper {
     // Query all records from 'matches', ordered by 'id' ascending.
     return await db.query(
       'matches',
-      orderBy: 'id ASC', // Order by ID ascending. Could be 'id DESC' for newest first.
+      orderBy:
+          'id ASC', // Order by ID ascending. Could be 'id DESC' for newest first.
     );
   }
 
@@ -385,7 +395,8 @@ class DatabaseHelper {
         'matchName': '1 Round Practice Match',
         'matchDate': '2025-03-20',
         'rounds': 1,
-        'finishedAtRound': 0, // Default/placeholder, can be updated when match concludes.
+        'finishedAtRound':
+            0, // Default/placeholder, can be updated when match concludes.
         'totalTime': '00:00', // Default/placeholder.
         'roundTime': 1, // Example: 1 unit of time (e.g., minute).
         'breakTime': 10, // Example: 10 units of time (e.g., seconds).
@@ -468,13 +479,17 @@ class DatabaseHelper {
   Future<String> insertEvent({required int matchId, String? winner}) async {
     final db = await database; // Get a reference to the database.
     var uuid = Uuid(); // Create a Uuid generator instance.
-    String eventId = uuid.v4(); // Generate a new v4 (random) UUID for the event ID.
+    String eventId = uuid
+        .v4(); // Generate a new v4 (random) UUID for the event ID.
     // Insert the new event record into the 'events' table.
     await db.insert('events', {
       'id': eventId, // The generated UUID as the primary key.
-      'timestamp': DateTime.now().millisecondsSinceEpoch, // Current time as milliseconds since epoch.
+      'timestamp': DateTime.now()
+          .millisecondsSinceEpoch, // Current time as milliseconds since epoch.
       'matchId': matchId, // The ID of the match this event belongs to.
-      'winner': winner ?? '', // Store the winner's name, or an empty string if winner is null.
+      'winner':
+          winner ??
+          '', // Store the winner's name, or an empty string if winner is null.
     });
     return eventId; // Return the generated event ID so it can be used to link rounds.
   }
@@ -514,7 +529,8 @@ class DatabaseHelper {
     await db.update(
       'events', // Table name.
       {'winner': winner}, // Data to update: only the winner field.
-      where: 'id = ?', // Condition for the update: target the row with the given eventId.
+      where:
+          'id = ?', // Condition for the update: target the row with the given eventId.
       whereArgs: [eventId], // Argument for the condition.
     );
   }
@@ -525,7 +541,8 @@ class DatabaseHelper {
   Future<int> insertRound({
     required int matchId, // ID of the parent match.
     required int round, // The round number (e.g., 1, 2, 3).
-    required String? eventId, // ID of the parent event; can be null if rounds are not directly tied to events in some contexts.
+    required String?
+    eventId, // ID of the parent event; can be null if rounds are not directly tied to events in some contexts.
   }) async {
     final db = await database; // Get a reference to the database.
     // Insert the new round record.
@@ -533,8 +550,8 @@ class DatabaseHelper {
       'matchId': matchId,
       'round': round,
       'eventId': eventId,
-      'timestamp':
-          DateTime.now().millisecondsSinceEpoch, // Store current time as Unix timestamp (milliseconds since epoch).
+      'timestamp': DateTime.now()
+          .millisecondsSinceEpoch, // Store current time as Unix timestamp (milliseconds since epoch).
     });
   }
 
@@ -599,7 +616,8 @@ class DatabaseHelper {
   /// The current implementation counts based on the 'punchBy' field as it appears in the data.
   Future<Map<String, int>> getEventPunchCounts(String eventId) async {
     // 1️⃣ Fetch all rounds from the database, then filter them to get only rounds belonging to the specified eventId.
-    final allRounds = await fetchRounds(); // Assumes fetchRounds() gets all rounds from the DB.
+    final allRounds =
+        await fetchRounds(); // Assumes fetchRounds() gets all rounds from the DB.
     final myRounds = allRounds.where((r) => r['eventId'] == eventId).toList();
 
     // 2️⃣ Initialize punch counters for BlueBoxer and RedBoxer.
@@ -610,20 +628,24 @@ class DatabaseHelper {
     for (final round in myRounds) {
       // ✔️ Ensure 'id' from the round map is correctly cast to 'int' for `fetchMessagesByRoundId`.
       final roundId = round['id'] as int;
-      final messages = await fetchMessagesByRoundId(roundId); // Fetch messages for the current round.
+      final messages = await fetchMessagesByRoundId(
+        roundId,
+      ); // Fetch messages for the current round.
       for (final msg in messages) {
-        final who = msg['punchBy'] as String?; // Get the value of 'punchBy' from the message.
-        if (who == 'BlueBoxer') {
-          // If 'punchBy' is 'BlueBoxer', increment 'blue' counter.
+        final who =
+            msg['punchBy']
+                as String?; // Get the value of 'punchBy' from the message.
+        if (who == DeviceConfig.blueBoxer) {
+          // If 'punchBy' is DeviceConfig.blueBoxer, increment 'blue' counter.
           blue++;
-        } else if (who == 'RedBoxer') {
-          // If 'punchBy' is 'RedBoxer', increment 'red' counter.
+        } else if (who == DeviceConfig.redBoxer) {
+          // If 'punchBy' is DeviceConfig.redBoxer, increment 'red' counter.
           red++;
         }
       }
     }
-    // Returns a map with the aggregated counts for 'BlueBoxer' and 'RedBoxer' based on the 'punchBy' field.
-    return {'BlueBoxer': blue, 'RedBoxer': red};
+    // Returns a map with the aggregated counts for DeviceConfig.blueBoxer and DeviceConfig.redBoxer based on the 'punchBy' field.
+    return {DeviceConfig.blueBoxer: blue, DeviceConfig.redBoxer: red};
   }
 
   // Exports the current SQLite database to a file with the given `fileName` in a temporary directory.
@@ -631,8 +653,11 @@ class DatabaseHelper {
   // Returns the path to the exported file if successful, otherwise rethrows the error.
   Future<String?> exportDatabaseToFile(String fileName) async {
     try {
-      final db = await database; // Ensure the database is initialized and get its instance.
-      final originalFile = File(db.path); // Create a File object for the current database path.
+      final db =
+          await database; // Ensure the database is initialized and get its instance.
+      final originalFile = File(
+        db.path,
+      ); // Create a File object for the current database path.
 
       // Check if the original database file actually exists at the expected path.
       if (!await originalFile.exists()) {
@@ -1225,15 +1250,15 @@ class DatabaseHelper {
 //       final messages = await fetchMessagesByRoundId(roundId);
 //       for (final msg in messages) {
 //         final who = msg['punchBy'] as String?;
-//         if (who == 'BlueBoxer') {
+//         if (who == DeviceConfig.blueBoxer) {
 //           blue++;
-//         } else if (who == 'RedBoxer') {
+//         } else if (who == DeviceConfig.redBoxer) {
 //           red++;
 //         }
 //       }
 //     }
 
-//     return {'BlueBoxer': blue, 'RedBoxer': red};
+//     return {DeviceConfig.blueBoxer: blue, DeviceConfig.redBoxer: red};
 //   }
 
 //   Future<String?> exportDatabaseToFile(String fileName) async {

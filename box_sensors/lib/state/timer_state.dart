@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:box_sensors/services/database_helper.dart';
 import 'package:box_sensors/services/bluetooth_manager.dart';
+import 'package:box_sensors/utils/device_config.dart';
 
 enum MatchState { notStarted, running, breakTime, paused, ended }
 
@@ -192,7 +193,7 @@ class TimerState with ChangeNotifier {
 
   /// Ends the match.
   void endMatch() => _safeCall(_endMatch);
-  
+
   /// Manually ends the match.
   void endMatchManually() => _safeCall(_endMatch);
 
@@ -206,13 +207,13 @@ class TimerState with ChangeNotifier {
     if (_eventId != null) {
       try {
         final counts = await _dbHelper.getEventPunchCounts(_eventId!);
-        final blueCount = counts['BlueBoxer'] ?? 0;
-        final redCount = counts['RedBoxer'] ?? 0;
+        final blueCount = counts[DeviceConfig.blueBoxer] ?? 0;
+        final redCount = counts[DeviceConfig.redBoxer] ?? 0;
         String computedWinner;
         if (blueCount > redCount) {
-          computedWinner = 'BlueBoxer';
+          computedWinner = DeviceConfig.blueBoxer;
         } else if (redCount > blueCount) {
-          computedWinner = 'RedBoxer';
+          computedWinner = DeviceConfig.redBoxer;
         } else {
           computedWinner = 'Draw';
         }

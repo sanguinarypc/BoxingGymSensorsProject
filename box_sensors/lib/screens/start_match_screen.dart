@@ -11,6 +11,7 @@ import 'package:box_sensors/screens_widgets/start_match_header.dart';
 import 'package:box_sensors/widgets/round_controls_card.dart';
 import 'package:box_sensors/widgets/display_row.dart'; // ← add this import
 import 'package:box_sensors/widgets/match_data_table.dart';
+import 'package:box_sensors/utils/device_config.dart';
 
 class StartMatchScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? match;
@@ -100,65 +101,58 @@ class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
       context: context,
       barrierDismissible: false,
       useRootNavigator: true,
-      builder:
-          (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: Row(
+          children: [
+            Icon(Icons.hourglass_top, color: Theme.of(ctx).colorScheme.primary),
+            const SizedBox(width: 8),
+            const Text(
+              'Get Ready!',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            title: Row(
-              children: [
-                Icon(
-                  Icons.hourglass_top,
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Starting in…',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ValueListenableBuilder<int>(
+              valueListenable: _countdownNotifier,
+              builder: (_, v, _) => Text(
+                '$v',
+                style: TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
                   color: Theme.of(ctx).colorScheme.primary,
                 ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Get Ready!',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ],
+              ),
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Starting in…',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey,
+            const SizedBox(height: 16),
+            ValueListenableBuilder<int>(
+              valueListenable: _countdownNotifier,
+              builder: (_, v, _) {
+                final progress = (totalSecs - v) / totalSecs;
+                return LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.grey[300],
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(ctx).colorScheme.primary,
                   ),
-                ),
-                const SizedBox(height: 16),
-                ValueListenableBuilder<int>(
-                  valueListenable: _countdownNotifier,
-                  builder:
-                      (_, v, _) => Text(
-                        '$v',
-                        style: TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(ctx).colorScheme.primary,
-                        ),
-                      ),
-                ),
-                const SizedBox(height: 16),
-                ValueListenableBuilder<int>(
-                  valueListenable: _countdownNotifier,
-                  builder: (_, v, _) {
-                    final progress = (totalSecs - v) / totalSecs;
-                    return LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: Colors.grey[300],
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Theme.of(ctx).colorScheme.primary,
-                      ),
-                    );
-                  },
-                ),
-              ],
+                );
+              },
             ),
-          ),
+          ],
+        ),
+      ),
     );
 
     // wait briefly for the dialog to mount
@@ -189,10 +183,10 @@ class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
       'SensorSettings': {
         'FsrSensitivity': s!['fsrSensitivity'].toString(),
         'FsrThreshold': s['fsrThreshold'].toString(),
-        'RoundTime':
-            ((widget.match?['roundTime'] ?? s['roundTime']) * 60000).toString(),
-        'BreakTime':
-            ((widget.match?['breakTime'] ?? s['breakTime']) * 1000).toString(),
+        'RoundTime': ((widget.match?['roundTime'] ?? s['roundTime']) * 60000)
+            .toString(),
+        'BreakTime': ((widget.match?['breakTime'] ?? s['breakTime']) * 1000)
+            .toString(),
       },
     });
   }
@@ -266,33 +260,60 @@ class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
 
               // DATA TABLE
               Expanded(
-                child: StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: bluetoothManager.rawMessageStream,
-                  initialData: const [],
-                  builder: (context, snap) {
-                    final msgs = snap.data ?? [];
-                    final blue =
-                        msgs.where((m) => m['punchBy'] == 'BlueBoxer').length;
-                    final red =
-                        msgs.where((m) => m['punchBy'] == 'RedBoxer').length;
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final sensorStream = ref.watch(sensorStreamProvider);
 
-                    return Column(
-                      children: [
-                        DisplayRow(
-                          fontSize: 14,
-                          title: 'Punches ➜ BlueBoxer: $blue - RedBoxer: $red',
-                        ),
-                        Expanded(
-                          child: MatchDataTable(
-                            tableStream: bluetoothManager.messageStream,
-                            tableWidthProvider: () {
-                              final w =
-                                  MediaQuery.of(context).size.width * 0.95;
-                              return w < 350 ? 350 : w;
-                            },
+                    return sensorStream.when(
+                      data: (data) {
+                        final msgs = data;
+                        final blue = msgs
+                            .where((m) => m.punchBy == DeviceConfig.blueBoxer)
+                            .length;
+                        final red = msgs
+                            .where((m) => m.punchBy == DeviceConfig.redBoxer)
+                            .length;
+
+                        return Column(
+                          children: [
+                            DisplayRow(
+                              fontSize: 14,
+                              title:
+                                  'Punches ➜ ${DeviceConfig.blueBoxer}: $blue - ${DeviceConfig.redBoxer}: $red',
+                            ),
+                            Expanded(
+                              child: MatchDataTable(
+                                rows: data,
+                                tableWidthProvider: () {
+                                  final w =
+                                      MediaQuery.of(context).size.width * 0.95;
+                                  return w < 350 ? 350 : w;
+                                },
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                      loading: () => Column(
+                        children: [
+                          DisplayRow(
+                            fontSize: 14,
+                            title:
+                                'Punches ➜ ${DeviceConfig.blueBoxer}: 0 - ${DeviceConfig.redBoxer}: 0',
                           ),
-                        ),
-                      ],
+                          Expanded(
+                            child: MatchDataTable(
+                              rows: [],
+                              tableWidthProvider: () {
+                                final w =
+                                    MediaQuery.of(context).size.width * 0.95;
+                                return w < 350 ? 350 : w;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      error: (err, stack) => Center(child: Text('Error: $err')),
                     );
                   },
                 ),
@@ -304,8 +325,3 @@ class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
     );
   }
 }
-
-
-
-
-

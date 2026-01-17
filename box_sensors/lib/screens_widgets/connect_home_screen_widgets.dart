@@ -5,6 +5,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:box_sensors/services/riverpod_imports.dart';
 import 'package:gap/gap.dart';
 import 'package:box_sensors/services/providers.dart';
+import 'package:box_sensors/utils/ui_utils.dart';
 
 import '../widgets/device_scanner_header.dart';
 import '../widgets/filter_chips_row.dart';
@@ -22,10 +23,12 @@ class ConnectHomeScreenWidgets extends ConsumerStatefulWidget {
       _ConnectHomeScreenWidgetsState();
 }
 
-class _ConnectHomeScreenWidgetsState extends ConsumerState<ConnectHomeScreenWidgets> {
+class _ConnectHomeScreenWidgetsState
+    extends ConsumerState<ConnectHomeScreenWidgets> {
   String filterKeyword = 'Boxer';
-  final TextEditingController _filterController =
-      TextEditingController(text: 'Boxer');
+  final TextEditingController _filterController = TextEditingController(
+    text: 'Boxer',
+  );
   Timer? _debounce;
   Timer? _periodicConnectedUpdateTimer;
   bool _disposed = false;
@@ -39,8 +42,9 @@ class _ConnectHomeScreenWidgetsState extends ConsumerState<ConnectHomeScreenWidg
   void initState() {
     super.initState();
     final bluetoothManager = ref.read(bluetoothManagerProvider);
-    _periodicConnectedUpdateTimer =
-        Timer.periodic(const Duration(seconds: 2), (timer) async {
+    _periodicConnectedUpdateTimer = Timer.periodic(const Duration(seconds: 2), (
+      timer,
+    ) async {
       await bluetoothManager.updateRSSIForConnectedDevices();
     });
   }
@@ -148,9 +152,7 @@ class _ConnectHomeScreenWidgetsState extends ConsumerState<ConnectHomeScreenWidg
               mergedDevices.isEmpty
                   ? "No devices available. Tap 'Scan' to search again."
                   : "Found ${mergedDevices.length} device(s).",
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              style: TextStyle(color: Theme.of(context).colorScheme.primary),
             ),
           ),
 
@@ -160,7 +162,7 @@ class _ConnectHomeScreenWidgetsState extends ConsumerState<ConnectHomeScreenWidg
                 devices: mergedDevices,
                 rssiValues: bluetoothManager.rssiValues,
                 calculateDistance: bluetoothManager.calculateDistance,
-                getRSSIColor: bluetoothManager.getRSSIColor,
+                getRSSIColor: UIUtils.getRSSIColor,
                 onConnect: bluetoothManager.connectToDeviceByName,
                 connectionNotifiers: bluetoothManager.deviceConnectionNotifiers,
                 isDeviceConnected: bluetoothManager.isDeviceConnected,
@@ -190,9 +192,6 @@ class _ConnectHomeScreenWidgetsState extends ConsumerState<ConnectHomeScreenWidg
     );
   }
 }
-
-
-
 
 // // lib/screens_widgets/connect_home_screen_widgets.dart
 // import 'dart:async';

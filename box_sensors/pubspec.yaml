@@ -39,7 +39,7 @@ dependencies:
   path: ^1.9.1
   path_provider: ^2.1.5
   # State management
-  flutter_riverpod: ">=3.1.0 <4.0.0" # ^3.1.0   # Riverpod 3 (Flutter)
+  flutter_riverpod: ">=3.2.0 <4.0.0" # ^3.1.0   # Riverpod 3 (Flutter)
   # BLE / Permissions / Audio
   flutter_blue_plus: ^2.1.0  # ">=2.0.1 <3.0.0"
   permission_handler: ^12.0.1
@@ -71,6 +71,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  integration_test:
+    sdk: flutter
 
 # ✅ Must be a map (like dependencies). Leaving it empty as null triggers the VS Code schema error.
 dependency_overrides: {}

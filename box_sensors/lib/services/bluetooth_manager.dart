@@ -1,13 +1,18 @@
 // lib/services/bluetooth_manager.dart
 import 'dart:async'; // Required for asynchronous operations like Timers and Streams.
 import 'dart:convert'; // Required for encoding and decoding data, e.g., UTF-8 and JSON.
-import 'dart:io' show Platform; // Used to check the current operating system platform (e.g., Android, iOS).
+import 'dart:io'
+    show
+        Platform; // Used to check the current operating system platform (e.g., Android, iOS).
 import 'dart:math'; // Provides mathematical functions like pow (for power).
-import 'package:flutter/material.dart'; // Flutter framework's Material Design widgets and core functionalities.
+
+import 'package:flutter/widgets.dart'; // For WidgetsBinding and AppLifecycleState
 import 'package:flutter_blue_plus/flutter_blue_plus.dart'; // Main library for Bluetooth Low Energy (BLE) interactions.
 import 'package:box_sensors/state/timer_state.dart'; // Custom class for managing timer states within the application.
 import 'package:box_sensors/services/database_helper.dart'; // Custom class for SQLite database operations.
 import 'package:sentry_flutter/sentry_flutter.dart'; // Sentry SDK for error reporting and performance monitoring.
+import 'package:box_sensors/utils/device_config.dart';
+import 'package:box_sensors/models/sensor_data.dart';
 
 void _captureSentryException(Object error, {StackTrace? stackTrace}) {
   if (!Sentry.isEnabled) return;
@@ -42,9 +47,9 @@ class BluetoothManager with ChangeNotifier {
   bool _didStopScan = false;
 
   // Stream controllers.
-  // Broadcast stream controller for lists of DataRow, used to update UI tables with formatted message data.
-  final StreamController<List<DataRow>> _messageStreamController =
-      StreamController<List<DataRow>>.broadcast();
+  // Broadcast stream controller for lists of SensorData.
+  final StreamController<List<SensorData>> _messageStreamController =
+      StreamController<List<SensorData>>.broadcast();
   // Broadcast stream controller for device disconnection events, emitting the name of the disconnected device.
   final StreamController<String?> _disconnectionStreamController =
       StreamController<String?>.broadcast();
@@ -64,29 +69,29 @@ class BluetoothManager with ChangeNotifier {
   Map<Guid, String> readValues = {};
   // A set to store unique message strings, potentially for duplicate filtering. (Currently not extensively used).
   Set<String> uniqueMessages = {};
-  // A list of DataRow objects, prepared for display in a UI table, representing received messages.
-  List<DataRow> rows = [];
+  // A list of SensorData objects.
+  List<SensorData> sensorDataList = [];
 
   // Device connection maps.
   // Tracks the connection status (true for connected, false for disconnected) for specific named devices.
   Map<String, bool> connectedDevices = {
-    'BlueBoxer': false,
-    'RedBoxer': false,
-    'BoxerServer': false,
+    DeviceConfig.blueBoxer: false,
+    DeviceConfig.redBoxer: false,
+    DeviceConfig.boxerServer: false,
   };
   // Maps device names to their corresponding BluetoothDevice objects when connected. Null if not connected.
   Map<String, BluetoothDevice?> connectedBluetoothDevices = {
-    'BlueBoxer': null,
-    'RedBoxer': null,
-    'BoxerServer': null,
+    DeviceConfig.blueBoxer: null,
+    DeviceConfig.redBoxer: null,
+    DeviceConfig.boxerServer: null,
   };
 
   // ValueNotifiers for connection states.
   // Provides ValueNotifier<bool> for each device, allowing widgets to reactively update based on connection status changes.
   final Map<String, ValueNotifier<bool>> _deviceConnectionNotifiers = {
-    'BlueBoxer': ValueNotifier<bool>(false),
-    'RedBoxer': ValueNotifier<bool>(false),
-    'BoxerServer': ValueNotifier<bool>(false),
+    DeviceConfig.blueBoxer: ValueNotifier<bool>(false),
+    DeviceConfig.redBoxer: ValueNotifier<bool>(false),
+    DeviceConfig.boxerServer: ValueNotifier<bool>(false),
   };
 
   // Overall connected devices count.
@@ -115,17 +120,20 @@ class BluetoothManager with ChangeNotifier {
   int? get currentRoundId => _currentRoundId;
   // Provides read-only access to the current match ID.
   int? get currentMatchId => _currentMatchId;
-  // Provides read-only access to the stream of formatted messages (DataRow list) for UI.
-  Stream<List<DataRow>> get messageStream => _messageStreamController.stream;
+  // Provides read-only access to the stream of formatted messages (SensorData list).
+  Stream<List<SensorData>> get messageStream => _messageStreamController.stream;
   // Provides read-only access to the stream of device disconnection events.
   Stream<String?> get disconnectionStream =>
       _disconnectionStreamController.stream;
   // Getter for the connection status of 'BlueBoxer'.
-  bool get isConnectedDevice1 => connectedDevices['BlueBoxer'] ?? false;
+  bool get isConnectedDevice1 =>
+      connectedDevices[DeviceConfig.blueBoxer] ?? false;
   // Getter for the connection status of 'RedBoxer'.
-  bool get isConnectedDevice2 => connectedDevices['RedBoxer'] ?? false;
+  bool get isConnectedDevice2 =>
+      connectedDevices[DeviceConfig.redBoxer] ?? false;
   // Getter for the connection status of 'BoxerServer'.
-  bool get isConnectedDevice3 => connectedDevices['BoxerServer'] ?? false;
+  bool get isConnectedDevice3 =>
+      connectedDevices[DeviceConfig.boxerServer] ?? false;
   // Getter for the map of device connection ValueNotifiers.
   Map<String, ValueNotifier<bool>> get deviceConnectionNotifiers =>
       _deviceConnectionNotifiers;
@@ -165,16 +173,20 @@ class BluetoothManager with ChangeNotifier {
   /// Clears the internal table data. In bluetooth_manager.dart
   // Clears all message data from internal lists and streams, effectively resetting the displayed message table.
   void clearTable() {
-    // 1) clear the DataRow list and push an empty list
-    rows.clear(); // Empties the list of DataRow objects.
-    if (!_messageStreamController.isClosed) { // Checks if the stream controller is active.
+    // 1) clear the SensorData list and push an empty list
+    sensorDataList.clear(); // Empties the list of SensorData objects.
+    if (!_messageStreamController.isClosed) {
+      // Checks if the stream controller is active.
       _messageStreamController.add([]); // Pushes an empty list to update UI.
     }
 
-    // 2) clear the raw‐map stream 
+    // 2) clear the raw‐map stream
     _rawMsgs.clear(); // Empties the list of raw message maps.
-    if (!_rawController.isClosed) { // Checks if the raw data stream controller is active.
-      _rawController.sink.add(<Map<String, dynamic>>[]); // Pushes an empty list to the raw data stream.
+    if (!_rawController.isClosed) {
+      // Checks if the raw data stream controller is active.
+      _rawController.sink.add(
+        <Map<String, dynamic>>[],
+      ); // Pushes an empty list to the raw data stream.
     }
 
     _safeNotifyListeners(); // Notifies listeners of the change.
@@ -184,8 +196,10 @@ class BluetoothManager with ChangeNotifier {
   // Generates a consistent key for a BluetoothDevice, preferring its platform name
   // but falling back to remoteId if the name is empty or "unknown".
   String getDeviceKey(BluetoothDevice device) {
-    final platformName = device.platformName.trim(); // Gets and trims the advertised name.
-    if (platformName.isEmpty || platformName.toLowerCase() == 'unknown') { // If name is unreliable.
+    final platformName = device.platformName
+        .trim(); // Gets and trims the advertised name.
+    if (platformName.isEmpty || platformName.toLowerCase() == 'unknown') {
+      // If name is unreliable.
       return device.remoteId.toString(); // Use the unique remote ID.
     }
     return platformName; // Use the platform name.
@@ -221,13 +235,16 @@ class BluetoothManager with ChangeNotifier {
   /// Updates the overall connected devices count.
   // Recalculates and updates the count of currently connected devices.
   void _updateConnectedDevicesCount() {
-    int count = connectedDevices.values.where((c) => c).length; // Counts 'true' values in the connection status map.
+    int count = connectedDevices.values
+        .where((c) => c)
+        .length; // Counts 'true' values in the connection status map.
     _connectedDevicesCount.value = count; // Updates the ValueNotifier.
   }
 
   // Checks if a device with the given name is currently connected.
   bool isDeviceConnected(String deviceName) =>
-      connectedDevices[deviceName] ?? false; // Returns true if connected, false otherwise or if name not found.
+      connectedDevices[deviceName] ??
+      false; // Returns true if connected, false otherwise or if name not found.
 
   /// Safely notifies listeners.
   // Calls notifyListeners() only if the manager instance has not been disposed.
@@ -239,7 +256,8 @@ class BluetoothManager with ChangeNotifier {
   // Implements a debounce mechanism for UI updates to improve performance.
   void _scheduleUIUpdate() {
     _notifyDebounce?.cancel(); // Cancels any existing pending debounce timer.
-    _notifyDebounce = Timer(const Duration(milliseconds: 300), () { // Sets a new timer.
+    _notifyDebounce = Timer(const Duration(milliseconds: 300), () {
+      // Sets a new timer.
       _notifyDebounce = null; // Clears the timer reference.
       _safeNotifyListeners(); // Notifies listeners after the delay.
     });
@@ -248,12 +266,20 @@ class BluetoothManager with ChangeNotifier {
   // Initiates a Bluetooth scan for nearby BLE devices.
   Future<void> startScan({
     Duration? timeout, // Optional duration for how long the scan should run.
-    String filterKeyword = 'Boxer', // Optional keyword to filter devices by name.
+    String filterKeyword =
+        'Boxer', // Optional keyword to filter devices by name.
   }) async {
-    if (isScanning) { // If a scan is already in progress.
+    if (isScanning) {
+      // If a scan is already in progress.
       debugPrint("Scan already in progress");
       return; // Do not start a new scan.
     }
+
+    if (DeviceConfig.isIntegrationTest) {
+      debugPrint("🚧 INTEGRATION_TEST: Skipping Bluetooth Scan.");
+      return;
+    }
+
     isScanning = true; // Set scanning state to true.
     availableDevices.clear(); // Clear previously found devices.
     rssiValues.clear(); // Clear previous RSSI values.
@@ -267,13 +293,13 @@ class BluetoothManager with ChangeNotifier {
 
       // Listen to the stream of scan results.
       final subscription = FlutterBluePlus.scanResults.listen((results) {
-        for (final r in results) { // Process each scan result.
+        for (final r in results) {
+          // Process each scan result.
           final device = r.device;
           // Determine device display name (platform name or remote ID if name is empty).
-          final displayName =
-              device.platformName.trim().isNotEmpty
-                  ? device.platformName.trim()
-                  : device.remoteId.toString();
+          final displayName = device.platformName.trim().isNotEmpty
+              ? device.platformName.trim()
+              : device.remoteId.toString();
 
           // Apply name filter if a keyword is provided.
           if (filterKeyword.isNotEmpty &&
@@ -286,10 +312,11 @@ class BluetoothManager with ChangeNotifier {
           if (!availableDevices.contains(displayName)) {
             availableDevices.add(displayName);
             debugPrint(
-                "Discovered device: $displayName added to availableDevices",
+              "Discovered device: $displayName added to availableDevices",
             );
           }
-          rssiValues[displayName] = r.rssi; // Store the RSSI value for the discovered device.
+          rssiValues[displayName] =
+              r.rssi; // Store the RSSI value for the discovered device.
         }
         // Debounced UI update instead of immediate notifyListeners()
         _scheduleUIUpdate(); // Schedule a UI update to reflect new devices/RSSI values.
@@ -300,17 +327,25 @@ class BluetoothManager with ChangeNotifier {
 
       // Start the BLE scan.
       await FlutterBluePlus.startScan(
-        timeout: timeout ?? const Duration(seconds: 4), // Use provided timeout or default to 4 seconds.
-        androidScanMode: AndroidScanMode.lowLatency, // Use low latency scan mode on Android for faster discovery.
-        androidUsesFineLocation: true, // Indicate that fine location permission is used (required for BLE on Android).
+        timeout:
+            timeout ??
+            const Duration(
+              seconds: 4,
+            ), // Use provided timeout or default to 4 seconds.
+        androidScanMode: AndroidScanMode
+            .lowLatency, // Use low latency scan mode on Android for faster discovery.
+        androidUsesFineLocation:
+            true, // Indicate that fine location permission is used (required for BLE on Android).
       );
       // Wait until the scan is no longer active.
       await FlutterBluePlus.isScanning.where((val) => val == false).first;
       debugPrint("Scan finished");
-    } catch (e) { // Catch any errors during the scan process.
+    } catch (e) {
+      // Catch any errors during the scan process.
       debugPrint("Error scanning for devices: $e");
       _captureSentryException(e); // Report error to Sentry.
-    } finally { // This block executes regardless of errors.
+    } finally {
+      // This block executes regardless of errors.
       isScanning = false; // Ensure scanning state is reset.
       _safeNotifyListeners(); // Notify UI about the end of scanning (final update).
     }
@@ -334,20 +369,25 @@ class BluetoothManager with ChangeNotifier {
   // Periodically reads and updates the RSSI values for all currently connected devices.
   Future<void> updateRSSIForConnectedDevices() async {
     // Create a set of device names from connected devices that are not null.
-    final deviceNames =
-        connectedBluetoothDevices.entries
-            .where((entry) => entry.value != null) // Filter for non-null (connected) devices.
-            .map((entry) => entry.key) // Get the device names.
-            .toSet(); // Convert to a Set to avoid duplicates and for efficient lookup.
+    final deviceNames = connectedBluetoothDevices.entries
+        .where(
+          (entry) => entry.value != null,
+        ) // Filter for non-null (connected) devices.
+        .map((entry) => entry.key) // Get the device names.
+        .toSet(); // Convert to a Set to avoid duplicates and for efficient lookup.
 
-    for (final deviceName in deviceNames) { // Iterate over the names of connected devices.
+    for (final deviceName in deviceNames) {
+      // Iterate over the names of connected devices.
       final connectedDevice = connectedBluetoothDevices[deviceName];
-      if (connectedDevice != null) { // If the device object exists.
+      if (connectedDevice != null) {
+        // If the device object exists.
         try {
-          final rssi = await connectedDevice.readRssi(); // Read the current RSSI from the device.
+          final rssi = await connectedDevice
+              .readRssi(); // Read the current RSSI from the device.
           rssiValues[deviceName] = rssi; // Update the stored RSSI value.
           debugPrint("Updated RSSI for $deviceName: $rssi");
-        } catch (e) { // Handle errors during RSSI read.
+        } catch (e) {
+          // Handle errors during RSSI read.
           debugPrint("Error reading RSSI for $deviceName: $e");
           _captureSentryException(e); // Report error to Sentry.
         }
@@ -359,9 +399,13 @@ class BluetoothManager with ChangeNotifier {
   /// Disconnect all devices.
   // Iterates through all known devices and disconnects them if they are currently connected.
   Future<void> disconnectAllDevices() async {
-    for (final deviceName in connectedBluetoothDevices.keys) { // Iterate over all potential device names.
-      if (connectedBluetoothDevices[deviceName] != null) { // If the device is mapped (implies connected or was recently).
-        await handleDisconnectDevice(deviceName); // Call the specific disconnect handler.
+    for (final deviceName in connectedBluetoothDevices.keys) {
+      // Iterate over all potential device names.
+      if (connectedBluetoothDevices[deviceName] != null) {
+        // If the device is mapped (implies connected or was recently).
+        await handleDisconnectDevice(
+          deviceName,
+        ); // Call the specific disconnect handler.
       }
     }
     _safeNotifyListeners(); // Notify UI after attempting all disconnections.
@@ -370,32 +414,44 @@ class BluetoothManager with ChangeNotifier {
   /// Disconnect a device and cancel its notification subscriptions.
   // Handles the disconnection logic for a single specified device.
   Future<void> handleDisconnectDevice(String deviceName) async {
-    final BluetoothDevice? device = connectedBluetoothDevices[deviceName]; // Get the BluetoothDevice object.
-    if (device != null) { // Proceed if the device is known.
-      setAutoReconnect(false); // Temporarily disable auto-reconnect for this intentional disconnect.
+    final BluetoothDevice? device =
+        connectedBluetoothDevices[deviceName]; // Get the BluetoothDevice object.
+    if (device != null) {
+      // Proceed if the device is known.
+      setAutoReconnect(
+        false,
+      ); // Temporarily disable auto-reconnect for this intentional disconnect.
       try {
         await device.disconnect(); // Send disconnect command.
         // Wait for the connection state to confirm disconnection.
         await device.connectionState.firstWhere(
           (state) => state == BluetoothConnectionState.disconnected,
-          orElse: () => BluetoothConnectionState.disconnected, // Fallback if stream ends before emitting 'disconnected'.
+          orElse: () => BluetoothConnectionState
+              .disconnected, // Fallback if stream ends before emitting 'disconnected'.
         );
-      } catch (e, stackTrace) { // Handle errors during the disconnect call.
+      } catch (e, stackTrace) {
+        // Handle errors during the disconnect call.
         debugPrint("Error disconnecting $deviceName: $e");
-        _captureSentryException(e, stackTrace: stackTrace); // Report error to Sentry.
+        _captureSentryException(
+          e,
+          stackTrace: stackTrace,
+        ); // Report error to Sentry.
       }
       // Clear the connection and update states.
       connectedBluetoothDevices[deviceName] = null; // Remove device object.
       connectedDevices[deviceName] = false; // Set connection status to false.
-      _deviceConnectionNotifiers[deviceName]?.value = false; // Update the ValueNotifier.
+      _deviceConnectionNotifiers[deviceName]?.value =
+          false; // Update the ValueNotifier.
 
       // Cancel any notification subscriptions for this device.
       // Identify all notification subscriptions associated with the disconnecting device.
-      final keysToRemove =
-          _notificationSubscriptions.keys
-              .where((key) => key.startsWith(deviceName)) // Filter by device name prefix.
-              .toList();
-      for (final key in keysToRemove) { // Iterate and cancel each subscription.
+      final keysToRemove = _notificationSubscriptions.keys
+          .where(
+            (key) => key.startsWith(deviceName),
+          ) // Filter by device name prefix.
+          .toList();
+      for (final key in keysToRemove) {
+        // Iterate and cancel each subscription.
         await _notificationSubscriptions[key]?.cancel();
         _notificationSubscriptions.remove(key); // Remove from the map.
         debugPrint("Cancelled notification subscription for $key.");
@@ -411,36 +467,51 @@ class BluetoothManager with ChangeNotifier {
     isScanning = true;
     _safeNotifyListeners();
 
+    if (DeviceConfig.isIntegrationTest) {
+      debugPrint(
+        "🚧 INTEGRATION_TEST: Skipping connectToDeviceByName ($deviceName).",
+      );
+      isScanning = false;
+      _safeNotifyListeners();
+      return;
+    }
+
     try {
       // 2️⃣ Wait for the adapter to be powered on
       await FlutterBluePlus.adapterState
-          .where((s) => s == BluetoothAdapterState.on) // Waits for the adapter to be on.
+          .where(
+            (s) => s == BluetoothAdapterState.on,
+          ) // Waits for the adapter to be on.
           .first;
       debugPrint("Starting single-device scan for $deviceName (3s)…");
 
       // 3️⃣ Listen for scan results
       // Subscribe to scan results to find the specific device.
-      final scanSubscription = FlutterBluePlus.scanResults.listen((
-        results,
-      ) async {
-        for (var result in results) {
-          if (result.device.platformName.trim() == deviceName) { // If the target device is found.
-            debugPrint("Found $deviceName; connecting…");
-            try {
-              await connectToDevice(result.device); // Attempt connection.
-              _deviceConnectionNotifiers[deviceName]?.value = true; // Update connection notifier.
-              _safeNotifyListeners();
-              debugPrint("Connected to $deviceName successfully.");
-            } catch (e, st) { // Handle connection failure.
-              debugPrint("Failed to connect to $deviceName: $e");
-              _captureSentryException(e, stackTrace: st); // Report to Sentry.
+      final scanSubscription = FlutterBluePlus.scanResults.listen(
+        (results) async {
+          for (var result in results) {
+            if (result.device.platformName.trim() == deviceName) {
+              // If the target device is found.
+              debugPrint("Found $deviceName; connecting…");
+              try {
+                await connectToDevice(result.device); // Attempt connection.
+                _deviceConnectionNotifiers[deviceName]?.value =
+                    true; // Update connection notifier.
+                _safeNotifyListeners();
+                debugPrint("Connected to $deviceName successfully.");
+              } catch (e, st) {
+                // Handle connection failure.
+                debugPrint("Failed to connect to $deviceName: $e");
+                _captureSentryException(e, stackTrace: st); // Report to Sentry.
+              }
+              debugPrint("Stopping scan for $deviceName early.");
+              await FlutterBluePlus.stopScan(); // Stop scan as device is found.
+              break; // Exit loop.
             }
-            debugPrint("Stopping scan for $deviceName early.");
-            await FlutterBluePlus.stopScan(); // Stop scan as device is found.
-            break; // Exit loop.
           }
-        }
-      }, onError: (err) => debugPrint("Scan error (single device): $err")); // Handle errors in the scan stream.
+        },
+        onError: (err) => debugPrint("Scan error (single device): $err"),
+      ); // Handle errors in the scan stream.
       FlutterBluePlus.cancelWhenScanComplete(scanSubscription);
 
       // 4️⃣ Kick off the scan
@@ -466,18 +537,33 @@ class BluetoothManager with ChangeNotifier {
     isScanning = true;
     _safeNotifyListeners();
 
+    if (DeviceConfig.isIntegrationTest) {
+      debugPrint("🚧 INTEGRATION_TEST: Skipping connectAllBoxerDevices.");
+      isScanning = false;
+      _safeNotifyListeners();
+      return;
+    }
+
     _didStopScan = false; // ← reset at the top; flag for early scan stop.
-    const targetDevices = {'BlueBoxer', 'RedBoxer', 'BoxerServer'}; // Set of target device names.
+    const targetDevices = {
+      DeviceConfig.blueBoxer,
+      DeviceConfig.redBoxer,
+      DeviceConfig.boxerServer,
+    }; // Set of target device names.
 
     // wait for adapter on…
     await FlutterBluePlus.adapterState
-        .where((s) => s == BluetoothAdapterState.on) // Waits for the Bluetooth adapter to be on.
+        .where(
+          (s) => s == BluetoothAdapterState.on,
+        ) // Waits for the Bluetooth adapter to be on.
         .first;
 
     // Listen to scan results.
     final subscription = FlutterBluePlus.scanResults.listen((results) {
-      for (final r in results) { // Iterate through each scan result.
-        final name = r.device.platformName.trim(); // Gets the trimmed device name.
+      for (final r in results) {
+        // Iterate through each scan result.
+        final name = r.device.platformName
+            .trim(); // Gets the trimmed device name.
         // Skips if the device is not a target device or is already connected.
         if (!targetDevices.contains(name) || isDeviceConnected(name)) continue;
 
@@ -512,7 +598,8 @@ class BluetoothManager with ChangeNotifier {
   Future<void> _connectAndMaybeStop(
     BluetoothDevice device, // The device to connect to.
     String name, // The name of the device.
-    Set<String> targetDevices, // The set of all target device names for the current multi-connect operation.
+    Set<String>
+    targetDevices, // The set of all target device names for the current multi-connect operation.
   ) async {
     debugPrint("Attempting to connect to $name…");
     try {
@@ -525,12 +612,14 @@ class BluetoothManager with ChangeNotifier {
 
       // Checks if all target devices are now connected.
       final allConnected = targetDevices.every(isDeviceConnected);
-      if (allConnected && !_didStopScan) { // If all are connected and scan hasn't been stopped yet.
+      if (allConnected && !_didStopScan) {
+        // If all are connected and scan hasn't been stopped yet.
         _didStopScan = true; // ← flip your class‐level flag
         debugPrint("All targets connected → stopping scan early.");
         await FlutterBluePlus.stopScan(); // Stops the Bluetooth scan.
       }
-    } catch (e, st) { // Handles connection errors.
+    } catch (e, st) {
+      // Handles connection errors.
       debugPrint("Failed to connect to $name: $e");
       _captureSentryException(e, stackTrace: st); // Reports error to Sentry.
     }
@@ -549,22 +638,33 @@ class BluetoothManager with ChangeNotifier {
       bool reallyConnected = await _isReallyConnected(
         connectedBluetoothDevices[deviceKey]!,
       );
-      if (reallyConnected) { // If truly connected, no need to proceed.
+      if (reallyConnected) {
+        // If truly connected, no need to proceed.
         debugPrint("Device $deviceKey is already connected.");
         return;
-      } else { // If not truly connected, clear the stale reference.
+      } else {
+        // If not truly connected, clear the stale reference.
         // Clear stale reference
         connectedBluetoothDevices[deviceKey] = null;
       }
     }
 
     try {
-      // 🔧 FBP 2.0.0 requires a license argument (free or commercial) Attempts to connect to the device with a timeout. 
-      await device.connect(license: License.free, timeout: const Duration(seconds: 5));
-      connectedBluetoothDevices[deviceKey] = device; // Stores the connected device object.
-      _updateDeviceConnectionStatus(deviceKey, true); // Updates the connection status.
+      // 🔧 FBP 2.0.0 requires a license argument (free or commercial) Attempts to connect to the device with a timeout.
+      await device.connect(
+        license: License.free,
+        timeout: const Duration(seconds: 5),
+      );
+      connectedBluetoothDevices[deviceKey] =
+          device; // Stores the connected device object.
+      _updateDeviceConnectionStatus(
+        deviceKey,
+        true,
+      ); // Updates the connection status.
       _safeNotifyListeners(); // Notifies listeners.
-      await Future.delayed(const Duration(seconds: 1)); // Short delay for stability.
+      await Future.delayed(
+        const Duration(seconds: 1),
+      ); // Short delay for stability.
 
       // Listen for disconnection events.
       late final StreamSubscription<BluetoothConnectionState>
@@ -573,27 +673,38 @@ class BluetoothManager with ChangeNotifier {
       disconnectionSubscription = device.connectionState.listen((
         connectionState,
       ) {
-        if (connectionState == BluetoothConnectionState.disconnected) { // If the device disconnects.
+        if (connectionState == BluetoothConnectionState.disconnected) {
+          // If the device disconnects.
           // Clean up notification subs on unexpected disconnect
           // Finds notification subscriptions related to this device.
-          final toRemove =
-              _notificationSubscriptions.keys
-                  .where((k) => k.startsWith(deviceKey)) // Filters by device key prefix.
-                  .toList();
-          for (final charKey in toRemove) { // Iterates and cancels/removes subscriptions.
+          final toRemove = _notificationSubscriptions.keys
+              .where(
+                (k) => k.startsWith(deviceKey),
+              ) // Filters by device key prefix.
+              .toList();
+          for (final charKey in toRemove) {
+            // Iterates and cancels/removes subscriptions.
             _notificationSubscriptions[charKey]?.cancel();
             _notificationSubscriptions.remove(charKey);
             debugPrint(
-                "Cancelled notification subscription for $charKey on disconnect.",
+              "Cancelled notification subscription for $charKey on disconnect.",
             );
           }
 
-          _updateDeviceConnectionStatus(deviceKey, false); // Updates connection status to disconnected.
-          connectedBluetoothDevices[deviceKey] = null; // Clears the device object.
-          _disconnectionStreamController.add(deviceKey); // Adds device key to disconnection stream.
-          disconnectionSubscription.cancel(); // Cancels this disconnection listener.
+          _updateDeviceConnectionStatus(
+            deviceKey,
+            false,
+          ); // Updates connection status to disconnected.
+          connectedBluetoothDevices[deviceKey] =
+              null; // Clears the device object.
+          _disconnectionStreamController.add(
+            deviceKey,
+          ); // Adds device key to disconnection stream.
+          disconnectionSubscription
+              .cancel(); // Cancels this disconnection listener.
           _safeNotifyListeners(); // Notifies listeners.
-          Future.delayed(const Duration(seconds: 1), () { // Schedules a reconnection attempt.
+          Future.delayed(const Duration(seconds: 1), () {
+            // Schedules a reconnection attempt.
             // it wss 3 sec testing 1 second
             // Checks if app is in resumed state, not disposed, and auto-reconnect is enabled.
             if (WidgetsBinding.instance.lifecycleState ==
@@ -601,9 +712,13 @@ class BluetoothManager with ChangeNotifier {
                 !_disposed &&
                 _shouldAutoReconnect) {
               debugPrint("Attempting to reconnect to $deviceKey...");
-              connectToDevice(device).catchError((e, stackTrace) { // Attempts reconnection.
+              connectToDevice(device).catchError((e, stackTrace) {
+                // Attempts reconnection.
                 debugPrint("Reconnection to $deviceKey failed: $e");
-                _captureSentryException(e, stackTrace: stackTrace); // Reports reconnection failure to Sentry.
+                _captureSentryException(
+                  e,
+                  stackTrace: stackTrace,
+                ); // Reports reconnection failure to Sentry.
               });
             }
           });
@@ -615,29 +730,33 @@ class BluetoothManager with ChangeNotifier {
         try {
           int newMtu = await device.requestMtu(247); // Requests an MTU of 247.
           debugPrint('Requested MTU = 247, actually set to: $newMtu');
-        } catch (mtuError, stackTrace) { // Handles MTU request errors.
-          debugPrint('Error requesting MTU: $mtuError'); // Corrected string interpolation
-          _captureSentryException(mtuError, stackTrace: stackTrace); // Reports error to Sentry.
+        } catch (mtuError, stackTrace) {
+          // Handles MTU request errors.
+          debugPrint(
+            'Error requesting MTU: $mtuError',
+          ); // Corrected string interpolation
+          _captureSentryException(
+            mtuError,
+            stackTrace: stackTrace,
+          ); // Reports error to Sentry.
         }
       }
       await discoverServices(); // Discovers services and characteristics on the connected device.
-    } catch (e, stackTrace) { // Handles general connection errors.
-      debugPrint("Error connecting to device: $e"); // Corrected string interpolation
-      _updateDeviceConnectionStatus(deviceKey, false); // Updates connection status to disconnected.
+    } catch (e, stackTrace) {
+      // Handles general connection errors.
+      debugPrint(
+        "Error connecting to device: $e",
+      ); // Corrected string interpolation
+      _updateDeviceConnectionStatus(
+        deviceKey,
+        false,
+      ); // Updates connection status to disconnected.
       _safeNotifyListeners(); // Notifies listeners.
-      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(
+        e,
+        stackTrace: stackTrace,
+      ); // Reports error to Sentry.
     }
-  }
-
-  /// Get a color based on the RSSI value.
-  // Used to visually represent signal strength.
-  Color getRSSIColor(int rssi) {
-    if (rssi >= -30) return Colors.blue; // Strongest signal
-    if (rssi >= -55) return Colors.green;
-    if (rssi >= -67) return Colors.lightGreen;
-    if (rssi >= -80) return Colors.yellow;
-    if (rssi >= -90) return Colors.orange;
-    return Colors.red; // Weakest signal
   }
 
   /// Helper method to check if a device is really connected.
@@ -646,8 +765,10 @@ class BluetoothManager with ChangeNotifier {
     try {
       // Reads the current connection state from the device.
       final state = await device.connectionState.first;
-      return state == BluetoothConnectionState.connected; // Returns true if connected.
-    } catch (e) { // Catches errors (e.g., if device is no longer accessible).
+      return state ==
+          BluetoothConnectionState.connected; // Returns true if connected.
+    } catch (e) {
+      // Catches errors (e.g., if device is no longer accessible).
       return false; // Returns false on error.
     }
   }
@@ -661,9 +782,11 @@ class BluetoothManager with ChangeNotifier {
     }
     // Updates status only if it has changed.
     if (connectedDevices[deviceName] != status) {
-      connectedDevices[deviceName] = status; // Updates the main connection status map.
+      connectedDevices[deviceName] =
+          status; // Updates the main connection status map.
       debugPrint('$deviceName connection status updated to: $status');
-      _deviceConnectionNotifiers[deviceName]?.value = status; // Updates the ValueNotifier for this device.
+      _deviceConnectionNotifiers[deviceName]?.value =
+          status; // Updates the ValueNotifier for this device.
       _updateConnectedDevicesCount(); // Updates the total connected devices count.
       _safeNotifyListeners(); // Notifies listeners of the change.
     }
@@ -673,7 +796,8 @@ class BluetoothManager with ChangeNotifier {
   // Iterates through connected devices, discovers their services and characteristics,
   // and subscribes to notifiable characteristics.
   Future<void> discoverServices() async {
-    if (_isDiscoveringServices) { // Prevents concurrent service discovery.
+    if (_isDiscoveringServices) {
+      // Prevents concurrent service discovery.
       debugPrint("⏳ Service discovery already in progress, skipping new call.");
       return;
     }
@@ -681,65 +805,81 @@ class BluetoothManager with ChangeNotifier {
     debugPrint("🔄 discoverServices() called");
     try {
       // Creates a list of futures for discovering services on each connected device.
-      List<Future<void>> discoveryFutures =
-          connectedBluetoothDevices.entries.map((entry) async {
-            final deviceName = entry.key; // Device name.
-            final BluetoothDevice? connectedDevice = entry.value; // BluetoothDevice object.
-            if (connectedDevice == null) { // Skips if device object is null.
-              debugPrint("⚠️ Device $deviceName is null. Skipping.");
-              return;
-            }
-            debugPrint("🔍 Discovering services for device: $deviceName");
-            try {
-              // Discovers services for the current device.
-              List<BluetoothService> servicesList =
-                  await connectedDevice.discoverServices();
-              debugPrint(
-                  "📡 Discovered ${servicesList.length} services for $deviceName",
-              );
-              for (var service in servicesList) { // Iterates through discovered services.
-                for (var characteristic in service.characteristics) { // Iterates through characteristics of each service.
-                  if (characteristic.properties.notify) { // Checks if the characteristic supports notifications.
-                    // Creates a unique key for the characteristic subscription.
-                    String charKey = '$deviceName-${characteristic.uuid}';
-                    // Skips if already subscribed to this characteristic.
-                    if (_notificationSubscriptions.containsKey(charKey)) {
-                      debugPrint(
-                          "⚠️ Listener already exists for $charKey, skipping.",
-                      );
-                      continue;
-                    }
-                    debugPrint(
-                        "✅ Subscribing to characteristic ${characteristic.uuid} for $deviceName.",
-                    );
-                    // Enables notifications for the characteristic.
-                    await characteristic.setNotifyValue(true);
-                    // Short delay after enabling notifications.
-                    await Future.delayed(Duration(milliseconds: 400));
-                    // Listens to the characteristic's value stream.
-                    var subscription = characteristic.lastValueStream.listen(
-                      (value) => _handleNotification(value, deviceName), // Handles incoming notification data.
-                      onError: (error, stackTrace) { // Handles errors in the notification stream.
-                        debugPrint(
-                            "❌ Error in notification stream for $deviceName: $error",
-                        );
-                        debugPrint(stackTrace.toString());
-                        _captureSentryException(error, stackTrace: stackTrace); // Reports error to Sentry.
-                      },
-                    );
-                    // Stores the subscription.
-                    _notificationSubscriptions[charKey] = subscription;
-                    debugPrint(
-                        "👂 Active Listeners Count: ${_notificationSubscriptions.length}",
-                    );
-                  }
+      List<Future<void>>
+      discoveryFutures = connectedBluetoothDevices.entries.map((entry) async {
+        final deviceName = entry.key; // Device name.
+        final BluetoothDevice? connectedDevice =
+            entry.value; // BluetoothDevice object.
+        if (connectedDevice == null) {
+          // Skips if device object is null.
+          debugPrint("⚠️ Device $deviceName is null. Skipping.");
+          return;
+        }
+        debugPrint("🔍 Discovering services for device: $deviceName");
+        try {
+          // Discovers services for the current device.
+          List<BluetoothService> servicesList = await connectedDevice
+              .discoverServices();
+          debugPrint(
+            "📡 Discovered ${servicesList.length} services for $deviceName",
+          );
+          for (var service in servicesList) {
+            // Iterates through discovered services.
+            for (var characteristic in service.characteristics) {
+              // Iterates through characteristics of each service.
+              if (characteristic.properties.notify) {
+                // Checks if the characteristic supports notifications.
+                // Creates a unique key for the characteristic subscription.
+                String charKey = '$deviceName-${characteristic.uuid}';
+                // Skips if already subscribed to this characteristic.
+                if (_notificationSubscriptions.containsKey(charKey)) {
+                  debugPrint(
+                    "⚠️ Listener already exists for $charKey, skipping.",
+                  );
+                  continue;
                 }
+                debugPrint(
+                  "✅ Subscribing to characteristic ${characteristic.uuid} for $deviceName.",
+                );
+                // Enables notifications for the characteristic.
+                await characteristic.setNotifyValue(true);
+                // Short delay after enabling notifications.
+                await Future.delayed(Duration(milliseconds: 400));
+                // Listens to the characteristic's value stream.
+                var subscription = characteristic.lastValueStream.listen(
+                  (value) => _handleNotification(
+                    value,
+                    deviceName,
+                  ), // Handles incoming notification data.
+                  onError: (error, stackTrace) {
+                    // Handles errors in the notification stream.
+                    debugPrint(
+                      "❌ Error in notification stream for $deviceName: $error",
+                    );
+                    debugPrint(stackTrace.toString());
+                    _captureSentryException(
+                      error,
+                      stackTrace: stackTrace,
+                    ); // Reports error to Sentry.
+                  },
+                );
+                // Stores the subscription.
+                _notificationSubscriptions[charKey] = subscription;
+                debugPrint(
+                  "👂 Active Listeners Count: ${_notificationSubscriptions.length}",
+                );
               }
-            } catch (e, stackTrace) { // Handles errors during service discovery for a specific device.
-              debugPrint("❌ Error discovering services for $deviceName: $e");
-              _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
             }
-          }).toList();
+          }
+        } catch (e, stackTrace) {
+          // Handles errors during service discovery for a specific device.
+          debugPrint("❌ Error discovering services for $deviceName: $e");
+          _captureSentryException(
+            e,
+            stackTrace: stackTrace,
+          ); // Reports error to Sentry.
+        }
+      }).toList();
       // Waits for all service discovery futures to complete.
       await Future.wait(discoveryFutures);
     } finally {
@@ -752,13 +892,16 @@ class BluetoothManager with ChangeNotifier {
   void _handleNotification(List<int> value, String deviceName) async {
     if (_disposed) return; // Exits if the manager is disposed.
     try {
-      final decodedMessage = utf8.decode(value); // Decodes the byte list to a UTF-8 string.
+      final decodedMessage = utf8.decode(
+        value,
+      ); // Decodes the byte list to a UTF-8 string.
       debugPrint("📩 Received notification from $deviceName: $decodedMessage");
       try {
         // Attempts to parse the message as JSON (e.g., for "RoundState" messages).
         final dynamic parsed = json.decode(decodedMessage);
         if (parsed is Map<String, dynamic> &&
-            parsed["RoundState"] == "Completed") { // If it's a "RoundState: Completed" message.
+            parsed["RoundState"] == "Completed") {
+          // If it's a "RoundState: Completed" message.
           _timerState?.endMatch(); // Ends the match via TimerState.
         }
       } catch (jsonError) {
@@ -769,28 +912,32 @@ class BluetoothManager with ChangeNotifier {
       final timestamp = _extractTimestamp(decodedMessage);
       String extractedDevice = _extractDevice(decodedMessage);
       // Uses the deviceName from the notification source if regex extraction fails.
-      final deviceStr =
-          (extractedDevice == "UnknownDevice") ? deviceName : extractedDevice;
+      final deviceStr = (extractedDevice == "UnknownDevice")
+          ? deviceName
+          : extractedDevice;
       final sensorValue = _extractSensorValue(decodedMessage);
 
       // Proceeds if all required data fields are successfully extracted.
       if (punchCount != null && timestamp != null && sensorValue != null) {
         // Determines the "opposite" device (e.g., if BlueBoxer sent, opposite is RedBoxer).
-        String oppositeDevice =
-            (deviceStr == "BlueBoxer") ? "RedBoxer" : "BlueBoxer";
-        // Creates a DataRow for UI display.
-        final newRow = DataRow(
-          cells: [
-            DataCell(Center(child: Text(deviceStr))),
-            DataCell(Center(child: Text(oppositeDevice))),
-            DataCell(Center(child: Text(punchCount.toString()))),
-            DataCell(Center(child: Text(timestamp))),
-            DataCell(Center(child: Text(sensorValue))),
-          ],
+        String oppositeDevice = (deviceStr == DeviceConfig.blueBoxer)
+            ? DeviceConfig.redBoxer
+            : DeviceConfig.blueBoxer;
+        // Creates a SensorData object.
+        final newData = SensorData(
+          device: deviceStr,
+          punchBy: oppositeDevice,
+          punchCount: punchCount.toString(),
+          timestamp: timestamp,
+          sensorValue: sensorValue,
         );
-        rows.add(newRow); // Adds the new row to the internal list.
-        if (!_messageStreamController.isClosed) { // Checks if the message stream controller is still active.
-          _messageStreamController.add(List.from(rows)); // Adds the updated list to the message stream.
+
+        sensorDataList.add(newData); // Adds the new data to the internal list.
+        if (!_messageStreamController.isClosed) {
+          // Checks if the message stream controller is still active.
+          _messageStreamController.add(
+            List.from(sensorDataList),
+          ); // Adds the updated list to the message stream.
         }
         _scheduleUIUpdate(); // ← debounce rapid‐fire notifications
 
@@ -803,8 +950,11 @@ class BluetoothManager with ChangeNotifier {
           'sensorValue': sensorValue,
         };
         _rawMsgs.add(msgMap); // Adds the raw message map to the internal list.
-        if (!_rawController.isClosed) { // Checks if the raw message stream controller is still active.
-           _rawController.sink.add(List.from(_rawMsgs)); // Adds the updated list to the raw message stream.
+        if (!_rawController.isClosed) {
+          // Checks if the raw message stream controller is still active.
+          _rawController.sink.add(
+            List.from(_rawMsgs),
+          ); // Adds the updated list to the raw message stream.
         }
 
         final localRoundId = _currentRoundId; // Gets the current round ID.
@@ -821,11 +971,16 @@ class BluetoothManager with ChangeNotifier {
           localMatchId,
         );
       }
-    } catch (e, stackTrace) { // Handles errors during notification processing.
-      if (!_disposed) { // Checks if not disposed before logging.
+    } catch (e, stackTrace) {
+      // Handles errors during notification processing.
+      if (!_disposed) {
+        // Checks if not disposed before logging.
         debugPrint("❌ 🔴 Error processing notification from $deviceName: $e");
         debugPrint(stackTrace.toString());
-        _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
+        _captureSentryException(
+          e,
+          stackTrace: stackTrace,
+        ); // Reports error to Sentry.
       }
     }
   }
@@ -841,9 +996,9 @@ class BluetoothManager with ChangeNotifier {
     int roundId,
     int? matchId,
   ) {
-  
     // Always insert into messages (with matchId == null storing as NULL)
-    final futures = <Future<void>>[ // List to hold asynchronous operations.
+    final futures = <Future<void>>[
+      // List to hold asynchronous operations.
       // Adds the database insertion operation to the list.
       _insertDataToDatabase(
         deviceStr,
@@ -857,7 +1012,8 @@ class BluetoothManager with ChangeNotifier {
     ];
 
     // Only send to server if match is active
-    if (matchId != null) { // If a match is currently active (matchId is not null).
+    if (matchId != null) {
+      // If a match is currently active (matchId is not null).
       // Adds the operation to send data to BoxerServer to the list.
       futures.add(
         _sendDataToBoxerServer(
@@ -896,9 +1052,13 @@ class BluetoothManager with ChangeNotifier {
         roundId,
         matchId,
       );
-    } catch (e, stackTrace) { // Handles errors during database insertion.
+    } catch (e, stackTrace) {
+      // Handles errors during database insertion.
       debugPrint("❌ 💾 🔴 Error inserting message into DB: $e");
-      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(
+        e,
+        stackTrace: stackTrace,
+      ); // Reports error to Sentry.
     }
   }
 
@@ -914,37 +1074,34 @@ class BluetoothManager with ChangeNotifier {
     //    If you want *all* messages, call fetchMessages();
     //    if only for a match, call fetchMessagesByMatchId(matchId).
     // Fetches messages from the database.
-    final List<Map<String, dynamic>> history =
-        matchId == null
-            ? await dbHelper.fetchMessages() // Fetches all messages if matchId is null.
-            : await dbHelper.fetchMessagesByMatchId(matchId); // Fetches messages for a specific match.
+    final List<Map<String, dynamic>> history = matchId == null
+        ? await dbHelper
+              .fetchMessages() // Fetches all messages if matchId is null.
+        : await dbHelper.fetchMessagesByMatchId(
+            matchId,
+          ); // Fetches messages for a specific match.
 
-    // 2) For each DB row, build a DataRow and push it.
-    for (final msg in history) { // Iterates through fetched messages.
-      // Creates a DataRow from the message data.
-      final row = DataRow(
-        cells: [
-          DataCell(Center(child: Text(msg['device'] ?? ''))),
-          DataCell(Center(child: Text(msg['punchBy'] ?? ''))),
-          DataCell(Center(child: Text(msg['punchCount'] ?? ''))),
-          DataCell(Center(child: Text(msg['timestamp'] ?? ''))),
-          DataCell(Center(child: Text(msg['sensorValue'] ?? ''))),
-        ],
-      );
+    // 2) For each DB row, build a SensorData object and push it.
+    for (final msg in history) {
+      // Iterates through fetched messages.
+      // Creates a SensorData object from the message data.
+      final data = SensorData.fromMap(msg);
 
       // Add to your internal list and stream
-      rows.add(row); // Adds the DataRow to the internal list.
+      sensorDataList.add(data); // Adds the SensorData to the internal list.
       if (!_messageStreamController.isClosed) {
-         _messageStreamController.add(List.from(rows)); // Adds the updated list to the message stream.
+        _messageStreamController.add(
+          List.from(sensorDataList),
+        ); // Adds the updated list to the message stream.
       }
-
 
       // Record raw msg and emit
       _rawMsgs.add(msg); // Adds the raw message map to the internal list.
       if (!_rawController.isClosed) {
-        _rawController.sink.add(List.from(_rawMsgs)); // Adds the updated list to the raw message stream.
+        _rawController.sink.add(
+          List.from(_rawMsgs),
+        ); // Adds the updated list to the raw message stream.
       }
-
 
       // ← instead of notifyListeners(), debounce via your existing helper
       _scheduleUIUpdate(); // Schedules a debounced UI update.
@@ -964,9 +1121,9 @@ class BluetoothManager with ChangeNotifier {
     String sensorValue,
   ) async {
     // Checks if BoxerServer is connected.
-    if (!isDeviceConnected("BoxerServer")) {
+    if (!isDeviceConnected(DeviceConfig.boxerServer)) {
       debugPrint(
-          "❌ 🔴 BoxerServer not connected. Skipping sendDataToBoxerServer.",
+        "❌ 🔴 BoxerServer not connected. Skipping sendDataToBoxerServer.",
       );
       return; // Exits if BoxerServer is not connected.
     }
@@ -979,9 +1136,13 @@ class BluetoothManager with ChangeNotifier {
         timestamp: timestamp,
         sensorValue: sensorValue,
       );
-    } catch (e, stackTrace) { // Handles errors during sending.
+    } catch (e, stackTrace) {
+      // Handles errors during sending.
       debugPrint("➡️ ❌ 🔴 Error sending data to BoxerServer: $e");
-      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(
+        e,
+        stackTrace: stackTrace,
+      ); // Reports error to Sentry.
     }
   }
 
@@ -997,28 +1158,37 @@ class BluetoothManager with ChangeNotifier {
     // If a writable characteristic is already cached.
     if (writableCharacteristic != null) {
       try {
-        final dataToSend = utf8.encode(trimmedMessage); // Encodes the message to UTF-8 bytes.
+        final dataToSend = utf8.encode(
+          trimmedMessage,
+        ); // Encodes the message to UTF-8 bytes.
         // Writes data to the cached characteristic.
         await writableCharacteristic!.write(dataToSend, withoutResponse: false);
         debugPrint("Message sent via cached characteristic: $trimmedMessage");
         return; // Exits after successful send.
-      } catch (e, stackTrace) { // Handles errors sending via cached characteristic.
+      } catch (e, stackTrace) {
+        // Handles errors sending via cached characteristic.
         debugPrint("Error sending message via cached characteristic: $e");
-        _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
+        _captureSentryException(
+          e,
+          stackTrace: stackTrace,
+        ); // Reports error to Sentry.
         debugPrint("Falling back to service discovery.");
         // No return here, will fall through to service discovery.
       }
-    } else { // If no cached characteristic.
+    } else {
+      // If no cached characteristic.
       debugPrint(
-          "No cached writable characteristic found. Falling back to service discovery.",
+        "No cached writable characteristic found. Falling back to service discovery.",
       );
     }
 
     // Fallback: find the first available connected device.
     BluetoothDevice? fallbackDevice;
     String fallbackDeviceName = "";
-    for (final entry in connectedBluetoothDevices.entries) { // Iterates through connected devices.
-      if (entry.value != null) { // If a device is found.
+    for (final entry in connectedBluetoothDevices.entries) {
+      // Iterates through connected devices.
+      if (entry.value != null) {
+        // If a device is found.
         fallbackDevice = entry.value;
         fallbackDeviceName = entry.key;
         break; // Uses the first one found.
@@ -1038,9 +1208,13 @@ class BluetoothManager with ChangeNotifier {
         fallbackDeviceName,
         trimmedMessage,
       );
-    } catch (e, stackTrace) { // Handles errors during fallback send.
+    } catch (e, stackTrace) {
+      // Handles errors during fallback send.
       debugPrint("Error sending message via service discovery: $e");
-      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(
+        e,
+        stackTrace: stackTrace,
+      ); // Reports error to Sentry.
     }
   }
 
@@ -1051,28 +1225,41 @@ class BluetoothManager with ChangeNotifier {
     String message, // The message string to send.
   ) async {
     try {
-      final services = await device.discoverServices(); // Discovers services on the device.
-      final List<Future<void>> writeFutures = []; // List to hold write operations.
-      for (var service in services) { // Iterates through services.
-        for (var characteristic in service.characteristics) { // Iterates through characteristics.
-          if (characteristic.properties.write) { // Checks if the characteristic is writable.
+      final services = await device
+          .discoverServices(); // Discovers services on the device.
+      final List<Future<void>> writeFutures =
+          []; // List to hold write operations.
+      for (var service in services) {
+        // Iterates through services.
+        for (var characteristic in service.characteristics) {
+          // Iterates through characteristics.
+          if (characteristic.properties.write) {
+            // Checks if the characteristic is writable.
             debugPrint(
-                "Discovered writable characteristic ${characteristic.uuid} on $deviceName",
+              "Discovered writable characteristic ${characteristic.uuid} on $deviceName",
             );
             // Adds the write operation to the list of futures.
             writeFutures.add(
               characteristic
-                  .write(utf8.encode(message), withoutResponse: false) // Writes the message.
-                  .then( // On successful write.
+                  .write(
+                    utf8.encode(message),
+                    withoutResponse: false,
+                  ) // Writes the message.
+                  .then(
+                    // On successful write.
                     (_) => debugPrint(
-                        "Message sent to $deviceName via ${characteristic.uuid}: $message",
+                      "Message sent to $deviceName via ${characteristic.uuid}: $message",
                     ),
                   )
-                  .catchError((error, stackTrace) { // On write error.
+                  .catchError((error, stackTrace) {
+                    // On write error.
                     debugPrint(
-                        "Error sending message via ${characteristic.uuid} on $deviceName: $error",
+                      "Error sending message via ${characteristic.uuid} on $deviceName: $error",
                     );
-                    _captureSentryException(error, stackTrace: stackTrace); // Reports error to Sentry.
+                    _captureSentryException(
+                      error,
+                      stackTrace: stackTrace,
+                    ); // Reports error to Sentry.
                   }),
             );
           }
@@ -1081,14 +1268,19 @@ class BluetoothManager with ChangeNotifier {
       // If no writable characteristics were found.
       if (writeFutures.isEmpty) {
         debugPrint(
-            "No writable characteristics found on $deviceName to send message.",
+          "No writable characteristics found on $deviceName to send message.",
         );
-      } else { // If writable characteristics were found, wait for all writes to complete.
+      } else {
+        // If writable characteristics were found, wait for all writes to complete.
         await Future.wait(writeFutures);
       }
-    } catch (e, stackTrace) { // Handles errors during service discovery or message sending.
+    } catch (e, stackTrace) {
+      // Handles errors during service discovery or message sending.
       debugPrint("Error in _sendMessageToDevice for $deviceName: $e");
-      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(
+        e,
+        stackTrace: stackTrace,
+      ); // Reports error to Sentry.
     }
   }
 
@@ -1101,21 +1293,28 @@ class BluetoothManager with ChangeNotifier {
       return;
     }
     List<Future<void>> sendFutures = []; // List to hold send operations.
-    for (var entry in connectedBluetoothDevices.entries) { // Iterates through connected devices map.
+    for (var entry in connectedBluetoothDevices.entries) {
+      // Iterates through connected devices map.
       final deviceName = entry.key;
       final BluetoothDevice? device = entry.value;
-      if (device != null) { // If the device object exists (is connected).
+      if (device != null) {
+        // If the device object exists (is connected).
         // Adds the send operation to the list.
         sendFutures.add(
           _sendMessageToDevice(device, deviceName, trimmedMessage).catchError((
             e,
             stackTrace,
-          ) { // Handles errors for individual device sends.
+          ) {
+            // Handles errors for individual device sends.
             debugPrint("Error sending message to $deviceName: $e");
-            _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
+            _captureSentryException(
+              e,
+              stackTrace: stackTrace,
+            ); // Reports error to Sentry.
           }),
         );
-      } else { // If device object is null.
+      } else {
+        // If device object is null.
         debugPrint("Device $deviceName is not connected.");
       }
     }
@@ -1124,7 +1323,9 @@ class BluetoothManager with ChangeNotifier {
       debugPrint("No connected devices available to send the message.");
       return;
     }
-    await Future.wait(sendFutures); // Waits for all send operations to complete.
+    await Future.wait(
+      sendFutures,
+    ); // Waits for all send operations to complete.
   }
 
   // Sends structured data specifically to the 'BoxerServer' device.
@@ -1143,21 +1344,34 @@ class BluetoothManager with ChangeNotifier {
       "timestamp": timestamp,
       "sensorValue": sensorValue,
     };
-    final dataMessage = jsonEncode(dataMap); // Encodes the map to a JSON string.
+    final dataMessage = jsonEncode(
+      dataMap,
+    ); // Encodes the map to a JSON string.
     debugPrint("Sending data to BoxerServer (JSON): $dataMessage");
 
-    final boxerServerDevice = connectedBluetoothDevices["BoxerServer"]; // Gets the BoxerServer device object.
-    if (boxerServerDevice == null) { // If BoxerServer is not connected.
+    final boxerServerDevice =
+        connectedBluetoothDevices[DeviceConfig
+            .boxerServer]; // Gets the BoxerServer device object.
+    if (boxerServerDevice == null) {
+      // If BoxerServer is not connected.
       debugPrint("🚀 ❌ BoxerServer is not connected. Cannot send data.");
       return;
     }
     try {
       // Sends the JSON message to the BoxerServer device.
-      await _sendMessageToDevice(boxerServerDevice, "BoxerServer", dataMessage);
+      await _sendMessageToDevice(
+        boxerServerDevice,
+        DeviceConfig.boxerServer,
+        dataMessage,
+      );
       debugPrint("📤 ➡️ Data sent to BoxerServer successfully.");
-    } catch (e, stackTrace) { // Handles errors during sending.
+    } catch (e, stackTrace) {
+      // Handles errors during sending.
       debugPrint("❌ Error sending data to BoxerServer: $e");
-      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(
+        e,
+        stackTrace: stackTrace,
+      ); // Reports error to Sentry.
     }
   }
 
@@ -1168,23 +1382,28 @@ class BluetoothManager with ChangeNotifier {
     _notifyDebounce?.cancel(); // Cancels any active UI debounce timer.
     try {
       _messageStreamController.close(); // Closes the message stream controller.
-      _disconnectionStreamController.close(); // Closes the disconnection stream controller.
+      _disconnectionStreamController
+          .close(); // Closes the disconnection stream controller.
       _rawController.close(); // Closes the raw message stream controller.
       // Cancels all active notification subscriptions.
       _notificationSubscriptions.forEach((_, subscription) {
         subscription.cancel();
       });
       _notificationSubscriptions.clear(); // Clears the map of subscriptions.
-    } catch (e, stackTrace) { // Handles errors during resource cleanup.
+    } catch (e, stackTrace) {
+      // Handles errors during resource cleanup.
       debugPrint("Error during BluetoothManager dispose: $e");
-      _captureSentryException(e, stackTrace: stackTrace); // Reports error to Sentry.
+      _captureSentryException(
+        e,
+        stackTrace: stackTrace,
+      ); // Reports error to Sentry.
     }
     // Disposes all device connection ValueNotifiers.
     _deviceConnectionNotifiers.forEach((_, notifier) => notifier.dispose());
     // Disposes the connected devices count ValueNotifier.
     _connectedDevicesCount.dispose();
     _disposed = true; // Sets the disposed flag to true.
-    super.dispose(); // Calls the dispose method of the superclass (ChangeNotifier).
+    super
+        .dispose(); // Calls the dispose method of the superclass (ChangeNotifier).
   }
 }
-

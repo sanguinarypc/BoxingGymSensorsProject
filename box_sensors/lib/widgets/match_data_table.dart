@@ -1,13 +1,14 @@
 // lib/widgets/match_data_table.dart
 import 'package:flutter/material.dart';
+import 'package:box_sensors/models/sensor_data.dart';
 
 class MatchDataTable extends StatelessWidget {
-  final Stream<List<DataRow>> tableStream;
+  final List<SensorData> rows;
   final double Function() tableWidthProvider;
 
   const MatchDataTable({
     super.key,
-    required this.tableStream,
+    required this.rows,
     required this.tableWidthProvider,
   });
 
@@ -27,10 +28,8 @@ class MatchDataTable extends StatelessWidget {
             _header(context, cellWidth),
             const Divider(height: 1, thickness: 1),
             Expanded(
-              child: StreamBuilder<List<DataRow>>(
-                stream: tableStream,
-                builder: (ctx, snap) {
-                  final rows = snap.data ?? [];
+              child: Builder(
+                builder: (context) {
                   if (rows.isEmpty) {
                     return const Center(child: Text('No Sensor(s) data.'));
                   }
@@ -84,21 +83,29 @@ class MatchDataTable extends StatelessWidget {
     );
   }
 
-  Widget _buildRow(DataRow row, double w) {
+  Widget _buildRow(SensorData data, double w) {
+    final cells = [
+      data.device,
+      data.punchBy,
+      data.punchCount,
+      data.timestamp,
+      data.sensorValue,
+    ];
+
     return Row(
-      children: row.cells.map((c) {
+      children: cells.map((text) {
         return SizedBox(
           width: w,
           child: Padding(
             padding: const EdgeInsets.all(2),
             child: Center(
-              child: DefaultTextStyle.merge(
+              child: Text(
+                text,
                 style: const TextStyle(
                   fontSize: 14,
                   overflow: TextOverflow.visible,
-                  // you could also use ellipsis: TextOverflow.ellipsis
                 ),
-                child: c.child,
+                textAlign: TextAlign.center,
               ),
             ),
           ),

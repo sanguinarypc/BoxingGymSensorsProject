@@ -1,5 +1,6 @@
 // lib/widgets/status_bar_indicator.dart
 import 'package:flutter/material.dart';
+import 'package:box_sensors/utils/device_config.dart';
 import 'bluetooth_indicator.dart';
 
 class StatusBarIndicator extends StatefulWidget {
@@ -41,15 +42,15 @@ class _StatusBarIndicatorState extends State<StatusBarIndicator> {
               children: [
                 BluetoothIndicator(
                   isConnected: widget.isConnectedDevice1,
-                  deviceLabel: 'BlueBoxer',
+                  deviceLabel: DeviceConfig.blueBoxer,
                 ),
                 BluetoothIndicator(
                   isConnected: widget.isConnectedDevice3,
-                  deviceLabel: 'BoxerServer',
+                  deviceLabel: DeviceConfig.boxerServer,
                 ),
                 BluetoothIndicator(
                   isConnected: widget.isConnectedDevice2,
-                  deviceLabel: 'RedBoxer',
+                  deviceLabel: DeviceConfig.redBoxer,
                 ),
               ],
             ),
