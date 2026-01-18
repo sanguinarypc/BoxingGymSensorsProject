@@ -262,58 +262,35 @@ class _StartMatchScreenState extends ConsumerState<StartMatchScreen> {
               Expanded(
                 child: Consumer(
                   builder: (context, ref, child) {
-                    final sensorStream = ref.watch(sensorStreamProvider);
+                    // Watch the manager directly for updates (debounced by manager)
+                    final manager = ref.watch(bluetoothManagerProvider);
+                    final msgs = manager.sensorDataList;
 
-                    return sensorStream.when(
-                      data: (data) {
-                        final msgs = data;
-                        final blue = msgs
-                            .where((m) => m.punchBy == DeviceConfig.blueBoxer)
-                            .length;
-                        final red = msgs
-                            .where((m) => m.punchBy == DeviceConfig.redBoxer)
-                            .length;
+                    final blue = msgs
+                        .where((m) => m.punchBy == DeviceConfig.blueBoxer)
+                        .length;
+                    final red = msgs
+                        .where((m) => m.punchBy == DeviceConfig.redBoxer)
+                        .length;
 
-                        return Column(
-                          children: [
-                            DisplayRow(
-                              fontSize: 14,
-                              title:
-                                  'Punches ➜ ${DeviceConfig.blueBoxer}: $blue - ${DeviceConfig.redBoxer}: $red',
-                            ),
-                            Expanded(
-                              child: MatchDataTable(
-                                rows: data,
-                                tableWidthProvider: () {
-                                  final w =
-                                      MediaQuery.of(context).size.width * 0.95;
-                                  return w < 350 ? 350 : w;
-                                },
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                      loading: () => Column(
-                        children: [
-                          DisplayRow(
-                            fontSize: 14,
-                            title:
-                                'Punches ➜ ${DeviceConfig.blueBoxer}: 0 - ${DeviceConfig.redBoxer}: 0',
+                    return Column(
+                      children: [
+                        DisplayRow(
+                          fontSize: 14,
+                          title:
+                              'Punches ➜ ${DeviceConfig.blueBoxer}: $blue - ${DeviceConfig.redBoxer}: $red',
+                        ),
+                        Expanded(
+                          child: MatchDataTable(
+                            rows: msgs,
+                            tableWidthProvider: () {
+                              final w =
+                                  MediaQuery.of(context).size.width * 0.95;
+                              return w < 350 ? 350 : w;
+                            },
                           ),
-                          Expanded(
-                            child: MatchDataTable(
-                              rows: [],
-                              tableWidthProvider: () {
-                                final w =
-                                    MediaQuery.of(context).size.width * 0.95;
-                                return w < 350 ? 350 : w;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      error: (err, stack) => Center(child: Text('Error: $err')),
+                        ),
+                      ],
                     );
                   },
                 ),

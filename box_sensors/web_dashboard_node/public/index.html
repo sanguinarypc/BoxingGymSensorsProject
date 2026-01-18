@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Box Sensors Live Dashboard</title>
+    <!-- Tailwind CSS (via CDN for instant deployment without build) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 950: '#020617' } // custom deep dark
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom animations */
+        @keyframes fade-in-down {
+            0% {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-enter {
+            animation: fade-in-down 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white font-sans antialiased">
+    <div class="p-4 md:p-8">
+        <!-- Header -->
+        <header class="mb-4 flex justify-between items-center max-w-6xl mx-auto border-b border-slate-800 pb-2">
+            <div>
+                <h1
+                    class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                    BOX SENSORS LIVE
+                </h1>
+                <p class="text-slate-400 text-sm mt-1">Real-time match telemetry (Node.js Edition)</p>
+            </div>
+            <div class="text-right">
+                <div class="text-xs text-slate-500 uppercase tracking-widest mb-1">Status</div>
+                <div class="flex items-center gap-4 justify-end">
+                    <!-- Reset Button -->
+                    <button onclick="resetData()"
+                        class="text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-3 py-1 rounded transition-colors uppercase tracking-wider font-bold">
+                        Reset Data
+                    </button>
+
+                    <div class="flex items-center gap-2" id="statusContainer">
+                        <span class="relative flex h-3 w-3">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-500 opacity-75"
+                                id="statusPing"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-slate-500" id="statusDot"></span>
+                        </span>
+                        <span class="font-mono text-slate-500" id="statusText">WAITING</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Scorecard (Round History) -->
+        <div class="max-w-6xl mx-auto mb-4" id="scorecardContainer" style="display: none;">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-800 bg-slate-950/30 flex justify-between items-center">
+                    <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400">Match Scorecard</h3>
+                    <div class="text-xs font-mono font-bold">
+                        <span class="text-blue-400">BLUE CORNER</span> <span class="text-slate-600 px-1">VS</span> <span
+                            class="text-red-400">RED CORNER</span>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="flex flex-wrap gap-4 justify-center" id="roundHistory">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards Container -->
+        <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+
+            <!-- BLUE CORNER COLUMN -->
+            <div class="flex flex-col gap-4">
+                <!-- Blue Total (Big) -->
+                <div
+                    class="bg-slate-900/80 border border-blue-900/50 rounded-xl p-4 relative overflow-hidden group shadow-[0_0_30px_rgba(59,130,246,0.15)]">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <div class="w-32 h-32 bg-blue-500 rounded-full blur-3xl"></div>
+                    </div>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="text-blue-500 font-black tracking-widest text-lg uppercase mb-2">BLUE CORNER</h3>
+                            <h2 class="text-blue-400 font-bold tracking-wider text-sm uppercase mb-1">Match Total</h2>
+                            <h1 class="text-6xl font-black text-white" id="blueTotal">0</h1>
+                        </div>
+                        <div class="text-right">
+                            <h2 class="text-blue-500/50 font-bold tracking-wider text-xs uppercase mb-1">Current Round
+                            </h2>
+                            <div class="text-3xl font-bold text-blue-200" id="blueRound">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RED CORNER COLUMN -->
+            <div class="flex flex-col gap-4">
+                <!-- Red Total (Big) -->
+                <div
+                    class="bg-slate-900/80 border border-red-900/50 rounded-xl p-4 relative overflow-hidden group shadow-[0_0_30px_rgba(239,68,68,0.15)]">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <div class="w-32 h-32 bg-red-500 rounded-full blur-3xl"></div>
+                    </div>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="text-red-500 font-black tracking-widest text-lg uppercase mb-2">RED CORNER</h3>
+                            <h2 class="text-red-400 font-bold tracking-wider text-sm uppercase mb-1">Match Total</h2>
+                            <h1 class="text-6xl font-black text-white" id="redTotal">0</h1>
+                        </div>
+                        <div class="text-right">
+                            <h2 class="text-red-500/50 font-bold tracking-wider text-xs uppercase mb-1">Current Round
+                            </h2>
+                            <div class="text-3xl font-bold text-red-200" id="redRound">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Data Table -->
+        <div class="max-w-6xl mx-auto">
+            <h3 class="text-lg font-bold mb-2 flex items-center gap-2">
+                <span class="w-1 h-6 bg-purple-500 rounded-full"></span>
+                Live Feed
+            </h3>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl flex flex-col">
+                <!-- Dynamic Height: Tweak to show approx 4-5 rows cleanly on 1080p -->
+                <div class="overflow-x-auto overflow-y-auto" style="height: calc(100vh - 610px); min-height: 200px;">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="sticky top-0 z-10 bg-slate-900 shadow-sm">
+                            <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider">
+                                <th class="p-2 font-semibold">Time</th>
+                                <th class="p-2 font-semibold">Round</th>
+                                <th class="p-2 font-semibold text-center">Punch By</th>
+                                <th class="p-2 font-semibold text-right">Force (mV)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-slate-800">
+                            <tr>
+                                <td colspan="4" class="p-12 text-center text-slate-500 italic">Waiting...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logic -->
+    <script>
+        let lastDataJSON = '';
+        const OFFLINE_THRESHOLD_MS = 10000; // 10 seconds without new data = offline
+        const STATUS_UI = {
+            online: { text: 'LIVE', color: 'green', ping: true },
+            offline: { text: 'OFFLINE', color: 'red', ping: false },
+            waiting: { text: 'WAITING', color: 'slate', ping: true }
+        };
+
+        function updateStatus(state) {
+            const config = STATUS_UI[state];
+            const colorClass = `text-${config.color}-400`;
+            const bgClass = `bg-${config.color}-500`;
+
+            // Text
+            const textEl = document.getElementById('statusText');
+            textEl.innerText = config.text;
+            textEl.className = `font-mono font-bold ${colorClass}`;
+
+            // Dot
+            const dotEl = document.getElementById('statusDot');
+            dotEl.className = `relative inline-flex rounded-full h-3 w-3 ${bgClass}`;
+
+            // Ping Animation
+            const pingEl = document.getElementById('statusPing');
+            pingEl.className = `absolute inline-flex h-full w-full rounded-full ${bgClass} opacity-75 ${config.ping ? 'animate-ping' : 'hidden'}`;
+        }
+
+        async function updateDashboard() {
+            try {
+                // Fetch from our Node.js API with cache-busting timestamp
+                const response = await fetch('/api/data?t=' + new Date().getTime());
+                const data = await response.json();
+
+                if (!Array.isArray(data)) return;
+
+                // Stop flashing: Only update DOM if data has changed
+                const currentDataJSON = JSON.stringify(data);
+                if (currentDataJSON === lastDataJSON) {
+                    return; // No changes, skip implementation
+                }
+                lastDataJSON = currentDataJSON;
+
+                // Update Stats Logic: Group by Round to calculate correct totals
+                const blueStats = { total: 0, currentRound: 0 };
+                const redStats = { total: 0, currentRound: 0 };
+
+                // 1. Group punches by round
+                const rounds = {};
+                data.forEach(p => {
+                    const r = p.round || 1;
+                    if (!rounds[r]) rounds[r] = { blue: 0, red: 0 };
+
+                    const val = parseInt(p.count || 0);
+                    if (p.punchBy === 'BlueBoxer') {
+                        if (val > rounds[r].blue) rounds[r].blue = val;
+                    } else if (p.punchBy === 'RedBoxer') {
+                        if (val > rounds[r].red) rounds[r].red = val;
+                    }
+                });
+
+                // 2. Sum up totals (Max count of each round added together)
+                Object.values(rounds).forEach(r => {
+                    blueStats.total += r.blue;
+                    redStats.total += r.red;
+                });
+
+                // 3. Get Current Round Score (Latest round info)
+                // Assuming data is sorted new->old, the first item has the latest round
+                let maxRound = 0;
+                Object.keys(rounds).forEach(r => {
+                    if (parseInt(r) > maxRound) maxRound = parseInt(r);
+                });
+
+                if (maxRound > 0 && rounds[maxRound]) {
+                    blueStats.currentRound = rounds[maxRound].blue;
+                    redStats.currentRound = rounds[maxRound].red;
+                }
+
+                // Render Scorecard (History)
+                const historyContainer = document.getElementById('roundHistory');
+                const scorecardContainer = document.getElementById('scorecardContainer');
+
+                if (maxRound > 0) {
+                    scorecardContainer.style.display = 'block';
+                    // Generate sorted rounds 1..maxRound
+                    const sortedRounds = Object.keys(rounds).map(r => parseInt(r)).sort((a, b) => a - b);
+
+                    historyContainer.innerHTML = sortedRounds.map(r => {
+                        const score = rounds[r];
+                        // Highlight the winner of the round
+                        const blueClass = score.blue > score.red ? 'text-blue-400 font-bold' : 'text-slate-500';
+                        const redClass = score.red > score.blue ? 'text-red-400 font-bold' : 'text-slate-500';
+
+                        return `
+                            <div class="flex flex-col items-center bg-slate-950/50 border border-slate-800 rounded-lg p-3 min-w-[100px]">
+                                <span class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Round ${r}</span>
+                                <div class="flex items-center gap-3 text-xl font-mono">
+                                    <span class="${blueClass}">${score.blue}</span>
+                                    <span class="text-slate-700">-</span>
+                                    <span class="${redClass}">${score.red}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    scorecardContainer.style.display = 'none';
+                }
+
+                // Update DOM Totals
+                document.getElementById('blueTotal').innerText = blueStats.total;
+                document.getElementById('blueRound').innerText = blueStats.currentRound;
+
+                document.getElementById('redTotal').innerText = redStats.total;
+                document.getElementById('redRound').innerText = redStats.currentRound;
+
+                // Check for "Liveness" by looking at the latest punch time
+                // (Note: This depends on server/client time sync, but good enough for relative checks)
+                // For simplicity here, we assume if we got *any* data in the last poll that changed, we are "Live".
+                // Better approach: check if the latest punch was recent.
+
+                if (data.length > 0) {
+                    // Check if latest punch is recent (within 60 seconds)
+                    // Since punch.time is HH:mm:ss string, it's hard to diff securely without date.
+                    // Instead, we trust that if we are receiving data updates, we are online.
+                    updateStatus('online');
+                } else {
+                    updateStatus('waiting');
+                }
+
+                // Update Table
+                const tbody = document.getElementById('tableBody');
+                if (data.length === 0) {
+                    updateStatus('waiting');
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-12 text-center text-slate-500 italic">Waiting for data...</td></tr>';
+                    return;
+                }
+
+                // Render rows - Limit to last 20 for UI cleanliness even if we rely on more history
+                const displayData = data.slice(0, 50);
+
+                tbody.innerHTML = displayData.map((punch, index) => {
+                    const isBlue = punch.punchBy === 'BlueBoxer';
+                    const badgeClass = isBlue
+                        ? 'bg-blue-900/30 text-blue-400 border-blue-800'
+                        : 'bg-red-900/30 text-red-400 border-red-800';
+                    const roundNum = punch.round || '-';
+
+                    return `
+                        <tr class="hover:bg-slate-800/50 transition-colors animate-enter" style="animation-delay: ${index * 0.02}s">
+                            <td class="p-2 font-mono text-slate-300 text-sm">${punch.time}</td>
+                            <td class="p-2 font-mono text-slate-400 text-sm">R${roundNum}</td>
+                            <td class="p-2 text-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${badgeClass}">
+                                    ${punch.punchBy}
+                                </span>
+                            </td>
+                            <td class="p-2 text-right font-mono text-emerald-400 font-bold text-sm">${punch.force}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (e) {
+                console.error("Poll error", e);
+            }
+        }
+
+        async function resetData() {
+            if (!confirm('Are you sure you want to clear all data?')) return;
+            try {
+                await fetch('/api/data?action=clear');
+                updateDashboard();
+            } catch (e) {
+                alert('Failed to reset');
+            }
+        }
+
+        // Poll every 1 second
+        setInterval(updateDashboard, 1000);
+        updateDashboard();
+    </script>
+</body>
+
+</html>

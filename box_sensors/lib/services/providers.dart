@@ -7,7 +7,6 @@ import 'package:box_sensors/services/bluetooth_manager.dart';
 import 'package:box_sensors/state/timer_state.dart';
 import 'package:box_sensors/Themes/theme_provider.dart';
 import 'package:box_sensors/services/database_helper.dart';
-import 'package:box_sensors/models/sensor_data.dart';
 
 /// A single, app-wide BluetoothManager that starts exactly one scan on creation.
 final bluetoothManagerProvider = ChangeNotifierProvider<BluetoothManager>((
@@ -66,12 +65,4 @@ final databaseHelperProvider = Provider<DatabaseHelper>((ref) {
 final matchesFutureProvider = FutureProvider<List<Map<String, dynamic>>>((ref) {
   final db = ref.read(databaseHelperProvider);
   return db.fetchMatches();
-});
-
-/// Exposes the live stream of sensor data from the BluetoothManager.
-final sensorStreamProvider = StreamProvider<List<SensorData>>((ref) {
-  final stream = ref.watch(
-    bluetoothManagerProvider.select((m) => m.messageStream),
-  );
-  return stream;
 });

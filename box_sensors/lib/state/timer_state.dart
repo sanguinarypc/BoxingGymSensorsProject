@@ -304,6 +304,7 @@ class TimerState with ChangeNotifier {
           eventId: _eventId,
         );
         _bluetoothManager.setCurrentRoundId(roundId);
+        _bluetoothManager.setCurrentRoundNumber(_round);
         _bluetoothManager.setCurrentMatchId(_matchId);
       } catch (e) {
         debugPrint("Error inserting round: $e");

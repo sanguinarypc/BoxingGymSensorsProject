@@ -13,6 +13,7 @@ import 'package:box_sensors/services/database_helper.dart'; // Custom class for 
 import 'package:sentry_flutter/sentry_flutter.dart'; // Sentry SDK for error reporting and performance monitoring.
 import 'package:box_sensors/utils/device_config.dart';
 import 'package:box_sensors/models/sensor_data.dart';
+import 'package:http/http.dart' as http;
 
 void _captureSentryException(Object error, {StackTrace? stackTrace}) {
   if (!Sentry.isEnabled) return;
@@ -34,6 +35,8 @@ class BluetoothManager with ChangeNotifier {
   Timer? _notifyDebounce; // ← debounce for ALL UI updates
   // Stores the ID of the currently active round. Null if no round is active.
   int? _currentRoundId;
+  // Stores the relative round number (e.g. 1, 2, 3) for display.
+  int _currentRoundNumber = 1;
   // Stores the ID of the currently active match. Null if no match is active.
   int? _currentMatchId;
   // Flag indicating whether a service discovery process is currently underway.
@@ -217,6 +220,12 @@ class BluetoothManager with ChangeNotifier {
   void setCurrentRoundId(int roundId) {
     _currentRoundId = roundId;
     _safeNotifyListeners(); // Notifies UI listeners about the change.
+  }
+
+  /// Sets current round number (1, 2, 3...).
+  void setCurrentRoundNumber(int number) {
+    _currentRoundNumber = number;
+    _safeNotifyListeners();
   }
 
   /// Sets current match ID.
@@ -1024,6 +1033,17 @@ class BluetoothManager with ChangeNotifier {
           sensorValue,
         ),
       );
+      // Also send to the new Web Dashboard
+      futures.add(
+        _sendDataToWebServer(
+          deviceStr: deviceStr,
+          oppositeDevice: oppositeDevice,
+          punchCount: punchCount,
+          timestamp: timestamp,
+          sensorValue: sensorValue,
+          roundId: _currentRoundNumber,
+        ),
+      );
     }
 
     // fire both off concurrently
@@ -1143,6 +1163,47 @@ class BluetoothManager with ChangeNotifier {
         e,
         stackTrace: stackTrace,
       ); // Reports error to Sentry.
+    }
+  }
+
+  /// Sends data to the external Web Dashboard via HTTP POST.
+  Future<void> _sendDataToWebServer({
+    required String deviceStr,
+    required String oppositeDevice,
+    required String punchCount,
+    required String timestamp,
+    required String sensorValue,
+    required int roundId,
+  }) async {
+    try {
+      final uri = Uri.parse(DeviceConfig.webServerUrl);
+      final body = jsonEncode({
+        "deviceStr": deviceStr,
+        "oppositeDevice": oppositeDevice,
+        "punchCount": punchCount,
+        "timestamp": timestamp,
+        "sensorValue": sensorValue,
+        "roundId": roundId,
+      });
+
+      debugPrint("🌐 Sending data to Web Server ($uri): $body");
+
+      final response = await http.post(
+        uri,
+        headers: {"Content-Type": "application/json"},
+        body: body,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint("✅ 🌐 Data sent to Web Server successfully.");
+      } else {
+        debugPrint(
+          "⚠️ 🌐 Web Server returned status ${response.statusCode}: ${response.body}",
+        );
+      }
+    } catch (e) {
+      debugPrint("❌ 🌐 Error sending specific data to Web Server: $e");
+      // Optional: report to Sentry if critical
     }
   }
 
