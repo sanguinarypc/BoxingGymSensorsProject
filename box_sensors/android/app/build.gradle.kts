@@ -67,7 +67,7 @@ android {
             // ✅ Σύγχρονος τρόπος (R8): shrink/obfuscate/optimize  Enable code shrinking, obfuscation, etc.
             isMinifyEnabled = true
             isShrinkResources = true
-	    // proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro") 
+	        // proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro") 
 
         proguardFiles(
                 // Includes the default ProGuard rules files that are packaged with
