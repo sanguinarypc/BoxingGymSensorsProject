@@ -106,39 +106,59 @@ class TimerState with ChangeNotifier {
     notifyListeners();
   });
 
+  /// Formats seconds into "mm:ss:00" format to match the punch data format (mm:ss:cs).
+  /// We assume 00 centiseconds for these system events as they happen on the second tick.
+  String _formatSystemTime(int totalSeconds) {
+    int minutes = totalSeconds ~/ 60;
+    int seconds = totalSeconds % 60;
+    String minStr = minutes.toString().padLeft(2, '0');
+    String secStr = seconds.toString().padLeft(2, '0');
+    return "$minStr:$secStr:00";
+  }
+
   /// Called once to kick off Round 1 and every subsequent round via the callback.
-  void startCountdown(VoidCallback sendStartRoundCallback) => _safeCall(() {
-    _sendSettingsAndStartRoundCallback = sendStartRoundCallback;
-    _matchState = MatchState.running;
-    _round = 1;
-    _countdown = roundTime;
-    _isStartButtonDisabled = true;
-    _isPauseButtonDisabled = false;
-    _isEndButtonDisabled = false;
-    _isResumeButtonDisabled = true;
-    notifyListeners();
+  void startCountdown(VoidCallback sendStartRoundCallback) =>
+      _safeCall(() async {
+        _sendSettingsAndStartRoundCallback = sendStartRoundCallback;
+        _matchState = MatchState.running;
+        _round = 1;
+        _countdown = roundTime;
+        _isStartButtonDisabled = true;
+        _isPauseButtonDisabled = false;
+        _isEndButtonDisabled = false;
+        _isResumeButtonDisabled = true;
+        notifyListeners();
 
-    _insertRound();
-    _sendSettingsAndStartRoundCallback?.call();
-
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      _safeCall(() {
-        if (_countdown > 0) {
-          _countdown--;
-          if (_countdown <= 10) _playSound();
-          notifyListeners();
-        } else {
-          t.cancel();
-          if (_round < rounds) {
-            _startBreak();
-          } else {
-            _endMatch();
-          }
+        _insertRound();
+        // Reset server data if this is the start of the match (Round 1)
+        if (_round == 1) {
+          await _bluetoothManager.resetServerData();
         }
+        _bluetoothManager.sendSystemEvent(
+          _round,
+          "RoundStart",
+          timestamp: _formatSystemTime(0),
+        );
+        _sendSettingsAndStartRoundCallback?.call();
+
+        _timer?.cancel();
+        _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+          _safeCall(() {
+            if (_countdown > 0) {
+              _countdown--;
+              if (_countdown <= 10) _playSound();
+              notifyListeners();
+            } else {
+              t.cancel();
+              if (_round < rounds) {
+                _startBreak();
+              } else {
+                _endMatch();
+              }
+            }
+          });
+        });
       });
-    });
-  });
 
   void _startRound() => _safeCall(() {
     _countdown = roundTime;
@@ -147,6 +167,11 @@ class TimerState with ChangeNotifier {
 
     _sendSettingsAndStartRoundCallback?.call();
     _insertRound();
+    _bluetoothManager.sendSystemEvent(
+      _round,
+      "RoundStart",
+      timestamp: _formatSystemTime(0),
+    );
 
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
@@ -171,6 +196,12 @@ class TimerState with ChangeNotifier {
   void _startBreak() => _safeCall(() {
     _countdown = breakTime;
     _matchState = MatchState.breakTime;
+    _matchState = MatchState.breakTime;
+    _bluetoothManager.sendSystemEvent(
+      _round,
+      "RoundEnd",
+      timestamp: _formatSystemTime(0),
+    );
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _safeCall(() {
@@ -203,6 +234,18 @@ class TimerState with ChangeNotifier {
     _countdown = 0;
     _round = 1;
     resetButtonStates();
+    // Send Match End event for the *final* round that just finished
+    // Note: _round has been reset to 1, but we likely want to record the last round.
+    // However, logic above increments _round. If we are here, we finished the last round.
+    // So current _round is 1. We might need to track `rounds`.
+    // Actually, let's just send "MatchEnd" with round 0 or generic updates?
+    // Or we send it for `rounds` (max rounds)?
+    // The dashboard sorts by round ID.
+    _bluetoothManager.sendSystemEvent(
+      rounds,
+      "MatchEnd",
+      timestamp: _formatSystemTime(0),
+    );
 
     if (_eventId != null) {
       try {

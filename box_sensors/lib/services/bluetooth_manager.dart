@@ -13,7 +13,7 @@ import 'package:box_sensors/services/database_helper.dart'; // Custom class for 
 import 'package:sentry_flutter/sentry_flutter.dart'; // Sentry SDK for error reporting and performance monitoring.
 import 'package:box_sensors/utils/device_config.dart';
 import 'package:box_sensors/models/sensor_data.dart';
-import 'package:http/http.dart' as http;
+import 'package:box_sensors/services/data_distribution_service.dart';
 
 void _captureSentryException(Object error, {StackTrace? stackTrace}) {
   if (!Sentry.isEnabled) return;
@@ -116,7 +116,14 @@ class BluetoothManager with ChangeNotifier {
 
   // Database helper.
   // Instance of DatabaseHelper to interact with the local SQLite database.
+  // Database helper.
+  // Instance of DatabaseHelper to interact with the local SQLite database.
   final DatabaseHelper dbHelper = DatabaseHelper();
+  late final DataDistributionService _distributor;
+
+  BluetoothManager() {
+    _distributor = DataDistributionService(dbHelper);
+  }
 
   // Getters.
   // Provides read-only access to the current round ID.
@@ -1009,14 +1016,14 @@ class BluetoothManager with ChangeNotifier {
     final futures = <Future<void>>[
       // List to hold asynchronous operations.
       // Adds the database insertion operation to the list.
-      _insertDataToDatabase(
-        deviceStr,
-        oppositeDevice,
-        punchCount,
-        timestamp,
-        sensorValue,
-        roundId,
-        matchId,
+      _distributor.saveToDatabase(
+        deviceStr: deviceStr,
+        oppositeDevice: oppositeDevice,
+        punchCount: punchCount,
+        timestamp: timestamp,
+        sensorValue: sensorValue,
+        roundId: roundId,
+        matchId: matchId,
       ),
     ];
 
@@ -1035,7 +1042,7 @@ class BluetoothManager with ChangeNotifier {
       );
       // Also send to the new Web Dashboard
       futures.add(
-        _sendDataToWebServer(
+        _distributor.sendToWebServer(
           deviceStr: deviceStr,
           oppositeDevice: oppositeDevice,
           punchCount: punchCount,
@@ -1048,38 +1055,6 @@ class BluetoothManager with ChangeNotifier {
 
     // fire both off concurrently
     Future.wait(futures); // Executes all operations in the list concurrently.
-  }
-
-  /// Insert data into the database for StartMatch mode.
-  // Inserts a message record into the local SQLite database.
-  Future<void> _insertDataToDatabase(
-    String deviceStr,
-    String oppositeDevice,
-    String punchCount,
-    String timestamp,
-    String sensorValue,
-    int roundId,
-    int? matchId,
-  ) async {
-    try {
-      // Calls the DatabaseHelper to insert the message.
-      await dbHelper.insertMessage(
-        deviceStr,
-        oppositeDevice,
-        punchCount,
-        timestamp,
-        sensorValue,
-        roundId,
-        matchId,
-      );
-    } catch (e, stackTrace) {
-      // Handles errors during database insertion.
-      debugPrint("❌ 💾 🔴 Error inserting message into DB: $e");
-      _captureSentryException(
-        e,
-        stackTrace: stackTrace,
-      ); // Reports error to Sentry.
-    }
   }
 
   /// Bulk‑load a bunch of historical rows from the 'messages' table.
@@ -1163,47 +1138,6 @@ class BluetoothManager with ChangeNotifier {
         e,
         stackTrace: stackTrace,
       ); // Reports error to Sentry.
-    }
-  }
-
-  /// Sends data to the external Web Dashboard via HTTP POST.
-  Future<void> _sendDataToWebServer({
-    required String deviceStr,
-    required String oppositeDevice,
-    required String punchCount,
-    required String timestamp,
-    required String sensorValue,
-    required int roundId,
-  }) async {
-    try {
-      final uri = Uri.parse(DeviceConfig.webServerUrl);
-      final body = jsonEncode({
-        "deviceStr": deviceStr,
-        "oppositeDevice": oppositeDevice,
-        "punchCount": punchCount,
-        "timestamp": timestamp,
-        "sensorValue": sensorValue,
-        "roundId": roundId,
-      });
-
-      debugPrint("🌐 Sending data to Web Server ($uri): $body");
-
-      final response = await http.post(
-        uri,
-        headers: {"Content-Type": "application/json"},
-        body: body,
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint("✅ 🌐 Data sent to Web Server successfully.");
-      } else {
-        debugPrint(
-          "⚠️ 🌐 Web Server returned status ${response.statusCode}: ${response.body}",
-        );
-      }
-    } catch (e) {
-      debugPrint("❌ 🌐 Error sending specific data to Web Server: $e");
-      // Optional: report to Sentry if critical
     }
   }
 
@@ -1434,6 +1368,30 @@ class BluetoothManager with ChangeNotifier {
         stackTrace: stackTrace,
       ); // Reports error to Sentry.
     }
+  }
+
+  /// Sends a System Event to the Web Server (e.g. Round Start/End) to ensure
+  /// the dashboard logs the round even if no punches occurred.
+  /// [timestamp] is optional; if provided, it's used as the visual timestamp
+  /// (e.g. "03:00:00"). If null, current epoch is used (as string).
+  Future<void> sendSystemEvent(
+    int roundId,
+    String eventType, {
+    String? timestamp,
+  }) async {
+    await _distributor.sendToWebServer(
+      deviceStr: 'System',
+      oppositeDevice: 'System',
+      punchCount: '0',
+      timestamp: timestamp ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      sensorValue: eventType,
+      roundId: roundId,
+    );
+  }
+
+  /// Clears the data on the Web Server (Dashboard).
+  Future<void> resetServerData() async {
+    await _distributor.resetServerData();
   }
 
   @override
