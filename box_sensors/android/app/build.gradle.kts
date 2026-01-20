@@ -1,13 +1,14 @@
 // --- imports ---
-import java.util.Properties
 import java.io.FileInputStream
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 // Προαιρετικό: αν θες να χρησιμοποιήσεις enum αντί για string στο ndk.debugSymbolLevel
 // import com.android.build.api.dsl.DebugSymbolLevel
 
-plugins {  // (χωρίς version στο plugins block εδώ)
+plugins { // (χωρίς version στο plugins block εδώ)
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")  // Μπορεί clsνα μείνει έτσι. Εναλλακτικά: id("kotlin-android") 
+    id("org.jetbrains.kotlin.android") // Μπορεί clsνα μείνει έτσι. Εναλλακτικά: id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin") // Το Flutter plugin ΜΕΤΑ τα Android/Kotlin plugins
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
 }
@@ -35,15 +36,23 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // ✅ ADD THIS block to include Kotlin sources in src/main/kotlin mostly not realy need in vs code
+    sourceSets {
+        getByName("main") {
+            java.srcDirs("src/main/java", "src/main/kotlin")
+        }
+    }    
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.sanguinarypc.box_sensors"
+
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion  // 28
+        minSdk = flutter.minSdkVersion // 28
         targetSdk = 36 // flutter.targetSdkVersion  // 35
-        versionCode =  flutter.versionCode  // 2
-        versionName =  flutter.versionName  // "1.0.1"
+        versionCode = flutter.versionCode // 2
+        versionName = flutter.versionName // "1.0.1"
     }
 
     signingConfigs {
@@ -52,10 +61,12 @@ android {
             // Use null-safe access and provide defaults or handle missing properties gracefully
             keyAlias = keystoreProperties["keyAlias"] as? String ?: ""
             keyPassword = keystoreProperties["keyPassword"] as? String ?: ""
-            storeFile = keystoreProperties["storeFile"]?.let { rootProject.file(it) } // Use rootProject.file for consistency
+            storeFile =
+                keystoreProperties["storeFile"]?.let { rootProject.file(it) } // Use rootProject.file for consistency
             storePassword = keystoreProperties["storePassword"] as? String ?: ""
+
             // Αν θέλεις αυστηρό έλεγχο:
-            // It's recommended to check if the storeFile exists before assigning		
+            // It's recommended to check if the storeFile exists before assigning
             // if (storeFile?.exists() == false) {
             //     throw GradleException("Keystore file not found: ${storeFile?.absolutePath}")
             // }
@@ -67,39 +78,41 @@ android {
             // ✅ Σύγχρονος τρόπος (R8): shrink/obfuscate/optimize  Enable code shrinking, obfuscation, etc.
             isMinifyEnabled = true
             isShrinkResources = true
-	        // proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro") 
+            // proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
 
-        proguardFiles(
+            proguardFiles(
                 // Includes the default ProGuard rules files that are packaged with
                 // the Android Gradle plugin. To learn more, go to the section about
                 // R8 configuration files.
                 getDefaultProguardFile("proguard-android-optimize.txt"),
 
                 // Includes a local, custom Proguard rules file
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
-  
-        // signingConfig = signingConfigs.getByName("debug")   // the debug one
-        signingConfig = signingConfigs.getByName("release")
 
-	    // Configure NDK options within the release build type	
+            // signingConfig = signingConfigs.getByName("debug")   // the debug one
+            signingConfig = signingConfigs.getByName("release")
+
+            // Configure NDK options within the release build type
             ndk {
                 // Προτεινόμενο με enum (πιο «καθαρό» για Kotlin DSL)   // Workaround: Use string literal instead of enum reference
                 // debugSymbolLevel = DebugSymbolLevel.FULL
                 // Αν για οποιονδήποτε λόγο «γκρινιάξει» το enum, γύρνα στο string:
                 debugSymbolLevel = "full" // "FULL" | "SYMBOL_TABLE" | "NONE"
+
                 // Προαιρετικό: περιορισμός σε συγκεκριμένα ABIs για μείωση μεγέθους APK/AAB
                 // abiFilters.addAll(listOf("arm64-v8a","armeabi-v7a"))
                 // abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86"))
             }
         }
 
-	// You can configure other build types like debug here if needed
+        // You can configure other build types like debug here if needed
         getByName("debug") {
-	    // Debug specific settings	
+            // Debug specific settings
             isDebuggable = true
             applicationIdSuffix = ".debug"
-	    // (optional) If you really want to override the default debug keystore:	
+
+            // (optional) If you really want to override the default debug keystore:
             // signingConfig = signingConfigs.getByName("debug") // αν θες ρητά
         }
     }
@@ -132,5 +145,4 @@ dependencies {
     implementation("com.google.android.material:material:1.13.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
-    
 }
