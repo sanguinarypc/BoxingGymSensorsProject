@@ -7,6 +7,7 @@ import 'package:box_sensors/services/database_helper.dart';
 import 'package:box_sensors/services/providers.dart';
 import 'package:box_sensors/widgets/settings_header.dart';
 import 'package:box_sensors/widgets/settings_form_card.dart';
+import 'package:box_sensors/widgets/web_server_settings_card.dart';
 import 'package:box_sensors/widgets/card_wdgets.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:box_sensors/services/database_importer.dart';
@@ -15,6 +16,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 // import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter/services.dart';
+import 'package:box_sensors/utils/device_config.dart';
 
 /// Allows parent widgets to request settings reload
 mixin SettingsReloadable on State<SettingsScreen> {
@@ -38,6 +40,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   final roundTimeController = TextEditingController(text: '3');
   final breakTimeController = TextEditingController(text: '120');
   final secondsBeforeRoundBeginsController = TextEditingController(text: '5');
+  final webServerUrlController = TextEditingController();
 
   late final TextEditingController filenameController;
 
@@ -91,16 +94,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       if (!mounted) return;
       if (settings != null) {
         _safeSetState(() {
-          fsrSensitivityController.text =
-              (settings['fsrSensitivity'] ?? '800').toString();
-          fsrThresholdController.text =
-              (settings['fsrThreshold'] ?? '200').toString();
+          fsrSensitivityController.text = (settings['fsrSensitivity'] ?? '800')
+              .toString();
+          fsrThresholdController.text = (settings['fsrThreshold'] ?? '200')
+              .toString();
           roundsController.text = (settings['rounds'] ?? '3').toString();
           roundTimeController.text = (settings['roundTime'] ?? '3').toString();
-          breakTimeController.text =
-              (settings['breakTime'] ?? '120').toString();
+          breakTimeController.text = (settings['breakTime'] ?? '120')
+              .toString();
           secondsBeforeRoundBeginsController.text =
               (settings['secondsBeforeRoundBegins'] ?? '5').toString();
+          webServerUrlController.text =
+              (settings['webServerUrl'] ?? DeviceConfig.webServerUrl)
+                  .toString();
         });
       }
     } catch (e) {
@@ -118,8 +124,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       roundsController.text.trim(),
       roundTimeController.text.trim(),
       breakTimeController.text.trim(),
+      breakTimeController.text.trim(),
       secondsBeforeRoundBeginsController.text.trim(),
     ];
+    final webServerUrl = webServerUrlController.text.trim();
+    if (webServerUrl.isEmpty) {
+      _showSnackBar('Please enter a Web Server URL.');
+      return;
+    }
     if (texts.any((t) => t.isEmpty)) {
       _showSnackBar('Please fill in all fields.');
       return;
@@ -172,6 +184,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         roundTime: roundTime,
         breakTime: breakTime,
         secondsBeforeRoundBegins: secondsBeforeStart,
+        webServerUrl: webServerUrl,
       );
       if (!mounted) return;
       _showSnackBar('Settings saved successfully.');
@@ -268,8 +281,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
           messageToShow = 'Database exported successfully';
           debugPrint("SAF Export: File saved to: $savedPath");
         } else {
-          messageToShow =
-              'Export cancelled by user.'; 
+          messageToShow = 'Export cancelled by user.';
           debugPrint("SAF Export: User cancelled the save dialog.");
         }
       }
@@ -285,7 +297,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
             "SAF Export: Temporary export file deleted: ${tempFile.path}",
           );
         } catch (e) {
-          debugPrint("SAF Export: Error deleting temporary export file: $e");          
+          debugPrint("SAF Export: Error deleting temporary export file: $e");
         }
       }
 
@@ -488,23 +500,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     if (!mounted) return;
     final really = await showDialog<bool>(
       context: context,
-      builder:
-          (BuildContext ctx) => AlertDialog(
-            title: const Text('Overwrite Existing Data?'),
-            content: const Text(
-              'Importing this database will replace all your current data. Continue?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('No'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Yes'),
-              ),
-            ],
+      builder: (BuildContext ctx) => AlertDialog(
+        title: const Text('Overwrite Existing Data?'),
+        content: const Text(
+          'Importing this database will replace all your current data. Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
     );
 
     if (!mounted) return;
@@ -600,6 +611,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     roundTimeController.dispose();
     breakTimeController.dispose();
     secondsBeforeRoundBeginsController.dispose();
+    webServerUrlController.dispose();
     filenameController.dispose();
     super.dispose();
   }
@@ -624,46 +636,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
             children: [
               SettingsHeader(onBack: () => widget.onTabChange(0)),
               Expanded(
-                child:
-                    isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : Scrollbar(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.all(4),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                SettingsFormCard(
-                                  theme: theme,
-                                  fsrSensitivityController:
-                                      fsrSensitivityController,
-                                  fsrThresholdController:
-                                      fsrThresholdController,
-                                  roundsController: roundsController,
-                                  roundTimeController: roundTimeController,
-                                  breakTimeController: breakTimeController,
-                                  secondsBeforeRoundBeginsController:
-                                      secondsBeforeRoundBeginsController,
-                                  isLoading: isLoading,
-                                  onSave: _saveSettings,
-                                ),
-                                SampleDataCard(
-                                  theme: theme,
-                                  onInsert: _insertSampleData,
-                                ),
-                                ExportDatabaseCard(
-                                  theme: theme,
-                                  onInsert: _showExportDatabaseDialog,
-                                ),
-                                ImportDatabaseCard(
-                                  theme: theme,
-                                  onInsert: _showImportDatabaseDialog,
-                                ),
-                                AndroidBatterySettingCard(),
-                              ],
-                            ),
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : Scrollbar(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(4),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SettingsFormCard(
+                                theme: theme,
+                                fsrSensitivityController:
+                                    fsrSensitivityController,
+                                fsrThresholdController: fsrThresholdController,
+                                roundsController: roundsController,
+                                roundTimeController: roundTimeController,
+                                breakTimeController: breakTimeController,
+                                secondsBeforeRoundBeginsController:
+                                    secondsBeforeRoundBeginsController,
+                                isLoading: isLoading,
+                                onSave: _saveSettings,
+                              ),
+                              WebServerSettingsCard(
+                                theme: theme,
+                                webServerUrlController: webServerUrlController,
+                                isLoading: isLoading,
+                                onSave: _saveSettings,
+                              ),
+                              SampleDataCard(
+                                theme: theme,
+                                onInsert: _insertSampleData,
+                              ),
+                              ExportDatabaseCard(
+                                theme: theme,
+                                onInsert: _showExportDatabaseDialog,
+                              ),
+                              ImportDatabaseCard(
+                                theme: theme,
+                                onInsert: _showImportDatabaseDialog,
+                              ),
+                              AndroidBatterySettingCard(),
+                            ],
                           ),
                         ),
+                      ),
               ),
             ],
           ),

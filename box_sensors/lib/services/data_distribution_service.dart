@@ -53,7 +53,10 @@ class DataDistributionService {
     required int roundId,
   }) async {
     try {
-      final uri = Uri.parse(DeviceConfig.webServerUrl);
+      final settings = await _dbHelper.fetchSettings();
+      final url =
+          settings?['webServerUrl'] as String? ?? DeviceConfig.webServerUrl;
+      final uri = Uri.parse(url);
       final body = jsonEncode({
         "deviceStr": deviceStr,
         "oppositeDevice": oppositeDevice,
@@ -88,7 +91,10 @@ class DataDistributionService {
   Future<void> resetServerData() async {
     try {
       // Append ?action=clear to the base URL
-      final baseUri = Uri.parse(DeviceConfig.webServerUrl);
+      final settings = await _dbHelper.fetchSettings();
+      final url =
+          settings?['webServerUrl'] as String? ?? DeviceConfig.webServerUrl;
+      final baseUri = Uri.parse(url);
       final uri = baseUri.replace(
         queryParameters: {...baseUri.queryParameters, 'action': 'clear'},
       );

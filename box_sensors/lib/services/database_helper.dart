@@ -50,12 +50,21 @@ class DatabaseHelper {
     return await openDatabase(
       path,
       // Set the database version. Used for schema migrations if the schema changes in future versions.
-      version: 1,
+      version: 2,
       // Callback executed when the database is opened.
       onOpen: (db) async {
         // Ensure foreign key constraints are enabled every time the database is opened.
         // This is crucial for maintaining relational integrity.
         await db.execute("PRAGMA foreign_keys = ON");
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Add webServerUrl column to settings table
+          // Default valid is DeviceConfig.webServerUrl
+          await db.execute(
+            "ALTER TABLE settings ADD COLUMN webServerUrl TEXT DEFAULT '${DeviceConfig.webServerUrl}'",
+          );
+        }
       },
       // Callback executed only when the database is first created (i.e., the db file doesn't exist).
       onCreate: (db, version) async {
@@ -128,7 +137,8 @@ class DatabaseHelper {
             roundTime INTEGER,                         /* Default duration of a round (e.g., in seconds or minutes) */
             breakTime INTEGER,                         /* Default duration of a break between rounds (e.g., in seconds) */
             secondsBeforeRoundBegins INTEGER,          /* Countdown time before a round officially begins */
-            rounds INTEGER                             /* Default number of rounds for a match */
+            rounds INTEGER,                            /* Default number of rounds for a match */
+            webServerUrl TEXT                          /* Dashboard Web Server URL */
           )
         ''');
 
@@ -141,6 +151,7 @@ class DatabaseHelper {
           'breakTime': 120, // Example: 120 seconds (2 minutes) break
           'secondsBeforeRoundBegins': 5,
           'rounds': 3, // Default to 3 rounds
+          'webServerUrl': DeviceConfig.webServerUrl,
         });
       },
     );
@@ -249,6 +260,7 @@ class DatabaseHelper {
     required int breakTime, // Duration of breaks between rounds.
     required int
     secondsBeforeRoundBegins, // Countdown duration before a round starts.
+    required String webServerUrl, // NEW: Web Server URL
   }) async {
     final db = await database; // Get a reference to the database.
 
@@ -263,6 +275,7 @@ class DatabaseHelper {
         'roundTime': roundTime,
         'breakTime': breakTime,
         'secondsBeforeRoundBegins': secondsBeforeRoundBegins,
+        'webServerUrl': webServerUrl,
       },
       where: 'id = ?', // Condition for the update: target the row with id=1.
       whereArgs: [1], // Argument for the condition.
@@ -278,6 +291,7 @@ class DatabaseHelper {
         'roundTime': roundTime,
         'breakTime': breakTime,
         'secondsBeforeRoundBegins': secondsBeforeRoundBegins,
+        'webServerUrl': webServerUrl,
       });
     }
   }
