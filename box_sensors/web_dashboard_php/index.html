@@ -44,7 +44,8 @@
 <body class="min-h-screen bg-slate-950 text-white font-sans antialiased">
     <div class="p-4 md:p-8">
         <!-- Header -->
-        <header class="mb-4 flex justify-between items-center max-w-6xl mx-auto border-b border-slate-800 pb-2">
+        <header
+            class="mb-4 flex flex-col md:flex-row justify-between items-center gap-4 max-w-6xl mx-auto border-b border-slate-800 pb-4">
             <div>
                 <h1
                     class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
@@ -52,9 +53,40 @@
                 </h1>
                 <p class="text-slate-400 text-sm mt-1">Real-time match telemetry</p>
             </div>
-            <div class="text-right">
+
+            <!-- History Button -->
+            <div id="historyControls">
+                <button onclick="openHistoryModal()"
+                    class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-4 py-2 rounded transition-colors uppercase tracking-wider font-bold flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Review Matches
+                </button>
+                <div id="liveControls" class="hidden flex gap-2">
+                    <button onclick="openHistoryModal()"
+                        class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 px-4 py-2 rounded transition-colors uppercase tracking-wider font-bold flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                        </svg>
+                        List
+                    </button>
+                    <button onclick="exitHistoryMode()"
+                        class="text-xs bg-red-900/40 hover:bg-red-900/60 text-red-200 border border-red-800 px-4 py-2 rounded transition-colors uppercase tracking-wider font-bold animate-pulse flex items-center gap-2">
+                        <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
+                        Back to Live
+                    </button>
+                    <div
+                        class="text-[10px] text-center text-slate-500 mt-1 uppercase tracking-widest absolute -bottom-5 w-full left-0">
+                        Viewing History
+                    </div>
+                </div>
+            </div>
+            <div class="text-center md:text-right">
                 <div class="text-xs text-slate-500 uppercase tracking-widest mb-1">Status</div>
-                <div class="flex items-center gap-4 justify-end">
+                <div class="flex items-center gap-4 justify-center md:justify-end">
                     <!-- Reset Button -->
                     <button onclick="resetData()"
                         class="text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-3 py-1 rounded transition-colors uppercase tracking-wider font-bold">
@@ -204,8 +236,31 @@
         </div>
     </div>
 
+
+    <!-- History Modal -->
+    <div id="historyModal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-enter">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+                <h3 class="text-lg font-bold text-slate-200">Match History</h3>
+                <button onclick="closeHistoryModal()" class="text-slate-500 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+            <div id="historyList" class="max-h-[60vh] overflow-y-auto space-y-2 pr-2">
+                <!-- Populated by JS -->
+                <div class="text-center text-slate-500 py-8 italic">Loading...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Logic -->
     <script>
+        let isViewingHistory = false;
+        const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
         let lastDataJSON = '';
         const OFFLINE_THRESHOLD_MS = 10000; // 10 seconds without new data = offline
         const STATUS_UI = {
@@ -233,73 +288,224 @@
             pingEl.className = `absolute inline-flex h-full w-full rounded-full ${bgClass} opacity-75 ${config.ping ? 'animate-ping' : 'hidden'}`;
         }
 
-        async function updateDashboard() {
+        // --- Alert System ---
+        let alertInterval = null;
+        let originalTitle = document.title;
+
+        function playBeep() {
             try {
-                // Fetch from our receiver.php with cache-busting timestamp
-                const response = await fetch('receiver.php?t=' + new Date().getTime());
-                const data = await response.json();
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(440, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.5);
+            } catch (e) { console.log('Audio Blocked'); }
+        }
 
-                if (!Array.isArray(data)) return;
+        function startAlert() {
+            if (alertInterval) return;
+            playBeep();
 
-                // Stop flashing: Only update DOM if data has changed
-                const currentDataJSON = JSON.stringify(data);
-                if (currentDataJSON === lastDataJSON) {
-                    return; // No changes, skip implementation
+            let on = false;
+            if (!originalTitle) originalTitle = document.title;
+            alertInterval = setInterval(() => {
+                document.title = on ? "🔴 LIVE MATCH!" : "Box Sensors Live";
+                on = !on;
+                if (on) playBeep();
+            }, 1000);
+        }
+
+        function stopAlert() {
+            if (alertInterval) {
+                clearInterval(alertInterval);
+                alertInterval = null;
+                if (originalTitle) document.title = originalTitle;
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) stopAlert();
+        });
+
+        async function updateDashboard(overrideData = null) {
+            let data = overrideData;
+            if (!data) {
+                if (isViewingHistory) return;
+                try {
+                    // Fetch from our receiver.php with cache-busting timestamp
+                    const response = await fetch('receiver.php?t=' + new Date().getTime());
+                    data = await response.json();
+                } catch (e) { return; }
+            }
+
+            if (!Array.isArray(data)) return;
+            renderDashboard(data);
+
+        }
+
+        // --- History Logic ---
+        function openHistoryModal() {
+            document.getElementById('historyModal').classList.remove('hidden');
+            loadHistoryList();
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        async function loadHistoryList() {
+            try {
+                const res = await fetch('list_history.php');
+                const files = await res.json();
+                const list = document.getElementById('historyList');
+
+                if (files.length === 0) {
+                    list.innerHTML = '<div class="text-center text-slate-500 py-8 italic">No archived matches found.</div>';
+                    return;
                 }
-                lastDataJSON = currentDataJSON;
 
-                // Update Stats Logic: Group by Round to calculate correct totals
-                const blueStats = { total: 0, currentRound: 0 };
-                const redStats = { total: 0, currentRound: 0 };
+                list.innerHTML = files.map(file => {
+                    let displayTime = file.name; // Fallback
 
-                // 1. Group punches by round
-                const rounds = {};
-                data.forEach(p => {
-                    const r = p.round || 1;
-                    if (!rounds[r]) rounds[r] = { blue: 0, red: 0 };
+                    // Parse filename for UTC timestamp: "match_YYYY-MM-DD_HH-mm-ss.json"
+                    const match = file.filename.match(/match_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})/);
 
-                    const val = parseInt(p.count || 0);
-                    if (p.punchBy === 'BlueBoxer') {
-                        if (val > rounds[r].blue) rounds[r].blue = val;
-                    } else if (p.punchBy === 'RedBoxer') {
-                        if (val > rounds[r].red) rounds[r].red = val;
+                    if (match) {
+                        const [_, y, m, d, h, min, s] = match;
+                        // Construct UTC ISO string (Z at end forces UTC interpretation)
+                        const isoStr = `${y}-${m}-${d}T${h}:${min}:${s}Z`;
+                        const dateObj = new Date(isoStr);
+                        // Convert to Local (Greek) Time
+                        displayTime = `${dateObj.toLocaleDateString('en-GB')} ${dateObj.toLocaleTimeString('en-GB', { hour12: false })}`;
+                    } else {
+                        // Fallback to file modification time if filename parse fails
+                        const dateObj = new Date(file.time * 1000);
+                        displayTime = `${dateObj.toLocaleDateString('en-GB')} ${dateObj.toLocaleTimeString('en-GB', { hour12: false })}`;
                     }
-                });
 
-                // 2. Sum up totals (Max count of each round added together)
-                Object.values(rounds).forEach(r => {
-                    blueStats.total += r.blue;
-                    redStats.total += r.red;
-                });
+                    return `
+                        <div onclick="loadHistoryMatch('${file.filename}')" class="bg-slate-950/50 hover:bg-slate-800 border border-slate-800 p-4 rounded-lg cursor-pointer transition-colors group">
+                            <div class="flex justify-between items-center">
+                                <span class="font-mono text-slate-300 font-bold group-hover:text-blue-400 transition-colors">${displayTime}</span>
+                            </div>
+                            <div class="text-xs text-slate-600 mt-1">${(file.size / 1024).toFixed(1)} KB</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                document.getElementById('historyList').innerText = "Failed to load history.";
+            }
+        }
 
-                // 3. Get Current Round Score (Latest round info)
-                // Assuming data is sorted new->old, the first item has the latest round
-                let maxRound = 0;
-                Object.keys(rounds).forEach(r => {
-                    if (parseInt(r) > maxRound) maxRound = parseInt(r);
-                });
+        async function loadHistoryMatch(filename) {
+            try {
+                closeHistoryModal();
+                isViewingHistory = true;
 
-                if (maxRound > 0 && rounds[maxRound]) {
-                    blueStats.currentRound = rounds[maxRound].blue;
-                    redStats.currentRound = rounds[maxRound].red;
+                // Toggle Buttons
+                document.querySelector('#historyControls > button').classList.add('hidden');
+                document.getElementById('liveControls').classList.remove('hidden');
+
+                // Fetch File
+                const res = await fetch('history/' + filename);
+                const data = await res.json();
+
+                renderDashboard(data); // Using the same render logic but with history data
+
+            } catch (e) {
+                alert("Failed to load match: " + e.message);
+                exitHistoryMode();
+            }
+        }
+
+        function exitHistoryMode() {
+            isViewingHistory = false;
+            // Toggle Buttons
+            document.querySelector('#historyControls > button').classList.remove('hidden');
+            document.getElementById('liveControls').classList.add('hidden');
+
+            // Clear current view and fetch live
+            updateDashboard();
+        }
+
+        // We need to refactor the render logic out of updateDashboard loop if we want to reuse it,
+        // OR just rely on the fact that the next poll will overwrite it.
+        // Wait, loadHistoryMatch calls renderDashboard(data) - but renderDashboard DOES NOT EXIST as a standalone function yet!
+        // The code inside updateDashboard needs to be extracted to 'renderDashboard(data)'.
+
+        // REFACTORING ON THE FLY:
+        // I will copy the rendering logic into a new function renderDashboard(data)
+        // and have updateDashboard call it.
+
+        function renderDashboard(data) {
+            if (!Array.isArray(data)) return;
+
+            // Stop flashing: Only update DOM if data has changed
+            const currentDataJSON = JSON.stringify(data);
+            if (currentDataJSON === lastDataJSON) {
+                return; // No changes, skip implementation
+            }
+            lastDataJSON = currentDataJSON;
+
+            // Update Stats Logic: Group by Round to calculate correct totals
+            const blueStats = { total: 0, currentRound: 0 };
+            const redStats = { total: 0, currentRound: 0 };
+
+            // 1. Group punches by round
+            const rounds = {};
+            data.forEach(p => {
+                const r = p.round || 1;
+                if (!rounds[r]) rounds[r] = { blue: 0, red: 0 };
+
+                const val = parseInt(p.count || 0);
+                if (p.punchBy === 'BlueBoxer') {
+                    if (val > rounds[r].blue) rounds[r].blue = val;
+                } else if (p.punchBy === 'RedBoxer') {
+                    if (val > rounds[r].red) rounds[r].red = val;
                 }
+            });
 
-                // Render Scorecard (History)
-                const historyContainer = document.getElementById('roundHistory');
-                const scorecardContainer = document.getElementById('scorecardContainer');
+            // 2. Sum up totals (Max count of each round added together)
+            Object.values(rounds).forEach(r => {
+                blueStats.total += r.blue;
+                redStats.total += r.red;
+            });
 
-                if (maxRound > 0) {
-                    scorecardContainer.style.display = 'block';
-                    // Generate sorted rounds 1..maxRound
-                    const sortedRounds = Object.keys(rounds).map(r => parseInt(r)).sort((a, b) => a - b);
+            // 3. Get Current Round Score (Latest round info)
+            // Assuming data is sorted new->old, the first item has the latest round
+            let maxRound = 0;
+            Object.keys(rounds).forEach(r => {
+                if (parseInt(r) > maxRound) maxRound = parseInt(r);
+            });
 
-                    historyContainer.innerHTML = sortedRounds.map(r => {
-                        const score = rounds[r];
-                        // Highlight the winner of the round
-                        const blueClass = score.blue > score.red ? 'text-blue-400 font-bold' : 'text-slate-500';
-                        const redClass = score.red > score.blue ? 'text-red-400 font-bold' : 'text-slate-500';
+            if (maxRound > 0 && rounds[maxRound]) {
+                blueStats.currentRound = rounds[maxRound].blue;
+                redStats.currentRound = rounds[maxRound].red;
+            }
 
-                        return `
+            // Render Scorecard (History)
+            const historyContainer = document.getElementById('roundHistory');
+            const scorecardContainer = document.getElementById('scorecardContainer');
+
+            if (maxRound > 0) {
+                scorecardContainer.style.display = 'block';
+                // Generate sorted rounds 1..maxRound
+                const sortedRounds = Object.keys(rounds).map(r => parseInt(r)).sort((a, b) => a - b);
+
+                historyContainer.innerHTML = sortedRounds.map(r => {
+                    const score = rounds[r];
+                    // Highlight the winner of the round
+                    const blueClass = score.blue > score.red ? 'text-blue-400 font-bold' : 'text-slate-500';
+                    const redClass = score.red > score.blue ? 'text-red-400 font-bold' : 'text-slate-500';
+
+                    return `
                             <div class="flex flex-col items-center bg-slate-950/50 border border-slate-800 rounded-lg p-3 min-w-[100px] shrink-0">
                                 <span class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Round ${r}</span>
                                 <div class="flex items-center gap-3 text-xl font-mono">
@@ -309,85 +515,155 @@
                                 </div>
                             </div>
                         `;
-                    }).join('');
-                } else {
-                    scorecardContainer.style.display = 'none';
+                }).join('');
+            } else {
+                scorecardContainer.style.display = 'none';
+            }
+
+            // Update DOM Totals
+            document.getElementById('blueTotal').innerText = blueStats.total;
+            document.getElementById('blueRound').innerText = blueStats.currentRound;
+
+            document.getElementById('redTotal').innerText = redStats.total;
+            document.getElementById('redRound').innerText = redStats.currentRound;
+
+            // Check for "Liveness" by looking at timestamps
+            // 1. Stale Data Check (> 30 mins old)
+            let isStale = false;
+            if (data.length > 0) {
+                const tStr = data[0].receivedAt || data[0].timestamp || '';
+                if (tStr) {
+                    // Robust parse for "Y-m-d H:i:s" (old PHP) or ISO 8601 (new PHP)
+                    // If no 'T', replace space. If 'T' exists, use as is.
+                    const isoStr = tStr.includes('T') ? tStr : tStr.replace(' ', 'T');
+                    const lastPunchTime = new Date(isoStr);
+                    const now = new Date();
+                    // Basic sanity check on date
+                    if (!isNaN(lastPunchTime.getTime()) && (now - lastPunchTime > STALE_THRESHOLD_MS)) {
+                        isStale = true;
+                    }
                 }
+            }
 
-                // Update DOM Totals
-                document.getElementById('blueTotal').innerText = blueStats.total;
-                document.getElementById('blueRound').innerText = blueStats.currentRound;
+            // Check for "Liveness" - Match is ended only if the LATEST event is MatchEnd
+            // Use findIndex to be safe against potential noise at top, but usually data[0] is enough.
+            // If the latest meaningful event (Punch or MatchEnd) is MatchEnd, then it ended.
+            // Simpler: If data[0] is MatchEnd, it ended. If data[0] is Punch, it's live (new match started).
+            const hasMatchEnded = data.length > 0 && data[0].punchBy === 'System' && data[0].force === 'MatchEnd';
 
-                document.getElementById('redTotal').innerText = redStats.total;
-                document.getElementById('redRound').innerText = redStats.currentRound;
+            // Auto-Switch to Live: If we are in history mode, but FRESH LIVE data arrives, exit history
+            if (isViewingHistory && data.length > 0 && !hasMatchEnded && !isStale) {
+                console.log("Auto-switching to Live");
+                exitHistoryMode();
+                return;
+            }
 
-                // Check for "Liveness" by looking at the latest punch time
-                // (Note: This depends on server/client time sync, but good enough for relative checks)
-                // For simplicity here, we assume if we got *any* data in the last poll that changed, we are "Live".
-                // Better approach: check if the latest punch was recent.
+            if (isViewingHistory) {
+                updateStatus('offline'); // Or 'History'
+                document.getElementById('statusText').innerText = "HISTORY";
+                document.getElementById('statusText').className = "font-mono font-bold text-purple-400";
+                document.getElementById('statusDot').className = "relative inline-flex rounded-full h-3 w-3 bg-purple-500";
+                document.getElementById('statusPing').className = "hidden";
+                // Ensure winner overlay is hidden in history mode by default
+                document.getElementById('winnerOverlay').classList.add('hidden');
 
-                // Check for "Liveness" - Only "LIVE" if we have data AND the match hasn't ended
-                const hasMatchEnded = data.some(d => d.punchBy === 'System' && d.force === 'MatchEnd');
-
-                if (data.length > 0 && !hasMatchEnded) {
-                    updateStatus('online');
+            } else if (data.length > 0 && !hasMatchEnded && !isStale) {
+                updateStatus('online');
+                document.getElementById('winnerOverlay').classList.add('hidden');
+            } else {
+                updateStatus('waiting');
+                if (isStale) {
+                    // Force hide winner overlay if stale
                     document.getElementById('winnerOverlay').classList.add('hidden');
+                }
+            }
+
+            // --- Match Result Logic ---
+            // Fix: Show result even if stale (for history), but HIDE overlay by default if viewing history
+            // --- Match Result Logic ---
+            // Fix: Show result even if stale (for history), but HIDE overlay by default if viewing history
+            if (hasMatchEnded) {
+                const winnerOverlay = document.getElementById('winnerOverlay');
+                const winnerNameEl = document.getElementById('winnerName');
+                const containerDiv = winnerOverlay.querySelector('div');
+
+                // Set Scores
+                document.getElementById('winnerBlueScore').innerText = blueStats.total;
+                document.getElementById('winnerRedScore').innerText = redStats.total;
+
+                // Determine Winner
+                if (blueStats.total > redStats.total) {
+                    winnerNameEl.innerText = "BLUE CORNER";
+                    winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-blue-400 drop-shadow-[0_0_25px_rgba(59,130,246,0.6)]";
+                    containerDiv.className = "bg-slate-900 border-4 border-blue-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(59,130,246,0.3)] transform scale-110";
+                } else if (redStats.total > blueStats.total) {
+                    winnerNameEl.innerText = "RED CORNER";
+                    winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]";
+                    containerDiv.className = "bg-slate-900 border-4 border-red-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(239,68,68,0.3)] transform scale-110";
                 } else {
-                    updateStatus('waiting');
+                    winnerNameEl.innerText = "DRAW";
+                    winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.6)]";
+                    containerDiv.className = "bg-slate-900 border-4 border-slate-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(255,255,255,0.2)] transform scale-110";
                 }
 
-                // --- Match Result Logic ---
-                if (hasMatchEnded) {
-                    const winnerOverlay = document.getElementById('winnerOverlay');
-                    const winnerNameEl = document.getElementById('winnerName');
-                    const containerDiv = winnerOverlay.querySelector('div');
+                if (!isViewingHistory) {
+                    // Check if match ended recently (< 2 minutes ago) to auto-show splash
+                    let isFreshFinish = false;
+                    try {
+                        // data[0].receivedAt is "YYYY-MM-DD HH:mm:ss" OR ISO
+                        let timeStr = data[0].receivedAt;
+                        if (timeStr && !timeStr.includes('T')) timeStr = timeStr.replace(' ', 'T');
 
-                    // Set Scores
-                    document.getElementById('winnerBlueScore').innerText = blueStats.total;
-                    document.getElementById('winnerRedScore').innerText = redStats.total;
+                        const lastTime = new Date(timeStr);
+                        const now = new Date();
+                        const diffMins = (now - lastTime) / 1000 / 60;
+                        if (!isNaN(diffMins) && diffMins < 2) {
+                            isFreshFinish = true;
+                        }
+                    } catch (e) { isFreshFinish = true; } // Fallback to show if cant parse
 
-                    // Determine Winner
-                    if (blueStats.total > redStats.total) {
-                        winnerNameEl.innerText = "BLUE CORNER";
-                        winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-blue-400 drop-shadow-[0_0_25px_rgba(59,130,246,0.6)]";
-                        containerDiv.className = "bg-slate-900 border-4 border-blue-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(59,130,246,0.3)] transform scale-110";
-                    } else if (redStats.total > blueStats.total) {
-                        winnerNameEl.innerText = "RED CORNER";
-                        winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]";
-                        containerDiv.className = "bg-slate-900 border-4 border-red-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(239,68,68,0.3)] transform scale-110";
+                    // Only auto-show if FRESH finish
+                    if (isFreshFinish) {
+                        if (!window.matchEndShownArg || window.matchEndShownArg !== data.length) {
+                            winnerOverlay.classList.remove('hidden');
+                            window.matchEndShownArg = data.length;
+                        }
                     } else {
-                        winnerNameEl.innerText = "DRAW";
-                        winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.6)]";
-                        containerDiv.className = "bg-slate-900 border-4 border-slate-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(255,255,255,0.2)] transform scale-110";
-                    }
-
-                    if (!window.matchEndShownArg || window.matchEndShownArg !== data.length) {
-                        winnerOverlay.classList.remove('hidden');
-                        window.matchEndShownArg = data.length;
+                        // Match ended a while ago, ensure overlay is hidden on refresh
+                        winnerOverlay.classList.add('hidden');
                     }
                 } else {
-                    window.matchEndShownArg = null;
+                    // In history mode, ensure it's hidden unless manually triggered
+                    // But we do NOT remove 'hidden' class here.
                 }
+            } else {
+                window.matchEndShownArg = null;
+            }
 
-                // Update Table
-                const tbody = document.getElementById('tableBody');
-                if (data.length === 0) {
-                    updateStatus('waiting');
-                    tbody.innerHTML = '<tr><td colspan="4" class="p-12 text-center text-slate-500 italic">Waiting for data...</td></tr>';
-                    return;
-                }
+            // Update Table
+            const tbody = document.getElementById('tableBody');
+            if (data.length === 0) {
+                updateStatus('waiting');
+                tbody.innerHTML = '<tr><td colspan="4" class="p-12 text-center text-slate-500 italic">Waiting for data...</td></tr>';
+                // Ensure buttons enabled if waiting
+                const historyBtn = document.querySelector('#historyControls > button');
+                const resetBtn = document.querySelector('button[onclick="resetData()"]');
+                if (historyBtn) { historyBtn.classList.remove('opacity-50', 'cursor-not-allowed'); historyBtn.disabled = false; }
+                if (resetBtn) { resetBtn.classList.remove('opacity-50', 'cursor-not-allowed'); resetBtn.disabled = false; }
+                return;
+            }
 
-                // Render rows - Limit to last 20 for UI cleanliness even if we rely on more history
-                const displayData = data.slice(0, 50);
+            // Render rows - Limit to last 20 for UI cleanliness even if we rely on more history
+            const displayData = data.slice(0, 50);
 
-                tbody.innerHTML = displayData.map((punch, index) => {
-                    const isBlue = punch.punchBy === 'BlueBoxer';
-                    const badgeClass = isBlue
-                        ? 'bg-blue-900/30 text-blue-400 border-blue-800'
-                        : 'bg-red-900/30 text-red-400 border-red-800';
-                    const roundNum = punch.round || '-';
+            tbody.innerHTML = displayData.map((punch, index) => {
+                const isBlue = punch.punchBy === 'BlueBoxer';
+                const badgeClass = isBlue
+                    ? 'bg-blue-900/30 text-blue-400 border-blue-800'
+                    : 'bg-red-900/30 text-red-400 border-red-800';
+                const roundNum = punch.round || '-';
 
-                    return `
+                return `
                         <tr class="hover:bg-slate-800/50 transition-colors animate-enter" style="animation-delay: ${index * 0.02}s">
                             <td class="p-2 font-mono text-slate-300 text-sm">${punch.time}</td>
                             <td class="p-2 font-mono text-slate-400 text-sm">R${roundNum}</td>
@@ -399,10 +675,45 @@
                             <td class="p-2 text-right font-mono text-emerald-400 font-bold text-sm">${punch.force}</td>
                         </tr>
                     `;
-                }).join('');
+            }).join('');
 
-            } catch (e) {
-                console.error("Poll error", e);
+            // --- Disable Controls if Live ---
+            const isMatchLive = !isViewingHistory && data.length > 0 && !hasMatchEnded && !isStale;
+            const historyBtn = document.querySelector('#historyControls > button');
+            const resetBtn = document.querySelector('button[onclick="resetData()"]');
+
+            if (historyBtn) {
+                if (isMatchLive) {
+                    historyBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    historyBtn.disabled = true;
+                    historyBtn.title = "Match in progress";
+                } else {
+                    historyBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    historyBtn.disabled = false;
+                    historyBtn.title = "";
+                }
+            }
+            if (resetBtn) {
+                if (isMatchLive) {
+                    resetBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    resetBtn.disabled = true;
+                    resetBtn.title = "Match in progress";
+                } else {
+                    resetBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    resetBtn.disabled = false;
+                    resetBtn.title = "";
+                }
+            }
+
+            // --- Alert System Trigger ---
+            if (isMatchLive) {
+                // Match is live. If user is tabbed away (document hidden), start alert to summon them back.
+                if (document.hidden) {
+                    startAlert();
+                }
+            } else {
+                stopAlert(); // Stop if match ends or goes stale
+                // Also stop if viewing history (isMatchLive is false then)
             }
         }
 

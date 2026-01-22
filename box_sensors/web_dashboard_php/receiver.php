@@ -14,6 +14,29 @@ if (
     ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'clear')
 ) {
 
+
+    // Archive before clearing
+    $file = 'data.json';
+    if (file_exists($file)) {
+        $content = file_get_contents($file);
+        $data = json_decode($content, true);
+        if ($data && count($data) > 0) {
+            // Check if there is actual data to save
+            if (!is_dir('history')) {
+                mkdir('history', 0777, true);
+            }
+            // Use timestamp of FIRST item (latest) or current time
+            $timestamp = date('Y-m-d_H-i-s');
+            // Check if we can get a better timestamp from data
+            if (isset($data[0]['receivedAt'])) {
+                // Clean up receivedAt for filename if desired, but current time is safer collision-wise
+            }
+
+            $archiveFile = 'history/match_' . $timestamp . '.json';
+            file_put_contents($archiveFile, $content);
+        }
+    }
+
     file_put_contents('data.json', json_encode([]));
     echo json_encode(["status" => "success", "message" => "Data cleared"]);
     exit;
@@ -58,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'time' => $data['timestamp'] ?? date('H:i:s'),
             'force' => $data['sensorValue'] ?? '0',
             'round' => $data['roundId'] ?? '1',
-            'receivedAt' => date('Y-m-d H:i:s')
+            'receivedAt' => date('c')
         ];
 
         // Add to TOP of list

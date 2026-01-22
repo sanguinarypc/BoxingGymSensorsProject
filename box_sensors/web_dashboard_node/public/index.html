@@ -44,7 +44,8 @@
 <body class="min-h-screen bg-slate-950 text-white font-sans antialiased">
     <div class="p-4 md:p-8">
         <!-- Header -->
-        <header class="mb-4 flex justify-between items-center max-w-6xl mx-auto border-b border-slate-800 pb-2">
+        <header
+            class="mb-4 flex flex-col md:flex-row justify-between items-center gap-4 max-w-6xl mx-auto border-b border-slate-800 pb-4">
             <div>
                 <h1
                     class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
@@ -52,9 +53,30 @@
                 </h1>
                 <p class="text-slate-400 text-sm mt-1">Real-time match telemetry</p>
             </div>
-            <div class="text-right">
+
+            <!-- History Button -->
+            <div id="historyControls">
+                <button onclick="openHistoryModal()"
+                    class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-4 py-2 rounded transition-colors uppercase tracking-wider font-bold flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Review Matches
+                </button>
+                <div id="liveControls" class="hidden">
+                    <button onclick="exitHistoryMode()"
+                        class="text-xs bg-red-900/40 hover:bg-red-900/60 text-red-200 border border-red-800 px-4 py-2 rounded transition-colors uppercase tracking-wider font-bold animate-pulse flex items-center gap-2">
+                        <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
+                        Back to Live
+                    </button>
+                    <div class="text-[10px] text-center text-slate-500 mt-1 uppercase tracking-widest">Viewing History
+                    </div>
+                </div>
+            </div>
+            <div class="text-center md:text-right">
                 <div class="text-xs text-slate-500 uppercase tracking-widest mb-1">Status</div>
-                <div class="flex items-center gap-4 justify-end">
+                <div class="flex items-center gap-4 justify-center md:justify-end">
                     <!-- Reset Button -->
                     <button onclick="resetData()"
                         class="text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-3 py-1 rounded transition-colors uppercase tracking-wider font-bold">
@@ -234,6 +256,8 @@
 
     <!-- Logic -->
     <script>
+        let isViewingHistory = false;
+        const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
         let lastDataJSON = '';
         const OFFLINE_THRESHOLD_MS = 10000; // 10 seconds without new data = offline
         const STATUS_UI = {
@@ -247,196 +271,195 @@
             const colorClass = `text-${config.color}-400`;
             const bgClass = `bg-${config.color}-500`;
 
-            // Text
             const textEl = document.getElementById('statusText');
             textEl.innerText = config.text;
             textEl.className = `font-mono font-bold ${colorClass}`;
 
-            // Dot
             const dotEl = document.getElementById('statusDot');
             dotEl.className = `relative inline-flex rounded-full h-3 w-3 ${bgClass}`;
 
-            // Ping Animation
             const pingEl = document.getElementById('statusPing');
             pingEl.className = `absolute inline-flex h-full w-full rounded-full ${bgClass} opacity-75 ${config.ping ? 'animate-ping' : 'hidden'}`;
         }
 
-        async function updateDashboard() {
-            try {
-                // Fetch from our Node.js API with cache-busting timestamp
-                const response = await fetch('/api/data?t=' + new Date().getTime());
-                const data = await response.json();
+        async function updateDashboard(overrideData = null) {
+            let data = overrideData;
+            if (!data) {
+                if (isViewingHistory) return;
+                try {
+                    const response = await fetch('/api/data');
+                    data = await response.json();
+                } catch (e) { return; }
+            }
 
-                if (!Array.isArray(data)) return;
+            if (!Array.isArray(data)) return;
+            renderDashboard(data);
+        }
 
-                // Stop flashing: Only update DOM if data has changed
-                const currentDataJSON = JSON.stringify(data);
-                if (currentDataJSON === lastDataJSON) {
-                    return; // No changes, skip implementation
+        function renderDashboard(data) {
+            if (!Array.isArray(data)) return;
+
+            const currentDataJSON = JSON.stringify(data);
+            // Skip check if in history mode (always render)? 
+            // Logic in loadHistoryMatch clears lastDataJSON to force render.
+            if (currentDataJSON === lastDataJSON) return;
+            lastDataJSON = currentDataJSON;
+
+            const blueStats = { total: 0, currentRound: 0 };
+            const redStats = { total: 0, currentRound: 0 };
+            const rounds = {};
+
+            data.forEach(p => {
+                const r = p.round || 1;
+                if (!rounds[r]) rounds[r] = { blue: 0, red: 0 };
+                const val = parseInt(p.count || 0);
+                if (p.punchBy === 'BlueBoxer') {
+                    if (val > rounds[r].blue) rounds[r].blue = val;
+                } else if (p.punchBy === 'RedBoxer') {
+                    if (val > rounds[r].red) rounds[r].red = val;
                 }
-                lastDataJSON = currentDataJSON;
+            });
 
-                // Update Stats Logic: Group by Round to calculate correct totals
-                const blueStats = { total: 0, currentRound: 0 };
-                const redStats = { total: 0, currentRound: 0 };
+            Object.values(rounds).forEach(r => {
+                blueStats.total += r.blue;
+                redStats.total += r.red;
+            });
 
-                // 1. Group punches by round
-                const rounds = {};
-                data.forEach(p => {
-                    const r = p.round || 1;
-                    if (!rounds[r]) rounds[r] = { blue: 0, red: 0 };
+            let maxRound = 0;
+            Object.keys(rounds).forEach(r => {
+                if (parseInt(r) > maxRound) maxRound = parseInt(r);
+            });
 
-                    const val = parseInt(p.count || 0);
-                    if (p.punchBy === 'BlueBoxer') {
-                        if (val > rounds[r].blue) rounds[r].blue = val;
-                    } else if (p.punchBy === 'RedBoxer') {
-                        if (val > rounds[r].red) rounds[r].red = val;
-                    }
-                });
+            if (maxRound > 0 && rounds[maxRound]) {
+                blueStats.currentRound = rounds[maxRound].blue;
+                redStats.currentRound = rounds[maxRound].red;
+            }
 
-                // 2. Sum up totals (Max count of each round added together)
-                Object.values(rounds).forEach(r => {
-                    blueStats.total += r.blue;
-                    redStats.total += r.red;
-                });
+            const historyContainer = document.getElementById('roundHistory');
+            const scorecardContainer = document.getElementById('scorecardContainer');
 
-                // 3. Get Current Round Score (Latest round info)
-                // Assuming data is sorted new->old, the first item has the latest round
-                let maxRound = 0;
-                Object.keys(rounds).forEach(r => {
-                    if (parseInt(r) > maxRound) maxRound = parseInt(r);
-                });
-
-                if (maxRound > 0 && rounds[maxRound]) {
-                    blueStats.currentRound = rounds[maxRound].blue;
-                    redStats.currentRound = rounds[maxRound].red;
-                }
-
-                // Render Scorecard (History)
-                const historyContainer = document.getElementById('roundHistory');
-                const scorecardContainer = document.getElementById('scorecardContainer');
-
-                if (maxRound > 0) {
-                    scorecardContainer.style.display = 'block';
-                    // Generate sorted rounds 1..maxRound
-                    const sortedRounds = Object.keys(rounds).map(r => parseInt(r)).sort((a, b) => a - b);
-
-                    historyContainer.innerHTML = sortedRounds.map(r => {
-                        const score = rounds[r];
-                        // Highlight the winner of the round
-                        const blueClass = score.blue > score.red ? 'text-blue-400 font-bold' : 'text-slate-500';
-                        const redClass = score.red > score.blue ? 'text-red-400 font-bold' : 'text-slate-500';
-
-                        return `
-                            <div class="flex flex-col items-center bg-slate-950/50 border border-slate-800 rounded-lg p-3 min-w-[100px] shrink-0">
-                                <span class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Round ${r}</span>
-                                <div class="flex items-center gap-3 text-xl font-mono">
-                                    <span class="${blueClass}">${score.blue}</span>
-                                    <span class="text-slate-700">-</span>
-                                    <span class="${redClass}">${score.red}</span>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                } else {
-                    scorecardContainer.style.display = 'none';
-                }
-
-                // Update DOM Totals
-                document.getElementById('blueTotal').innerText = blueStats.total;
-                document.getElementById('blueRound').innerText = blueStats.currentRound;
-
-                document.getElementById('redTotal').innerText = redStats.total;
-                document.getElementById('redRound').innerText = redStats.currentRound;
-
-                // Check for "Liveness" by looking at the latest punch time
-                // (Note: This depends on server/client time sync, but good enough for relative checks)
-                // For simplicity here, we assume if we got *any* data in the last poll that changed, we are "Live".
-                // Better approach: check if the latest punch was recent.
-
-                // Check for "Liveness" - Only "LIVE" if we have data AND the match hasn't ended
-                const hasMatchEnded = data.some(d => d.punchBy === 'System' && d.force === 'MatchEnd');
-
-                if (data.length > 0 && !hasMatchEnded) {
-                    updateStatus('online');
-                    document.getElementById('winnerOverlay').classList.add('hidden');
-                } else {
-                    updateStatus('waiting');
-                }
-
-                // --- Match Result Logic ---
-                if (hasMatchEnded) {
-                    const winnerOverlay = document.getElementById('winnerOverlay');
-                    const winnerNameEl = document.getElementById('winnerName');
-                    const containerDiv = winnerOverlay.querySelector('div');
-
-                    // Set Scores
-                    document.getElementById('winnerBlueScore').innerText = blueStats.total;
-                    document.getElementById('winnerRedScore').innerText = redStats.total;
-
-                    // Determine Winner
-                    if (blueStats.total > redStats.total) {
-                        winnerNameEl.innerText = "BLUE CORNER";
-                        winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-blue-400 drop-shadow-[0_0_25px_rgba(59,130,246,0.6)]";
-                        containerDiv.className = "bg-slate-900 border-4 border-blue-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(59,130,246,0.3)] transform scale-110";
-                    } else if (redStats.total > blueStats.total) {
-                        winnerNameEl.innerText = "RED CORNER";
-                        winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]";
-                        containerDiv.className = "bg-slate-900 border-4 border-red-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(239,68,68,0.3)] transform scale-110";
-                    } else {
-                        winnerNameEl.innerText = "DRAW";
-                        winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.6)]";
-                        containerDiv.className = "bg-slate-900 border-4 border-slate-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(255,255,255,0.2)] transform scale-110";
-                    }
-
-                    if (!window.matchEndShownArg || window.matchEndShownArg !== data.length) {
-                        winnerOverlay.classList.remove('hidden');
-                        window.matchEndShownArg = data.length;
-                    }
-                } else {
-                    window.matchEndShownArg = null;
-                }
-
-                // Update Table
-                const tbody = document.getElementById('tableBody');
-                if (data.length === 0) {
-                    updateStatus('waiting');
-                    tbody.innerHTML = '<tr><td colspan="4" class="p-12 text-center text-slate-500 italic">Waiting for data...</td></tr>';
-                    return;
-                }
-
-                // Render rows - Limit to last 20 for UI cleanliness even if we rely on more history
-                const displayData = data.slice(0, 50);
-
-                tbody.innerHTML = displayData.map((punch, index) => {
-                    const isBlue = punch.punchBy === 'BlueBoxer';
-                    const badgeClass = isBlue
-                        ? 'bg-blue-900/30 text-blue-400 border-blue-800'
-                        : 'bg-red-900/30 text-red-400 border-red-800';
-                    const roundNum = punch.round || '-';
-
+            if (maxRound > 0) {
+                scorecardContainer.style.display = 'block';
+                const sortedRounds = Object.keys(rounds).map(r => parseInt(r)).sort((a, b) => a - b);
+                historyContainer.innerHTML = sortedRounds.map(r => {
+                    const score = rounds[r];
+                    const blueClass = score.blue > score.red ? 'text-blue-400 font-bold' : 'text-slate-500';
+                    const redClass = score.red > score.blue ? 'text-red-400 font-bold' : 'text-slate-500';
                     return `
-                        <tr class="hover:bg-slate-800/50 transition-colors animate-enter" style="animation-delay: ${index * 0.02}s">
-                            <td class="p-2 font-mono text-slate-300 text-sm">${punch.time}</td>
-                            <td class="p-2 font-mono text-slate-400 text-sm">R${roundNum}</td>
-                            <td class="p-2 text-center">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${badgeClass}">
-                                    ${punch.punchBy}
-                                </span>
-                            </td>
-                            <td class="p-2 text-right font-mono text-emerald-400 font-bold text-sm">${punch.force}</td>
-                        </tr>
+                        <div class="flex flex-col items-center bg-slate-950/50 border border-slate-800 rounded-lg p-3 min-w-[100px] shrink-0">
+                            <span class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Round ${r}</span>
+                            <div class="flex items-center gap-3 text-xl font-mono">
+                                <span class="${blueClass}">${score.blue}</span>
+                                <span class="text-slate-700">-</span>
+                                <span class="${redClass}">${score.red}</span>
+                            </div>
+                        </div>
                     `;
                 }).join('');
-
-            } catch (e) {
-                console.error("Poll error", e);
+            } else {
+                scorecardContainer.style.display = 'none';
             }
+
+            document.getElementById('blueTotal').innerText = blueStats.total;
+            document.getElementById('blueRound').innerText = blueStats.currentRound;
+            document.getElementById('redTotal').innerText = redStats.total;
+            document.getElementById('redRound').innerText = redStats.currentRound;
+
+            let isStale = false;
+            if (data.length > 0) {
+                const tStr = data[0].receivedAt || data[0].timestamp || '';
+                if (tStr) {
+                    const lastPunchTime = new Date(tStr);
+                    const now = new Date();
+                    if (!isNaN(lastPunchTime.getTime()) && (now - lastPunchTime > STALE_THRESHOLD_MS)) {
+                        isStale = true;
+                    }
+                }
+            }
+
+            const hasMatchEnded = data.some(d => d.punchBy === 'System' && d.force === 'MatchEnd');
+
+            if (isViewingHistory) {
+                updateStatus('offline');
+                const t = document.getElementById('statusText');
+                t.innerText = "HISTORY";
+                t.className = "font-mono font-bold text-purple-400";
+                document.getElementById('statusDot').className = "relative inline-flex rounded-full h-3 w-3 bg-purple-500";
+                document.getElementById('statusPing').className = "hidden";
+                if (hasMatchEnded) document.getElementById('winnerOverlay').classList.remove('hidden');
+                else document.getElementById('winnerOverlay').classList.add('hidden');
+
+            } else if (data.length > 0 && !hasMatchEnded && !isStale) {
+                updateStatus('online');
+                document.getElementById('winnerOverlay').classList.add('hidden');
+            } else {
+                updateStatus('waiting');
+                if (isStale) document.getElementById('winnerOverlay').classList.add('hidden');
+            }
+
+            if (hasMatchEnded && !isStale) {
+                const winnerOverlay = document.getElementById('winnerOverlay');
+                const winnerNameEl = document.getElementById('winnerName');
+                const containerDiv = winnerOverlay.querySelector('div');
+
+                document.getElementById('winnerBlueScore').innerText = blueStats.total;
+                document.getElementById('winnerRedScore').innerText = redStats.total;
+
+                if (blueStats.total > redStats.total) {
+                    winnerNameEl.innerText = "BLUE CORNER";
+                    winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-blue-400 drop-shadow-[0_0_25px_rgba(59,130,246,0.6)]";
+                    containerDiv.className = "bg-slate-900 border-4 border-blue-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(59,130,246,0.3)] transform scale-110";
+                } else if (redStats.total > blueStats.total) {
+                    winnerNameEl.innerText = "RED CORNER";
+                    winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]";
+                    containerDiv.className = "bg-slate-900 border-4 border-red-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(239,68,68,0.3)] transform scale-110";
+                } else {
+                    winnerNameEl.innerText = "DRAW";
+                    winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.6)]";
+                    containerDiv.className = "bg-slate-900 border-4 border-slate-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(255,255,255,0.2)] transform scale-110";
+                }
+
+                if (!window.matchEndShownArg || window.matchEndShownArg !== data.length) {
+                    winnerOverlay.classList.remove('hidden');
+                    window.matchEndShownArg = data.length;
+                }
+            } else {
+                window.matchEndShownArg = null;
+            }
+
+            const tbody = document.getElementById('tableBody');
+            if (data.length === 0) {
+                updateStatus('waiting');
+                tbody.innerHTML = '<tr><td colspan="4" class="p-12 text-center text-slate-500 italic">Waiting...</td></tr>';
+                return;
+            }
+
+            const displayData = data.slice(0, 50);
+            tbody.innerHTML = displayData.map((punch, index) => {
+                const isBlue = punch.punchBy === 'BlueBoxer';
+                const badgeClass = isBlue ? 'bg-blue-900/30 text-blue-400 border-blue-800' : 'bg-red-900/30 text-red-400 border-red-800';
+                const roundNum = punch.round || '-';
+                return `
+                    <tr class="hover:bg-slate-800/50 transition-colors animate-enter" style="animation-delay: ${index * 0.02}s">
+                        <td class="p-2 font-mono text-slate-300 text-sm">${punch.time}</td>
+                        <td class="p-2 font-mono text-slate-400 text-sm">R${roundNum}</td>
+                        <td class="p-2 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${badgeClass}">${punch.punchBy}</span></td>
+                        <td class="p-2 text-right font-mono text-emerald-400 font-bold text-sm">${punch.force}</td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         async function resetData() {
             if (!confirm('Are you sure you want to clear all data?')) return;
             try {
+                await fetch('/api/data?action=clear', { method: 'POST' }); // Use POST or GET based on server implementation. Server uses Query param on Any?? Server: app.get(..., action=clear).
+                // Wait, server.js uses app.get('/api/data') for clear.
+                // So fetch('/api/data?action=clear') is correct.
+                // But my replace used { method: 'POST' }?
+                // Let's check server.js (Step 279).
+                // app.get('/api/data', ...) -> checks req.query.action === 'clear'.
+                // So it is GET.
                 await fetch('/api/data?action=clear');
                 updateDashboard();
             } catch (e) {
@@ -444,10 +467,72 @@
             }
         }
 
-        // Poll every 1 second
+        // History Helpers
+        function openHistoryModal() {
+            document.getElementById('historyModal').classList.remove('hidden');
+            loadHistoryList();
+        }
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+        async function loadHistoryList() {
+            try {
+                const res = await fetch('/api/history');
+                const files = await res.json();
+                const list = document.getElementById('historyList');
+                if (files.length === 0) { list.innerHTML = '<div class="text-center text-slate-500 py-8 italic">No archived matches found.</div>'; return; }
+                list.innerHTML = files.map(file => {
+                    const date = new Date(file.time * 1000).toLocaleString();
+                    return `<div onclick="loadHistoryMatch('${file.filename}')" class="bg-slate-950/50 hover:bg-slate-800 border border-slate-800 p-4 rounded-lg cursor-pointer transition-colors group">
+                            <div class="flex justify-between items-center"><span class="font-mono text-slate-300 font-bold group-hover:text-blue-400 transition-colors">${file.name}</span><span class="text-xs text-slate-500">${date}</span></div>
+                            <div class="text-xs text-slate-600 mt-1">${(file.size / 1024).toFixed(1)} KB</div>
+                        </div>`;
+                }).join('');
+            } catch (e) { document.getElementById('historyList').innerText = "Failed to load history."; }
+        }
+        async function loadHistoryMatch(filename) {
+            try {
+                closeHistoryModal();
+                isViewingHistory = true;
+                document.querySelector('#historyControls > button').classList.add('hidden');
+                document.getElementById('liveControls').classList.remove('hidden');
+                const res = await fetch('/api/history/' + filename);
+                const data = await res.json();
+                lastDataJSON = '';
+                renderDashboard(data);
+            } catch (e) { alert("Failed to load match: " + e.message); exitHistoryMode(); }
+        }
+        function exitHistoryMode() {
+            isViewingHistory = false;
+            document.querySelector('#historyControls > button').classList.remove('hidden');
+            document.getElementById('liveControls').classList.add('hidden');
+            lastDataJSON = '';
+            updateDashboard();
+        }
+
         setInterval(updateDashboard, 1000);
         updateDashboard();
     </script>
+
+    <!-- History Modal -->
+    <div id="historyModal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-enter">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+                <h3 class="text-lg font-bold text-slate-200">Match History</h3>
+                <button onclick="closeHistoryModal()" class="text-slate-500 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+            <div id="historyList" class="max-h-[60vh] overflow-y-auto space-y-2 pr-2">
+                <!-- Populated by JS -->
+                <div class="text-center text-slate-500 py-8 italic">Loading...</div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
