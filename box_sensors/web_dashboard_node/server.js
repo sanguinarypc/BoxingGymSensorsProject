@@ -3,10 +3,16 @@ const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const http = require('http');
+const WebSocket = require('ws');
 
 const app = express();
+const server = http.createServer(app); // Create HTTP server
+const wss = new WebSocket.Server({ server }); // Attach WebSocket server
+
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
+const EVENTS_FILE = path.join(__dirname, 'events.jsonl'); // Append-only log
 const HISTORY_DIR = path.join(__dirname, 'history');
 
 // Ensure history dir exists
@@ -18,6 +24,28 @@ if (!fs.existsSync(HISTORY_DIR)) {
 app.use(cors()); // Allow cross-origin requests (for Flutter app)
 app.use(bodyParser.json());
 app.use(express.static('public')); // Serve static files (dashboard)
+
+// WebSocket: Handle connections
+wss.on('connection', (ws) => {
+    console.log('Client connected');
+    ws.send(JSON.stringify({ type: 'WELCOME', message: 'Connected to Box Sensors Live' }));
+
+    ws.on('close', () => console.log('Client disconnected'));
+});
+
+// Helper: Broadcast data to all connected clients
+function broadcast(data) {
+    wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+        }
+    });
+}
+
+// Helper: Append to event log
+function appendEvent(event) {
+    fs.appendFileSync(EVENTS_FILE, JSON.stringify(event) + '\n');
+}
 
 // Helper to read data
 function readData() {
@@ -129,11 +157,17 @@ app.post('/api/data', (req, res) => {
     }
 
     writeData(currentData);
+    appendEvent(newData); // Log it
+
+    // Broadcast to WebSockets
+    broadcast({ type: 'NEW_PUNCH', data: newData });
+
     console.log('Received punch:', newData);
     res.json({ success: true });
 });
 
 // Start Server
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+// Start Server
+server.listen(PORT, '127.0.0.1', () => {
+    console.log(`Server running at http://127.0.0.1:${PORT}`);
 });

@@ -11,7 +11,9 @@ class DeviceConfig {
     'INTEGRATION_TEST',
   );
 
-  static const String webServerUrl = "https://ndim.codecraft.gr/receiver.php"; 
+  static const String webServerUrl =
+      "https://boxing-dashboard.ndimitrakarakos.gr/api/data";
+  // static const String webServerUrl = "https://ndim.codecraft.gr/receiver.php";
   // static const String webServerUrl = "https://ndim.codecraft.gr/api/data";
   // static const String webServerUrl = "http://192.168.1.3:3000/api/data";
   // static const String webServerUrl = "http://192.168.1.3:3000/api/data";

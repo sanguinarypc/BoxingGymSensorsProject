@@ -257,6 +257,7 @@
     <!-- Logic -->
     <script>
         let isViewingHistory = false;
+        let localData = []; // Store data locally for WebSocket updates
         const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
         let lastDataJSON = '';
         const OFFLINE_THRESHOLD_MS = 10000; // 10 seconds without new data = offline
@@ -293,6 +294,7 @@
             }
 
             if (!Array.isArray(data)) return;
+            localData = data; // Update local cache
             renderDashboard(data);
         }
 
@@ -482,9 +484,14 @@
                 const list = document.getElementById('historyList');
                 if (files.length === 0) { list.innerHTML = '<div class="text-center text-slate-500 py-8 italic">No archived matches found.</div>'; return; }
                 list.innerHTML = files.map(file => {
-                    const date = new Date(file.time * 1000).toLocaleString();
+                    // Greek Format: DD/MM/YYYY, HH:MM:SS
+                    const date = new Date(file.time * 1000).toLocaleString('el-GR', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit',
+                        hour12: false
+                    });
                     return `<div onclick="loadHistoryMatch('${file.filename}')" class="bg-slate-950/50 hover:bg-slate-800 border border-slate-800 p-4 rounded-lg cursor-pointer transition-colors group">
-                            <div class="flex justify-between items-center"><span class="font-mono text-slate-300 font-bold group-hover:text-blue-400 transition-colors">${file.name}</span><span class="text-xs text-slate-500">${date}</span></div>
+                            <div class="flex justify-between items-center"><span class="font-mono text-slate-300 font-bold group-hover:text-blue-400 transition-colors">${date}</span></div>
                             <div class="text-xs text-slate-600 mt-1">${(file.size / 1024).toFixed(1)} KB</div>
                         </div>`;
                 }).join('');
@@ -510,8 +517,51 @@
             updateDashboard();
         }
 
-        setInterval(updateDashboard, 1000);
-        updateDashboard();
+        function setupWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.hostname}:${window.location.port || 3000}`; // Default to port 3000 if running locally or dev
+            // NOTE: When running via Nginx proxy on port 80, window.location.port will be empty (80 implied), 
+            // but our proxy config forwards / to 3000. 
+            // If we access http://IP, port is empty. We want ws://IP/ (which Nginx upgrades to localhost:3000).
+            // If we access http://IP:3000, port is 3000. ws://IP:3000.
+
+            const ws = new WebSocket(window.location.port ? `ws://${window.location.hostname}:${window.location.port}` : `ws://${window.location.hostname}`);
+
+            ws.onopen = () => {
+                console.log('WS Connected');
+                updateStatus('waiting'); // Will turn online when data arrives or if we have data
+                if (localData.length > 0) updateStatus('online');
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'NEW_PUNCH') {
+                        // Add to top (Newest first)
+                        localData.unshift(msg.data);
+                        if (localData.length > 2000) localData.pop();
+                        renderDashboard(localData);
+
+                        // Flash effect or status update handled in render
+                    }
+                } catch (e) { console.error('WS Error:', e); }
+            };
+
+            ws.onclose = () => {
+                console.log('WS Disconnected, retrying...');
+                updateStatus('offline');
+                setTimeout(setupWebSocket, 3000);
+            };
+
+            ws.onerror = (err) => {
+                console.error('WS Error:', err);
+                ws.close();
+            };
+        }
+
+        // Initial load then WS
+        updateDashboard().then(() => setupWebSocket());
+        // No more polling!
     </script>
 
     <!-- History Modal -->
