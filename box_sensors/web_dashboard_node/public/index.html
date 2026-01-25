@@ -77,9 +77,10 @@
             <div class="text-center md:text-right">
                 <div class="text-xs text-slate-500 uppercase tracking-widest mb-1">Status</div>
                 <div class="flex items-center gap-4 justify-center md:justify-end">
-                    <!-- Reset Button -->
+                    <!-- Reset Button with Dynamic Dot -->
                     <button onclick="resetData()"
-                        class="text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-3 py-1 rounded transition-colors uppercase tracking-wider font-bold">
+                        class="text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-3 py-1 rounded transition-colors uppercase tracking-wider font-bold flex items-center gap-2">
+                        <span id="resetStatusDot" class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
                         Reset Data
                     </button>
 
@@ -281,7 +282,61 @@
 
             const pingEl = document.getElementById('statusPing');
             pingEl.className = `absolute inline-flex h-full w-full rounded-full ${bgClass} opacity-75 ${config.ping ? 'animate-ping' : 'hidden'}`;
+
+            // Reset Button Dot Logic
+            const resetDot = document.getElementById('resetStatusDot');
+            if (resetDot) {
+                // If Waiting -> Orange/Yellow? User said "indicator like live". 
+                // PHP version has a light that goes on/off.
+                // Let's map it to the status color.
+                resetDot.className = `w-1.5 h-1.5 rounded-full ${bgClass}`;
+            }
         }
+
+        // --- Alert System ---
+        let alertInterval = null;
+        let originalTitle = document.title;
+
+        function playBeep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(440, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.5);
+            } catch (e) { console.log('Audio Blocked'); }
+        }
+
+        function startAlert() {
+            if (alertInterval) return;
+            playBeep();
+            let on = false;
+            if (!originalTitle) originalTitle = document.title;
+            alertInterval = setInterval(() => {
+                document.title = on ? "🔴 LIVE MATCH!" : "Box Sensors Live";
+                on = !on;
+                if (on) playBeep();
+            }, 1000);
+        }
+
+        function stopAlert() {
+            if (alertInterval) {
+                clearInterval(alertInterval);
+                alertInterval = null;
+                if (originalTitle) document.title = originalTitle;
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) stopAlert();
+        });
 
         async function updateDashboard(overrideData = null) {
             let data = overrideData;
@@ -421,12 +476,34 @@
                     containerDiv.className = "bg-slate-900 border-4 border-slate-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(255,255,255,0.2)] transform scale-110";
                 }
 
-                if (!window.matchEndShownArg || window.matchEndShownArg !== data.length) {
-                    winnerOverlay.classList.remove('hidden');
-                    window.matchEndShownArg = data.length;
+                // Only auto-show if data has 'MatchEnd'
+                if (hasMatchEnded && !isStale) {
+                    if (!window.matchEndShownArg || window.matchEndShownArg !== data.length) {
+                        winnerOverlay.classList.remove('hidden');
+                        window.matchEndShownArg = data.length;
+                    }
+                } else if (isViewingHistory && hasMatchEnded) {
+                    // In history mode, if it was a completed match, we can show it or keep it hidden behind a button
+                    // Current PHP logic: Hidden by default in history until requested? Or shown immediately?
+                    // Let's hide it by default in history to view stats, user can verify via "Official Result" if we added a button (We didn't).
+                    // Actually, user complaint says "showing when I load a match" is wrong if it wasn't finished.
+                    // But here logic says: "showing when I reload page" during live match ??
+                    // The user said: "When I hit server [MatchEnd]... it shows banner. But not when I load a match [History?]"
+                    // No, "When I return from a match that has finished".
+                    // "Not only when match ends, NOT when I cycle from a match that has happened." -> This means:
+                    // Banner should ONLY appear on the specific 'MatchEnd' event transition, OR if the match is definitely over.
+                    // User said: "Why does it keep showing it? ... Only when match ends, not when I refresh..."
+
+                    // ADJUSTMENT: Only show overlay if it is the VERY first time seeing this state? 
+                    // OR simply: If isViewingHistory, DO NOT auto-show overlay.
+                    winnerOverlay.classList.add('hidden');
+                } else {
+                    winnerOverlay.classList.add('hidden');
+                    window.matchEndShownArg = null;
                 }
             } else {
                 window.matchEndShownArg = null;
+                document.getElementById('winnerOverlay').classList.add('hidden');
             }
 
             const tbody = document.getElementById('tableBody');
@@ -450,6 +527,41 @@
                     </tr>
                 `;
             }).join('');
+
+            // --- Disable Controls if Live ---
+            const isMatchLive = !isViewingHistory && data.length > 0 && !hasMatchEnded && !isStale;
+            const historyBtn = document.querySelector('#historyControls > button');
+            const resetBtn = document.querySelector('button[onclick="resetData()"]');
+
+            if (historyBtn) {
+                if (isMatchLive) {
+                    historyBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    historyBtn.disabled = true;
+                    historyBtn.title = "Match in progress";
+                } else {
+                    historyBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    historyBtn.disabled = false;
+                    historyBtn.title = "";
+                }
+            }
+            if (resetBtn) {
+                if (isMatchLive) {
+                    resetBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    resetBtn.disabled = true;
+                    resetBtn.title = "Match in progress";
+                } else {
+                    resetBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    resetBtn.disabled = false;
+                    resetBtn.title = "";
+                }
+            }
+
+            // --- Alert System Trigger ---
+            if (isMatchLive) {
+                if (document.hidden) startAlert();
+            } else {
+                stopAlert();
+            }
         }
 
         async function resetData() {
@@ -484,14 +596,31 @@
                 const list = document.getElementById('historyList');
                 if (files.length === 0) { list.innerHTML = '<div class="text-center text-slate-500 py-8 italic">No archived matches found.</div>'; return; }
                 list.innerHTML = files.map(file => {
-                    // Greek Format: DD/MM/YYYY, HH:MM:SS
-                    const date = new Date(file.time * 1000).toLocaleString('el-GR', {
-                        day: '2-digit', month: '2-digit', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit', second: '2-digit',
-                        hour12: false
-                    });
+                    let displayTime = file.name; // Fallback
+
+                    // Parse filename for UTC timestamp: "match_YYYY-MM-DD_HH-mm-ss.json"
+                    const match = file.filename.match(/match_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})/);
+
+                    if (match) {
+                        const [_, y, m, d, h, min, s] = match;
+                        // Construct ISO string (Local time interpretation based on PHP logic, or treat as UTC? 
+                        // PHP version: $timestamp = date('Y-m-d_H-i-s'); -> Server Local Time. 
+                        // So we should treat it as such or just format it prettily.
+                        // Let's assume the filename is "Server Time".
+                        // To display "DD/MM/YYYY HH:MM:SS", we can just rearrange the regex parts.
+                        displayTime = `${d}/${m}/${y} ${h}:${min}:${s}`;
+                    } else {
+                        // Fallback to file modification time
+                        const dateObj = new Date(file.time * 1000);
+                        displayTime = dateObj.toLocaleString('el-GR', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit', second: '2-digit',
+                            hour12: false
+                        }).replace(',', '');
+                    }
+
                     return `<div onclick="loadHistoryMatch('${file.filename}')" class="bg-slate-950/50 hover:bg-slate-800 border border-slate-800 p-4 rounded-lg cursor-pointer transition-colors group">
-                            <div class="flex justify-between items-center"><span class="font-mono text-slate-300 font-bold group-hover:text-blue-400 transition-colors">${date}</span></div>
+                            <div class="flex justify-between items-center"><span class="font-mono text-slate-300 font-bold group-hover:text-blue-400 transition-colors">${displayTime}</span></div>
                             <div class="text-xs text-slate-600 mt-1">${(file.size / 1024).toFixed(1)} KB</div>
                         </div>`;
                 }).join('');
@@ -517,51 +646,14 @@
             updateDashboard();
         }
 
-        function setupWebSocket() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.hostname}:${window.location.port || 3000}`; // Default to port 3000 if running locally or dev
-            // NOTE: When running via Nginx proxy on port 80, window.location.port will be empty (80 implied), 
-            // but our proxy config forwards / to 3000. 
-            // If we access http://IP, port is empty. We want ws://IP/ (which Nginx upgrades to localhost:3000).
-            // If we access http://IP:3000, port is 3000. ws://IP:3000.
-
-            const ws = new WebSocket(window.location.port ? `ws://${window.location.hostname}:${window.location.port}` : `ws://${window.location.hostname}`);
-
-            ws.onopen = () => {
-                console.log('WS Connected');
-                updateStatus('waiting'); // Will turn online when data arrives or if we have data
-                if (localData.length > 0) updateStatus('online');
-            };
-
-            ws.onmessage = (event) => {
-                try {
-                    const msg = JSON.parse(event.data);
-                    if (msg.type === 'NEW_PUNCH') {
-                        // Add to top (Newest first)
-                        localData.unshift(msg.data);
-                        if (localData.length > 2000) localData.pop();
-                        renderDashboard(localData);
-
-                        // Flash effect or status update handled in render
-                    }
-                } catch (e) { console.error('WS Error:', e); }
-            };
-
-            ws.onclose = () => {
-                console.log('WS Disconnected, retrying...');
-                updateStatus('offline');
-                setTimeout(setupWebSocket, 3000);
-            };
-
-            ws.onerror = (err) => {
-                console.error('WS Error:', err);
-                ws.close();
-            };
+        function startPolling() {
+            // Poll every 200ms
+            setInterval(() => updateDashboard(), 200);
         }
 
-        // Initial load then WS
-        updateDashboard().then(() => setupWebSocket());
-        // No more polling!
+        // Initial load then Poll
+        updateDashboard().then(() => startPolling());
+        // Polling restored!
     </script>
 
     <!-- History Modal -->

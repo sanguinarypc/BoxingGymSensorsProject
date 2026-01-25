@@ -4,11 +4,9 @@ const path = require('path');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const http = require('http');
-const WebSocket = require('ws');
 
 const app = express();
-const server = http.createServer(app); // Create HTTP server
-const wss = new WebSocket.Server({ server }); // Attach WebSocket server
+const server = http.createServer(app);
 
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
@@ -24,23 +22,6 @@ if (!fs.existsSync(HISTORY_DIR)) {
 app.use(cors()); // Allow cross-origin requests (for Flutter app)
 app.use(bodyParser.json());
 app.use(express.static('public')); // Serve static files (dashboard)
-
-// WebSocket: Handle connections
-wss.on('connection', (ws) => {
-    console.log('Client connected');
-    ws.send(JSON.stringify({ type: 'WELCOME', message: 'Connected to Box Sensors Live' }));
-
-    ws.on('close', () => console.log('Client disconnected'));
-});
-
-// Helper: Broadcast data to all connected clients
-function broadcast(data) {
-    wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(data));
-        }
-    });
-}
 
 // Helper: Append to event log
 function appendEvent(event) {
@@ -75,7 +56,15 @@ app.get('/api/data', (req, res) => {
         // Archive first
         const currentData = readData();
         if (currentData.length > 0) {
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            const h = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            const timestamp = `${y}-${m}-${d}_${h}-${min}-${s}`;
+
             const archivePath = path.join(HISTORY_DIR, `match_${timestamp}.json`);
             fs.writeFileSync(archivePath, JSON.stringify(currentData, null, 2));
         }
@@ -160,7 +149,7 @@ app.post('/api/data', (req, res) => {
     appendEvent(newData); // Log it
 
     // Broadcast to WebSockets
-    broadcast({ type: 'NEW_PUNCH', data: newData });
+    // Broadcast removed (polling used instead)
 
     console.log('Received punch:', newData);
     res.json({ success: true });
