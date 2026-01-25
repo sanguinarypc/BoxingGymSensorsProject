@@ -266,20 +266,20 @@ void _showWebDashboardDialog(BuildContext context) {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                gradientStart.withOpacity(0.95), // Slightly transparent
-                gradientEnd.withOpacity(0.95),
+                gradientStart.withValues(alpha: 0.95), // Slightly transparent
+                gradientEnd.withValues(alpha: 0.95),
               ],
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 20,
                 spreadRadius: 5,
                 offset: const Offset(0, 10),
               ),
               // Glow effect using primary color
               BoxShadow(
-                color: accentColor.withOpacity(0.15),
+                color: accentColor.withValues(alpha: 0.15),
                 blurRadius: 30,
                 spreadRadius: 0,
                 offset: const Offset(0, 0),
@@ -287,8 +287,8 @@ void _showWebDashboardDialog(BuildContext context) {
             ],
             border: Border.all(
               color: isDark
-                  ? Colors.white.withOpacity(0.1)
-                  : Colors.black.withOpacity(0.05),
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : Colors.black.withValues(alpha: 0.05),
               width: 1,
             ),
           ),
@@ -300,7 +300,7 @@ void _showWebDashboardDialog(BuildContext context) {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.1),
+                  color: accentColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -339,11 +339,11 @@ void _showWebDashboardDialog(BuildContext context) {
                 ),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.black.withOpacity(0.3)
-                      : Colors.grey.withOpacity(0.1),
+                      ? Colors.black.withValues(alpha: 0.3)
+                      : Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: accentColor.withOpacity(0.3),
+                    color: accentColor.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -437,7 +437,9 @@ void _showWebDashboardDialog(BuildContext context) {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: theme.colorScheme.primary.withOpacity(0.4),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.4,
+                            ),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
