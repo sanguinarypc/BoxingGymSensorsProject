@@ -5,6 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 
 const app = express();
+app.disable('x-powered-by');
 const PORT = process.env.PORT || 3000;
 
 // Update Paths to use separated data directory
