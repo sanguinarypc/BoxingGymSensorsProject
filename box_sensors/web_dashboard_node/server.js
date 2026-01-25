@@ -104,6 +104,11 @@ app.get('/api/history/:filename', (req, res) => {
     }
 });
 
+// API: Health Check (Best Practice)
+app.get('/health', (req, res) => {
+    res.status(200).send('ok');
+});
+
 // API: Receive Data (from Flutter App)
 app.post('/api/data', (req, res) => {
     const rawData = req.body;
