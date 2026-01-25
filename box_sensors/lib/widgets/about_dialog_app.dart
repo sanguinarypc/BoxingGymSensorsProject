@@ -1,199 +1,264 @@
 // lib/widgets/about_dialog_app.dart
+import 'dart:ui'; // For BackdropFilter
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart'; // Import the package
+import 'package:package_info_plus/package_info_plus.dart';
 
 class AboutDialogApp {
-  // Make the method async to await package info
   static Future<void> show(BuildContext context) async {
-    // Retrieve package information asynchronously
     final PackageInfo packageInfo = await PackageInfo.fromPlatform();
-
-    // Extract the version from package info
     final String appVersion = packageInfo.version;
-    // You can also get the build number if needed:
-    // final String buildNumber = packageInfo.buildNumber;
 
-    // Check if the context is still mounted BEFORE accessing it after the await
     if (!context.mounted) return;
 
-    // Retrieve theme and color scheme for styling AFTER the mounted check.
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final textStyle = TextStyle(
-      color: colorScheme.onSurface,
-    ); // Reusable text style
+    final isDark = theme.brightness == Brightness.dark;
 
-    // --- Use showDialog with AlertDialog for custom sizing ---
+    // Gradient colors
+    final gradientStart = colorScheme.surface;
+    final gradientEnd = colorScheme.surfaceContainerHighest;
+    final accentColor = colorScheme.primary;
+
     showDialog(
-      context: context, // It's safe to use context here now
-      // Use barrierDismissible: false if you want users to explicitly close via buttons
-      // barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        // Get screen width for proportional sizing
-        final screenWidth = MediaQuery.of(dialogContext).size.width;
-        // Aim for dialog width to be 60% of screen width, adjust as needed
-        final dialogWidth = screenWidth * 0.60;
-
-        return AlertDialog(
-          // Use scrollable if content might overflow vertically
-          scrollable: true,
-          // Set padding to control space around the content
-          contentPadding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 24.0),
-          // Set background color if needed, defaults usually work well
-          // backgroundColor: colorScheme.surface,
-          // Define the shape (rounded corners)
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0), // Adjust radius
-          ),
-          // Wrap the content in a SizedBox to constrain its width
-          content: SizedBox(
-            width: dialogWidth, // Apply desired width
-            child: Column(
-              mainAxisSize: MainAxisSize.min, // Take minimum vertical space
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // --- Dialog Content ---
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8), // Strong blur
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 24,
+            ),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 400),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                // Premium Gradient Background
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    gradientStart.withValues(alpha: 0.90),
+                    gradientEnd.withValues(alpha: 0.95),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                    offset: const Offset(0, 10),
+                  ),
+                  // Subtle glow
+                  BoxShadow(
+                    color: accentColor.withValues(alpha: 0.1),
+                    blurRadius: 30,
+                    spreadRadius: 0,
+                  ),
+                ],
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.05),
+                  width: 1,
+                ),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Application Icon
-                    CircleAvatar(
-                      radius: 30, // Slightly smaller icon for dialog layout
-                      backgroundColor: Colors.transparent,
-                      child: ClipOval(
-                        child: Icon(
-                          Icons.sports_mma,
-                          color: colorScheme.primary,
-                          size: 50, // Adjust size
-                        ),
+                    // 1. Glowing Icon Header
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: accentColor.withValues(alpha: 0.2),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.sports_mma,
+                        size: 48,
+                        color: accentColor,
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    // App Name and Version
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 16),
+
+                    // 2. Title & Version
+                    Text(
+                      packageInfo.appName,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Version: $appVersion',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Developed by Nick Dimitrakarakos',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // 3. Description
+                    Text(
+                      'Box Sensors is a premium application designed for boxing and MMA athletes, leveraging advanced sensor data to track punches, analyze force, and provide real-time performance metrics.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // 4. Developer Profile Card (Inset)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.black.withValues(alpha: 0.2)
+                            : Colors.white.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: colorScheme.onSurface.withValues(alpha: 0.05),
+                        ),
+                      ),
+                      child: Row(
                         children: [
-                          Text(
-                            packageInfo.appName, // Use appName from packageInfo
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.bold,
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: accentColor.withValues(alpha: 0.5),
+                                width: 2,
+                              ),
+                            ),
+                            child: CircleAvatar(
+                              radius: 24,
+                              backgroundColor: Colors.transparent,
+                              child: ClipOval(
+                                child: Image.asset(
+                                  'assets/images/profilepicture.jpg',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.person,
+                                      color: colorScheme.onSurfaceVariant,
+                                    );
+                                  },
+                                ),
+                              ),
                             ),
                           ),
-                          Text(
-                            'Version: $appVersion',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Nick Dimitrakarakos',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                Text(
+                                  'std083899@ac.eap.gr',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Legalese Text
-                    Text('Developed by Nick Dimitrakarakos', style: textStyle),
-                  ],
-                ),
-                const SizedBox(height: 20), // Increased spacing
-                // Description Text
-                Text(
-                  'The Box App is designed to help athletes and trainers manage boxing matches. '
-                  'It allows you to connect devices, track performance, and create matches efficiently.',
-                  style: textStyle,
-                  textAlign: TextAlign.justify, // Apply justification here
-                ),
-                const SizedBox(height: 16), // Increased spacing
-                // User Info Card
-                Card(
-                  elevation: 0, // Remove shadow if inside AlertDialog
-                  // color: colorScheme.surfaceContainerHighest.withAlpha(102),
-                  //color: theme.cardColor,
-                  // Use less padding inside the card if AlertDialog has padding
-                  margin: EdgeInsets.zero,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0), // Adjust padding
-                    child: Row(
+                    const SizedBox(height: 32),
+
+                    // 5. Action Buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        CircleAvatar(
-                          radius: 25, // Adjusted size for card
-                          backgroundColor: Colors.transparent,
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/profilepicture.jpg',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(
-                                  Icons.person,
-                                  size: 30,
-                                  color: colorScheme.onSurface,
-                                );
-                              },
-                            ),
+                        TextButton(
+                          onPressed: () {
+                            showLicensePage(
+                              context: context,
+                              applicationName: packageInfo.appName,
+                              applicationVersion: appVersion,
+                            );
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: colorScheme.onSurfaceVariant,
                           ),
+                          child: const Text('View licenses'),
                         ),
-                        const SizedBox(width: 12), // Adjust spacing
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Nick Dimitrakarakos',
-                                style: TextStyle(
-                                  color: colorScheme.onSurface,
-                                  fontSize: 15, // Adjust font size
-                                  fontWeight: FontWeight.bold,
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            gradient: LinearGradient(
+                              colors: [
+                                colorScheme.primary,
+                                colorScheme.tertiary,
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colorScheme.primary.withValues(
+                                  alpha: 0.4,
                                 ),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
-                              Text(
-                                'std083899@ac.eap.gr',
-                                style: TextStyle(
-                                  color: colorScheme.onSurface,
-                                  fontSize: 13, // Adjust font size
-                                ),
-                              ),                             
                             ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              foregroundColor: colorScheme.onPrimary,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                            child: const Text('Close'),
                           ),
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-          // --- Dialog Actions ---
-          actions: <Widget>[
-            // Add View Licenses Button
-            TextButton(
-              child: const Text('View licenses'), // Standard text
-              onPressed: () {
-                // Use the dialogContext to show the license page
-                // It's generally recommended to use the main context
-                // if possible, but dialogContext works here.
-                showLicensePage(
-                  context: dialogContext, // Or use the original 'context'
-                  applicationName: packageInfo.appName,
-                  applicationVersion: appVersion,
-                  // You can optionally add an icon here too
-                  // applicationIcon: Icon(Icons.sports_mma, color: colorScheme.primary),
-                );
-              },
-            ),
-            // Close Button
-            TextButton(
-              child: const Text('Close'), // Standard text
-              onPressed: () {
-                Navigator.of(dialogContext).pop(); // Close the dialog
-              },
-            ),
-          ],
         );
       },
     );
