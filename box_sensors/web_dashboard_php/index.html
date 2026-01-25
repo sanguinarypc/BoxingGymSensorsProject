@@ -465,8 +465,8 @@
                 document.querySelector('#historyControls > button').classList.add('hidden');
                 document.getElementById('liveControls').classList.remove('hidden');
 
-                // Fetch File
-                const res = await fetch('history/' + filename);
+                // Fetch File via Proxy
+                const res = await fetch('list_history.php?file=' + filename);
                 const data = await res.json();
 
                 renderDashboard(data); // Using the same render logic but with history data

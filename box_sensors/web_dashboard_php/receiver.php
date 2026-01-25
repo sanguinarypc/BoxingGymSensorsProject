@@ -16,14 +16,19 @@ if (
 
 
     // Archive before clearing
-    $file = 'data.json';
+    $dataDir = '../data';
+    if (!is_dir($dataDir))
+        mkdir($dataDir, 0777, true);
+
+    $file = $dataDir . '/data.json';
     if (file_exists($file)) {
         $content = file_get_contents($file);
         $data = json_decode($content, true);
         if ($data && count($data) > 0) {
             // Check if there is actual data to save
-            if (!is_dir('history')) {
-                mkdir('history', 0777, true);
+            $historyDir = $dataDir . '/history';
+            if (!is_dir($historyDir)) {
+                mkdir($historyDir, 0777, true);
             }
             // Use timestamp of FIRST item (latest) or current time
             $timestamp = date('Y-m-d_H-i-s');
@@ -32,19 +37,19 @@ if (
                 // Clean up receivedAt for filename if desired, but current time is safer collision-wise
             }
 
-            $archiveFile = 'history/match_' . $timestamp . '.json';
+            $archiveFile = $historyDir . '/match_' . $timestamp . '.json';
             file_put_contents($archiveFile, $content);
         }
     }
 
-    file_put_contents('data.json', json_encode([]));
+    file_put_contents($file, json_encode([]));
     echo json_encode(["status" => "success", "message" => "Data cleared"]);
     exit;
 }
 
 // Handle GET request - return data
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $file = 'data.json';
+    $file = '../data/data.json';
     if (file_exists($file)) {
         echo file_get_contents($file);
     } else {
@@ -60,7 +65,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode($json, true);
 
     if ($data) {
-        $file = 'data.json';
+        $dataDir = '../data';
+        if (!is_dir($dataDir))
+            mkdir($dataDir, 0777, true);
+        $file = $dataDir . '/data.json';
 
         // Read existing data
         $currentData = [];

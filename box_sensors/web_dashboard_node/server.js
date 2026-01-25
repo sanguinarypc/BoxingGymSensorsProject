@@ -6,12 +6,18 @@ const bodyParser = require('body-parser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, 'data.json');
-const HISTORY_DIR = path.join(__dirname, 'history');
 
-// Ensure history dir exists
+// Update Paths to use separated data directory
+const DATA_DIR = path.join(__dirname, '../data');
+const DATA_FILE = path.join(DATA_DIR, 'data.json');
+const HISTORY_DIR = path.join(DATA_DIR, 'history');
+
+// Ensure directories exist
+if (!fs.existsSync(DATA_DIR)) {
+    try { fs.mkdirSync(DATA_DIR); } catch (e) { console.error("Error creating data dir:", e); }
+}
 if (!fs.existsSync(HISTORY_DIR)) {
-    fs.mkdirSync(HISTORY_DIR);
+    try { fs.mkdirSync(HISTORY_DIR); } catch (e) { console.error("Error creating history dir:", e); }
 }
 
 // Middleware

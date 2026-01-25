@@ -4,7 +4,23 @@
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
 
-$dir = 'history';
+$dir = '../data/history';
+
+// Serve specific file if requested
+if (isset($_GET['file'])) {
+    $filename = basename($_GET['file']); // Security: basename prevents directory traversal
+    $filepath = $dir . '/' . $filename;
+
+    if (file_exists($filepath) && strpos($filename, '.json') !== false) {
+        echo file_get_contents($filepath);
+        exit;
+    } else {
+        http_response_code(404);
+        echo json_encode(['error' => 'File not found']);
+        exit;
+    }
+}
+
 $files = [];
 
 if (is_dir($dir)) {
