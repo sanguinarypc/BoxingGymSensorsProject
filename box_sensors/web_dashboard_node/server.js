@@ -114,6 +114,12 @@ app.get('/health', (req, res) => {
 app.post('/api/data', (req, res) => {
     const rawData = req.body;
 
+    // Strict Validation: Reject if main fields are missing
+    if (!rawData.oppositeDevice || !rawData.sensorValue) {
+        console.warn("Rejected invalid request:", rawData);
+        return res.status(400).json({ error: 'Missing Required Fields (oppositeDevice, sensorValue)' });
+    }
+
     // Map Flutter keys to Dashboard keys (Matching receiver.php logic)
     // Flutter sends: deviceStr, oppositeDevice, punchCount, timestamp, sensorValue, roundId
     const newData = {

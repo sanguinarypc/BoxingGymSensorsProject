@@ -200,7 +200,7 @@ class TimerState with ChangeNotifier {
     _bluetoothManager.sendSystemEvent(
       _round,
       "RoundEnd",
-      timestamp: _formatSystemTime(0),
+      timestamp: _formatSystemTime(roundTime),  // timestamp: _formatSystemTime(0),
     );
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -230,21 +230,20 @@ class TimerState with ChangeNotifier {
 
   Future<void> _endMatch() async {
     _timer?.cancel();
+
+    // Calculate elapsed time (Round Duration - Remaining)
+    // If ending manually, countdown has value. If ended naturally, countdown is 0.
+    final int elapsedSeconds = roundTime - _countdown;
+
     _matchState = MatchState.ended;
     _countdown = 0;
     _round = 1;
     resetButtonStates();
-    // Send Match End event for the *final* round that just finished
-    // Note: _round has been reset to 1, but we likely want to record the last round.
-    // However, logic above increments _round. If we are here, we finished the last round.
-    // So current _round is 1. We might need to track `rounds`.
-    // Actually, let's just send "MatchEnd" with round 0 or generic updates?
-    // Or we send it for `rounds` (max rounds)?
-    // The dashboard sorts by round ID.
+
     _bluetoothManager.sendSystemEvent(
       rounds,
       "MatchEnd",
-      timestamp: _formatSystemTime(0),
+      timestamp: _formatSystemTime(elapsedSeconds), // timestamp: _formatSystemTime(0),
     );
 
     if (_eventId != null) {

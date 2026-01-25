@@ -65,6 +65,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode($json, true);
 
     if ($data) {
+        // Strict Validation: Reject if main fields are missing
+        if (!isset($data['oppositeDevice']) || !isset($data['sensorValue'])) {
+            http_response_code(400);
+            die(json_encode(["error" => "Missing oppositeDevice or sensorValue"]));
+        }
+
         $dataDir = '../data';
         if (!is_dir($dataDir))
             mkdir($dataDir, 0777, true);

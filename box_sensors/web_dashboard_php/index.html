@@ -227,7 +227,7 @@
                     <table class="w-full text-left border-collapse">
                         <thead class="sticky top-0 z-10 bg-slate-900 shadow-sm">
                             <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider">
-                                <th class="p-2 font-semibold">Time</th>
+                                <th class="p-2 font-semibold">Time (MM:SS:CS)</th>
                                 <th class="p-2 font-semibold">Round</th>
                                 <th class="p-2 font-semibold text-center">Punch By</th>
                                 <th class="p-2 font-semibold text-right">Force (mV)</th>
@@ -467,7 +467,12 @@
 
                 // Fetch File via Proxy
                 const res = await fetch('list_history.php?file=' + filename);
-                const data = await res.json();
+                let data = await res.json();
+
+                // Fix: Ensure Newest First (Descending)
+                if (Array.isArray(data)) {
+                    data.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                }
 
                 renderDashboard(data); // Using the same render logic but with history data
 
