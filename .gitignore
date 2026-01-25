@@ -79,3 +79,12 @@ upload-keystore.jks
 # -----------------------
 .env*
 !.env.example
+
+# Node
+**/node_modules/
+**/node_modules/**
+
+
+# Backups
+**/*_backup/
+**/*backup*/
