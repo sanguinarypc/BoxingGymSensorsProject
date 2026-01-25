@@ -84,31 +84,32 @@
                     </div>
                 </div>
             </div>
-            <div class="text-center md:text-right flex flex-col items-center md:items-end">
+            <!-- Right Status Section -->
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1 items-center">
                 <!-- Server Status Indicator -->
-                <div class="flex items-center gap-1.5 mb-2 bg-slate-900/50 px-2 py-1 rounded border border-slate-800">
+                <div
+                    class="flex items-center gap-1.5 bg-slate-900/50 px-2 py-1 rounded border border-slate-800 justify-self-start">
                     <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Server</span>
                     <span id="serverStatusDot"
                         class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
                 </div>
 
-                <div class="text-xs text-slate-500 uppercase tracking-widest mb-1">Status</div>
-                <div class="flex items-center gap-4 justify-center md:justify-end">
-                    <!-- Reset Button -->
-                    <button onclick="resetData()"
-                        class="text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-3 py-1 rounded transition-colors uppercase tracking-wider font-bold">
-                        Reset Data
-                    </button>
+                <div class="text-xs text-slate-500 uppercase tracking-widest justify-self-end">Status</div>
 
-                    <div class="flex items-center gap-2" id="statusContainer">
-                        <span class="relative flex h-3 w-3">
-                            <span
-                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-500 opacity-75"
-                                id="statusPing"></span>
-                            <span class="relative inline-flex rounded-full h-3 w-3 bg-slate-500" id="statusDot"></span>
-                        </span>
-                        <span class="font-mono text-slate-500" id="statusText">WAITING</span>
-                    </div>
+                <!-- Reset Button -->
+                <button onclick="resetData()"
+                    class="text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-3 py-1 rounded transition-colors uppercase tracking-wider font-bold justify-self-start">
+                    RESET DATA
+                </button>
+
+                <div class="flex items-center gap-2 justify-self-end" id="statusContainer">
+                    <span class="relative flex h-3 w-3">
+                        <span
+                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-500 opacity-75"
+                            id="statusPing"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-slate-500" id="statusDot"></span>
+                    </span>
+                    <span class="font-mono text-slate-500" id="statusText">WAITING</span>
                 </div>
             </div>
         </header>
