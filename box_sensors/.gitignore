@@ -83,3 +83,7 @@ upload-keystore.jks
 # Node
 **/node_modules/
 **/node_modules/**
+
+# Backups
+**/*_backup/
+**/*backup*/
