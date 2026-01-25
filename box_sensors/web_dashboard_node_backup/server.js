@@ -3,10 +3,14 @@ const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const http = require('http');
 
 const app = express();
+const server = http.createServer(app);
+
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
+const EVENTS_FILE = path.join(__dirname, 'events.jsonl'); // Append-only log
 const HISTORY_DIR = path.join(__dirname, 'history');
 
 // Ensure history dir exists
@@ -18,6 +22,11 @@ if (!fs.existsSync(HISTORY_DIR)) {
 app.use(cors()); // Allow cross-origin requests (for Flutter app)
 app.use(bodyParser.json());
 app.use(express.static('public')); // Serve static files (dashboard)
+
+// Helper: Append to event log
+function appendEvent(event) {
+    fs.appendFileSync(EVENTS_FILE, JSON.stringify(event) + '\n');
+}
 
 // Helper to read data
 function readData() {
@@ -47,7 +56,15 @@ app.get('/api/data', (req, res) => {
         // Archive first
         const currentData = readData();
         if (currentData.length > 0) {
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            const h = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            const timestamp = `${y}-${m}-${d}_${h}-${min}-${s}`;
+
             const archivePath = path.join(HISTORY_DIR, `match_${timestamp}.json`);
             fs.writeFileSync(archivePath, JSON.stringify(currentData, null, 2));
         }
@@ -129,11 +146,17 @@ app.post('/api/data', (req, res) => {
     }
 
     writeData(currentData);
+    appendEvent(newData); // Log it
+
+    // Broadcast to WebSockets
+    // Broadcast removed (polling used instead)
+
     console.log('Received punch:', newData);
     res.json({ success: true });
 });
 
 // Start Server
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+// Start Server
+server.listen(PORT, '127.0.0.1', () => {
+    console.log(`Server running at http://127.0.0.1:${PORT}`);
 });

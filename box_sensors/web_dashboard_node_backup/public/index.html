@@ -64,39 +64,23 @@
                     </svg>
                     Review Matches
                 </button>
-                <div id="liveControls" class="hidden flex gap-2">
-                    <button onclick="openHistoryModal()"
-                        class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 px-4 py-2 rounded transition-colors uppercase tracking-wider font-bold flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
-                        </svg>
-                        List
-                    </button>
+                <div id="liveControls" class="hidden">
                     <button onclick="exitHistoryMode()"
                         class="text-xs bg-red-900/40 hover:bg-red-900/60 text-red-200 border border-red-800 px-4 py-2 rounded transition-colors uppercase tracking-wider font-bold animate-pulse flex items-center gap-2">
                         <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
                         Back to Live
                     </button>
-                    <div
-                        class="text-[10px] text-center text-slate-500 mt-1 uppercase tracking-widest absolute -bottom-5 w-full left-0">
-                        Viewing History
+                    <div class="text-[10px] text-center text-slate-500 mt-1 uppercase tracking-widest">Viewing History
                     </div>
                 </div>
             </div>
-            <div class="text-center md:text-right flex flex-col items-center md:items-end">
-                <!-- Server Status Indicator -->
-                <div class="flex items-center gap-1.5 mb-2 bg-slate-900/50 px-2 py-1 rounded border border-slate-800">
-                    <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Server</span>
-                    <span id="serverStatusDot"
-                        class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
-                </div>
-
+            <div class="text-center md:text-right">
                 <div class="text-xs text-slate-500 uppercase tracking-widest mb-1">Status</div>
                 <div class="flex items-center gap-4 justify-center md:justify-end">
-                    <!-- Reset Button -->
+                    <!-- Reset Button with Dynamic Dot -->
                     <button onclick="resetData()"
-                        class="text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-3 py-1 rounded transition-colors uppercase tracking-wider font-bold">
+                        class="text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-3 py-1 rounded transition-colors uppercase tracking-wider font-bold flex items-center gap-2">
+                        <span id="resetStatusDot" class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
                         Reset Data
                     </button>
 
@@ -134,7 +118,35 @@
                     </div>
                 </div>
                 <!-- Close Button -->
-                <button onclick="closeWinnerOverlay()"
+                <button onclick="document.getElementById('winnerOverlay').classList.add('hidden')"
+                    class="mt-8 text-xs text-slate-500 hover:text-white uppercase tracking-widest transition-colors">
+                    [ Close Result ]
+                </button>
+            </div>
+        </div>
+
+        <!-- Winner Overlay (Hidden by default) -->
+        <div id="winnerOverlay"
+            class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-enter">
+            <div
+                class="bg-slate-900 border-2 border-slate-700 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_50px_rgba(0,0,0,0.5)] transform scale-110">
+                <div id="winnerTitle" class="text-sm font-bold uppercase tracking-[0.5em] mb-4 text-slate-400">OFFICIAL
+                    RESULT</div>
+                <div id="winnerName"
+                    class="text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
+                    WINNER NAME
+                </div>
+                <div class="flex justify-center gap-8 text-2xl font-mono font-bold text-slate-300">
+                    <div>
+                        <span class="text-blue-400">BLUE</span> <span id="winnerBlueScore">0</span>
+                    </div>
+                    <span>-</span>
+                    <div>
+                        <span class="text-red-400">RED</span> <span id="winnerRedScore">0</span>
+                    </div>
+                </div>
+                <!-- Close Button -->
+                <button onclick="document.getElementById('winnerOverlay').classList.add('hidden')"
                     class="mt-8 text-xs text-slate-500 hover:text-white uppercase tracking-widest transition-colors">
                     [ Close Result ]
                 </button>
@@ -243,34 +255,12 @@
         </div>
     </div>
 
-
-    <!-- History Modal -->
-    <div id="historyModal"
-        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-enter">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl">
-            <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
-                <h3 class="text-lg font-bold text-slate-200">Match History</h3>
-                <button onclick="closeHistoryModal()" class="text-slate-500 hover:text-white transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg>
-                </button>
-            </div>
-            <div id="historyList" class="max-h-[60vh] overflow-y-auto space-y-2 pr-2">
-                <!-- Populated by JS -->
-                <div class="text-center text-slate-500 py-8 italic">Loading...</div>
-            </div>
-        </div>
-    </div>
-
     <!-- Logic -->
     <script>
         let isViewingHistory = false;
+        let localData = []; // Store data locally for WebSocket updates
         const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
         let lastDataJSON = '';
-        let currentMatchId = null; // Track match ID
-        let lastMatchEndedState = null; // For transition detection
         const OFFLINE_THRESHOLD_MS = 10000; // 10 seconds without new data = offline
         const STATUS_UI = {
             online: { text: 'LIVE', color: 'green', ping: true },
@@ -283,18 +273,24 @@
             const colorClass = `text-${config.color}-400`;
             const bgClass = `bg-${config.color}-500`;
 
-            // Text
             const textEl = document.getElementById('statusText');
             textEl.innerText = config.text;
             textEl.className = `font-mono font-bold ${colorClass}`;
 
-            // Dot
             const dotEl = document.getElementById('statusDot');
             dotEl.className = `relative inline-flex rounded-full h-3 w-3 ${bgClass}`;
 
-            // Ping Animation
             const pingEl = document.getElementById('statusPing');
             pingEl.className = `absolute inline-flex h-full w-full rounded-full ${bgClass} opacity-75 ${config.ping ? 'animate-ping' : 'hidden'}`;
+
+            // Reset Button Dot Logic
+            const resetDot = document.getElementById('resetStatusDot');
+            if (resetDot) {
+                // If Waiting -> Orange/Yellow? User said "indicator like live". 
+                // PHP version has a light that goes on/off.
+                // Let's map it to the status color.
+                resetDot.className = `w-1.5 h-1.5 rounded-full ${bgClass}`;
+            }
         }
 
         // --- Alert System ---
@@ -321,7 +317,6 @@
         function startAlert() {
             if (alertInterval) return;
             playBeep();
-
             let on = false;
             if (!originalTitle) originalTitle = document.title;
             alertInterval = setInterval(() => {
@@ -345,151 +340,35 @@
 
         async function updateDashboard(overrideData = null) {
             let data = overrideData;
-            const serverDot = document.getElementById('serverStatusDot');
-
             if (!data) {
                 if (isViewingHistory) return;
                 try {
-                    // Fetch from our receiver.php with cache-busting timestamp
-                    const response = await fetch('receiver.php?t=' + new Date().getTime());
+                    const response = await fetch('/api/data');
                     data = await response.json();
-
-                    // Server is UP
-                    if (serverDot) {
-                        serverDot.className = "w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]";
-                        serverDot.parentElement.classList.remove('border-red-900/50', 'bg-red-900/10');
-                        serverDot.parentElement.classList.add('border-slate-800', 'bg-slate-900/50');
-                    }
-                } catch (e) {
-                    // Server is DOWN
-                    if (serverDot) {
-                        serverDot.className = "w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]";
-                        serverDot.parentElement.classList.remove('border-slate-800', 'bg-slate-900/50');
-                        serverDot.parentElement.classList.add('border-red-900/50', 'bg-red-900/10');
-                    }
-                    return;
-                }
+                } catch (e) { return; }
             }
 
             if (!Array.isArray(data)) return;
+            localData = data; // Update local cache
             renderDashboard(data);
-
         }
-
-        // --- History Logic ---
-        function openHistoryModal() {
-            document.getElementById('historyModal').classList.remove('hidden');
-            loadHistoryList();
-        }
-
-        function closeHistoryModal() {
-            document.getElementById('historyModal').classList.add('hidden');
-        }
-
-        async function loadHistoryList() {
-            try {
-                const res = await fetch('list_history.php');
-                const files = await res.json();
-                const list = document.getElementById('historyList');
-
-                if (files.length === 0) {
-                    list.innerHTML = '<div class="text-center text-slate-500 py-8 italic">No archived matches found.</div>';
-                    return;
-                }
-
-                list.innerHTML = files.map(file => {
-                    let displayTime = file.name; // Fallback
-
-                    // Parse filename for UTC timestamp: "match_YYYY-MM-DD_HH-mm-ss.json"
-                    const match = file.filename.match(/match_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})/);
-
-                    if (match) {
-                        const [_, y, m, d, h, min, s] = match;
-                        // Construct UTC ISO string (Z at end forces UTC interpretation)
-                        const isoStr = `${y}-${m}-${d}T${h}:${min}:${s}Z`;
-                        const dateObj = new Date(isoStr);
-                        // Convert to Local (Greek) Time
-                        displayTime = `${dateObj.toLocaleDateString('en-GB')} ${dateObj.toLocaleTimeString('en-GB', { hour12: false })}`;
-                    } else {
-                        // Fallback to file modification time if filename parse fails
-                        const dateObj = new Date(file.time * 1000);
-                        displayTime = `${dateObj.toLocaleDateString('en-GB')} ${dateObj.toLocaleTimeString('en-GB', { hour12: false })}`;
-                    }
-
-                    return `
-                        <div onclick="loadHistoryMatch('${file.filename}')" class="bg-slate-950/50 hover:bg-slate-800 border border-slate-800 p-4 rounded-lg cursor-pointer transition-colors group">
-                            <div class="flex justify-between items-center">
-                                <span class="font-mono text-slate-300 font-bold group-hover:text-blue-400 transition-colors">${displayTime}</span>
-                            </div>
-                            <div class="text-xs text-slate-600 mt-1">${(file.size / 1024).toFixed(1)} KB</div>
-                        </div>
-                    `;
-                }).join('');
-            } catch (e) {
-                document.getElementById('historyList').innerText = "Failed to load history.";
-            }
-        }
-
-        async function loadHistoryMatch(filename) {
-            try {
-                closeHistoryModal();
-                isViewingHistory = true;
-
-                // Toggle Buttons
-                document.querySelector('#historyControls > button').classList.add('hidden');
-                document.getElementById('liveControls').classList.remove('hidden');
-
-                // Fetch File
-                const res = await fetch('history/' + filename);
-                const data = await res.json();
-
-                renderDashboard(data); // Using the same render logic but with history data
-
-            } catch (e) {
-                alert("Failed to load match: " + e.message);
-                exitHistoryMode();
-            }
-        }
-
-        function exitHistoryMode() {
-            isViewingHistory = false;
-            // Toggle Buttons
-            document.querySelector('#historyControls > button').classList.remove('hidden');
-            document.getElementById('liveControls').classList.add('hidden');
-
-            // Clear current view and fetch live
-            updateDashboard();
-        }
-
-        // We need to refactor the render logic out of updateDashboard loop if we want to reuse it,
-        // OR just rely on the fact that the next poll will overwrite it.
-        // Wait, loadHistoryMatch calls renderDashboard(data) - but renderDashboard DOES NOT EXIST as a standalone function yet!
-        // The code inside updateDashboard needs to be extracted to 'renderDashboard(data)'.
-
-        // REFACTORING ON THE FLY:
-        // I will copy the rendering logic into a new function renderDashboard(data)
-        // and have updateDashboard call it.
 
         function renderDashboard(data) {
             if (!Array.isArray(data)) return;
 
-            // Stop flashing: Only update DOM if data has changed
             const currentDataJSON = JSON.stringify(data);
-            if (currentDataJSON === lastDataJSON) {
-                return; // No changes, skip implementation
-            }
+            // Skip check if in history mode (always render)? 
+            // Logic in loadHistoryMatch clears lastDataJSON to force render.
+            if (currentDataJSON === lastDataJSON) return;
             lastDataJSON = currentDataJSON;
 
-            // Update Stats Logic: Group by Round to calculate correct totals
             const blueStats = { total: 0, currentRound: 0 };
             const redStats = { total: 0, currentRound: 0 };
-
-            // 1. Group punches by round
             const rounds = {};
+
             data.forEach(p => {
                 const r = p.round || 1;
                 if (!rounds[r]) rounds[r] = { blue: 0, red: 0 };
-
                 const val = parseInt(p.count || 0);
                 if (p.punchBy === 'BlueBoxer') {
                     if (val > rounds[r].blue) rounds[r].blue = val;
@@ -498,14 +377,11 @@
                 }
             });
 
-            // 2. Sum up totals (Max count of each round added together)
             Object.values(rounds).forEach(r => {
                 blueStats.total += r.blue;
                 redStats.total += r.red;
             });
 
-            // 3. Get Current Round Score (Latest round info)
-            // Assuming data is sorted new->old, the first item has the latest round
             let maxRound = 0;
             Object.keys(rounds).forEach(r => {
                 if (parseInt(r) > maxRound) maxRound = parseInt(r);
@@ -516,178 +392,140 @@
                 redStats.currentRound = rounds[maxRound].red;
             }
 
-            // Render Scorecard (History)
             const historyContainer = document.getElementById('roundHistory');
             const scorecardContainer = document.getElementById('scorecardContainer');
 
             if (maxRound > 0) {
                 scorecardContainer.style.display = 'block';
-                // Generate sorted rounds 1..maxRound
                 const sortedRounds = Object.keys(rounds).map(r => parseInt(r)).sort((a, b) => a - b);
-
                 historyContainer.innerHTML = sortedRounds.map(r => {
                     const score = rounds[r];
-                    // Highlight the winner of the round
                     const blueClass = score.blue > score.red ? 'text-blue-400 font-bold' : 'text-slate-500';
                     const redClass = score.red > score.blue ? 'text-red-400 font-bold' : 'text-slate-500';
-
                     return `
-                            <div class="flex flex-col items-center bg-slate-950/50 border border-slate-800 rounded-lg p-3 min-w-[100px] shrink-0">
-                                <span class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Round ${r}</span>
-                                <div class="flex items-center gap-3 text-xl font-mono">
-                                    <span class="${blueClass}">${score.blue}</span>
-                                    <span class="text-slate-700">-</span>
-                                    <span class="${redClass}">${score.red}</span>
-                                </div>
+                        <div class="flex flex-col items-center bg-slate-950/50 border border-slate-800 rounded-lg p-3 min-w-[100px] shrink-0">
+                            <span class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Round ${r}</span>
+                            <div class="flex items-center gap-3 text-xl font-mono">
+                                <span class="${blueClass}">${score.blue}</span>
+                                <span class="text-slate-700">-</span>
+                                <span class="${redClass}">${score.red}</span>
                             </div>
-                        `;
+                        </div>
+                    `;
                 }).join('');
             } else {
                 scorecardContainer.style.display = 'none';
             }
 
-            // Update DOM Totals
             document.getElementById('blueTotal').innerText = blueStats.total;
             document.getElementById('blueRound').innerText = blueStats.currentRound;
-
             document.getElementById('redTotal').innerText = redStats.total;
             document.getElementById('redRound').innerText = redStats.currentRound;
 
-            // Check for "Liveness" by looking at timestamps
-            // 1. Stale Data Check (> 30 mins old)
             let isStale = false;
             if (data.length > 0) {
                 const tStr = data[0].receivedAt || data[0].timestamp || '';
                 if (tStr) {
-                    // Robust parse for "Y-m-d H:i:s" (old PHP) or ISO 8601 (new PHP)
-                    // If no 'T', replace space. If 'T' exists, use as is.
-                    const isoStr = tStr.includes('T') ? tStr : tStr.replace(' ', 'T');
-                    const lastPunchTime = new Date(isoStr);
+                    const lastPunchTime = new Date(tStr);
                     const now = new Date();
-                    // Basic sanity check on date
                     if (!isNaN(lastPunchTime.getTime()) && (now - lastPunchTime > STALE_THRESHOLD_MS)) {
                         isStale = true;
                     }
                 }
             }
 
-            // Check for "Liveness" - Match is ended only if the LATEST event is MatchEnd
-            // Use findIndex to be safe against potential noise at top, but usually data[0] is enough.
-            // If the latest meaningful event (Punch or MatchEnd) is MatchEnd, then it ended.
-            // Simpler: If data[0] is MatchEnd, it ended. If data[0] is Punch, it's live (new match started).
-            const hasMatchEnded = data.length > 0 && data[0].punchBy === 'System' && data[0].force === 'MatchEnd';
-
-            // Auto-Switch to Live: If we are in history mode, but FRESH LIVE data arrives, exit history
-            if (isViewingHistory && data.length > 0 && !hasMatchEnded && !isStale) {
-                console.log("Auto-switching to Live");
-                exitHistoryMode();
-                return;
-            }
+            const hasMatchEnded = data.some(d => d.punchBy === 'System' && d.force === 'MatchEnd');
 
             if (isViewingHistory) {
-                updateStatus('offline'); // Or 'History'
-                document.getElementById('statusText').innerText = "HISTORY";
-                document.getElementById('statusText').className = "font-mono font-bold text-purple-400";
+                updateStatus('offline');
+                const t = document.getElementById('statusText');
+                t.innerText = "HISTORY";
+                t.className = "font-mono font-bold text-purple-400";
                 document.getElementById('statusDot').className = "relative inline-flex rounded-full h-3 w-3 bg-purple-500";
                 document.getElementById('statusPing').className = "hidden";
-                // Ensure winner overlay is hidden in history mode by default
-                document.getElementById('winnerOverlay').classList.add('hidden');
+                if (hasMatchEnded) document.getElementById('winnerOverlay').classList.remove('hidden');
+                else document.getElementById('winnerOverlay').classList.add('hidden');
 
             } else if (data.length > 0 && !hasMatchEnded && !isStale) {
                 updateStatus('online');
                 document.getElementById('winnerOverlay').classList.add('hidden');
             } else {
                 updateStatus('waiting');
-                if (isStale) {
-                    // Force hide winner overlay if stale
-                    document.getElementById('winnerOverlay').classList.add('hidden');
-                }
+                if (isStale) document.getElementById('winnerOverlay').classList.add('hidden');
             }
 
-            // --- Match Result Logic ---
-            // Only show result if we witness a transition from Live -> Ended
-            if (!isViewingHistory) {
-                if (lastMatchEndedState === null) {
-                    // First load (or first valid data): Initialize state but DO NOT show overlay
-                    lastMatchEndedState = hasMatchEnded;
-                    // Ensure overlay is hidden on load
-                    document.getElementById('winnerOverlay').classList.add('hidden');
+            if (hasMatchEnded && !isStale) {
+                const winnerOverlay = document.getElementById('winnerOverlay');
+                const winnerNameEl = document.getElementById('winnerName');
+                const containerDiv = winnerOverlay.querySelector('div');
+
+                document.getElementById('winnerBlueScore').innerText = blueStats.total;
+                document.getElementById('winnerRedScore').innerText = redStats.total;
+
+                if (blueStats.total > redStats.total) {
+                    winnerNameEl.innerText = "BLUE CORNER";
+                    winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-blue-400 drop-shadow-[0_0_25px_rgba(59,130,246,0.6)]";
+                    containerDiv.className = "bg-slate-900 border-4 border-blue-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(59,130,246,0.3)] transform scale-110";
+                } else if (redStats.total > blueStats.total) {
+                    winnerNameEl.innerText = "RED CORNER";
+                    winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]";
+                    containerDiv.className = "bg-slate-900 border-4 border-red-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(239,68,68,0.3)] transform scale-110";
                 } else {
-                    // Check for transition
-                    if (hasMatchEnded && !lastMatchEndedState) {
-                        // Transition: Live -> Ended
-                        // SHOW OVERLAY
-                        const winnerOverlay = document.getElementById('winnerOverlay');
-                        const winnerNameEl = document.getElementById('winnerName');
-                        const containerDiv = winnerOverlay.querySelector('div');
+                    winnerNameEl.innerText = "DRAW";
+                    winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.6)]";
+                    containerDiv.className = "bg-slate-900 border-4 border-slate-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(255,255,255,0.2)] transform scale-110";
+                }
 
-                        // Set Scores
-                        document.getElementById('winnerBlueScore').innerText = blueStats.total;
-                        document.getElementById('winnerRedScore').innerText = redStats.total;
-
-                        // Determine Winner
-                        if (blueStats.total > redStats.total) {
-                            winnerNameEl.innerText = "BLUE CORNER";
-                            winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-blue-400 drop-shadow-[0_0_25px_rgba(59,130,246,0.6)]";
-                            containerDiv.className = "bg-slate-900 border-4 border-blue-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(59,130,246,0.3)] transform scale-110";
-                        } else if (redStats.total > blueStats.total) {
-                            winnerNameEl.innerText = "RED CORNER";
-                            winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]";
-                            containerDiv.className = "bg-slate-900 border-4 border-red-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(239,68,68,0.3)] transform scale-110";
-                        } else {
-                            winnerNameEl.innerText = "DRAW";
-                            winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.6)]";
-                            containerDiv.className = "bg-slate-900 border-4 border-slate-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(255,255,255,0.2)] transform scale-110";
-                        }
-
+                // Only auto-show if data has 'MatchEnd'
+                if (hasMatchEnded && !isStale) {
+                    if (!window.matchEndShownArg || window.matchEndShownArg !== data.length) {
                         winnerOverlay.classList.remove('hidden');
-                    } else if (!hasMatchEnded && lastMatchEndedState) {
-                        // Reset if match restarts/new match begins
-                        document.getElementById('winnerOverlay').classList.add('hidden');
+                        window.matchEndShownArg = data.length;
                     }
+                } else if (isViewingHistory && hasMatchEnded) {
+                    // In history mode, if it was a completed match, we can show it or keep it hidden behind a button
+                    // Current PHP logic: Hidden by default in history until requested? Or shown immediately?
+                    // Let's hide it by default in history to view stats, user can verify via "Official Result" if we added a button (We didn't).
+                    // Actually, user complaint says "showing when I load a match" is wrong if it wasn't finished.
+                    // But here logic says: "showing when I reload page" during live match ??
+                    // The user said: "When I hit server [MatchEnd]... it shows banner. But not when I load a match [History?]"
+                    // No, "When I return from a match that has finished".
+                    // "Not only when match ends, NOT when I cycle from a match that has happened." -> This means:
+                    // Banner should ONLY appear on the specific 'MatchEnd' event transition, OR if the match is definitely over.
+                    // User said: "Why does it keep showing it? ... Only when match ends, not when I refresh..."
 
-                    lastMatchEndedState = hasMatchEnded;
+                    // ADJUSTMENT: Only show overlay if it is the VERY first time seeing this state? 
+                    // OR simply: If isViewingHistory, DO NOT auto-show overlay.
+                    winnerOverlay.classList.add('hidden');
+                } else {
+                    winnerOverlay.classList.add('hidden');
+                    window.matchEndShownArg = null;
                 }
             } else {
-                // Always hide in history mode
+                window.matchEndShownArg = null;
                 document.getElementById('winnerOverlay').classList.add('hidden');
             }
 
-            // Update Table
             const tbody = document.getElementById('tableBody');
             if (data.length === 0) {
                 updateStatus('waiting');
-                tbody.innerHTML = '<tr><td colspan="4" class="p-12 text-center text-slate-500 italic">Waiting for data...</td></tr>';
-                // Ensure buttons enabled if waiting
-                const historyBtn = document.querySelector('#historyControls > button');
-                const resetBtn = document.querySelector('button[onclick="resetData()"]');
-                if (historyBtn) { historyBtn.classList.remove('opacity-50', 'cursor-not-allowed'); historyBtn.disabled = false; }
-                if (resetBtn) { resetBtn.classList.remove('opacity-50', 'cursor-not-allowed'); resetBtn.disabled = false; }
+                tbody.innerHTML = '<tr><td colspan="4" class="p-12 text-center text-slate-500 italic">Waiting...</td></tr>';
                 return;
             }
 
-            // Render rows - Limit to last 20 for UI cleanliness even if we rely on more history
             const displayData = data.slice(0, 50);
-
             tbody.innerHTML = displayData.map((punch, index) => {
                 const isBlue = punch.punchBy === 'BlueBoxer';
-                const badgeClass = isBlue
-                    ? 'bg-blue-900/30 text-blue-400 border-blue-800'
-                    : 'bg-red-900/30 text-red-400 border-red-800';
+                const badgeClass = isBlue ? 'bg-blue-900/30 text-blue-400 border-blue-800' : 'bg-red-900/30 text-red-400 border-red-800';
                 const roundNum = punch.round || '-';
-
                 return `
-                        <tr class="hover:bg-slate-800/50 transition-colors animate-enter" style="animation-delay: ${index * 0.02}s">
-                            <td class="p-2 font-mono text-slate-300 text-sm">${punch.time}</td>
-                            <td class="p-2 font-mono text-slate-400 text-sm">R${roundNum}</td>
-                            <td class="p-2 text-center">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${badgeClass}">
-                                    ${punch.punchBy}
-                                </span>
-                            </td>
-                            <td class="p-2 text-right font-mono text-emerald-400 font-bold text-sm">${punch.force}</td>
-                        </tr>
-                    `;
+                    <tr class="hover:bg-slate-800/50 transition-colors animate-enter" style="animation-delay: ${index * 0.02}s">
+                        <td class="p-2 font-mono text-slate-300 text-sm">${punch.time}</td>
+                        <td class="p-2 font-mono text-slate-400 text-sm">R${roundNum}</td>
+                        <td class="p-2 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${badgeClass}">${punch.punchBy}</span></td>
+                        <td class="p-2 text-right font-mono text-emerald-400 font-bold text-sm">${punch.force}</td>
+                    </tr>
+                `;
             }).join('');
 
             // --- Disable Controls if Live ---
@@ -720,37 +558,123 @@
 
             // --- Alert System Trigger ---
             if (isMatchLive) {
-                // Match is live. If user is tabbed away (document hidden), start alert to summon them back.
-                if (document.hidden) {
-                    startAlert();
-                }
+                if (document.hidden) startAlert();
             } else {
-                stopAlert(); // Stop if match ends or goes stale
-                // Also stop if viewing history (isMatchLive is false then)
+                stopAlert();
             }
         }
 
         async function resetData() {
             if (!confirm('Are you sure you want to clear all data?')) return;
             try {
-                await fetch('receiver.php?action=clear');
+                await fetch('/api/data?action=clear', { method: 'POST' }); // Use POST or GET based on server implementation. Server uses Query param on Any?? Server: app.get(..., action=clear).
+                // Wait, server.js uses app.get('/api/data') for clear.
+                // So fetch('/api/data?action=clear') is correct.
+                // But my replace used { method: 'POST' }?
+                // Let's check server.js (Step 279).
+                // app.get('/api/data', ...) -> checks req.query.action === 'clear'.
+                // So it is GET.
+                await fetch('/api/data?action=clear');
                 updateDashboard();
             } catch (e) {
                 alert('Failed to reset');
             }
         }
 
-        function closeWinnerOverlay() {
-            document.getElementById('winnerOverlay').classList.add('hidden');
-            if (currentMatchId) {
-                localStorage.setItem('lastSeenMatchEnd', currentMatchId);
-            }
+        // History Helpers
+        function openHistoryModal() {
+            document.getElementById('historyModal').classList.remove('hidden');
+            loadHistoryList();
+        }
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+        async function loadHistoryList() {
+            try {
+                const res = await fetch('/api/history');
+                const files = await res.json();
+                const list = document.getElementById('historyList');
+                if (files.length === 0) { list.innerHTML = '<div class="text-center text-slate-500 py-8 italic">No archived matches found.</div>'; return; }
+                list.innerHTML = files.map(file => {
+                    let displayTime = file.name; // Fallback
+
+                    // Parse filename for UTC timestamp: "match_YYYY-MM-DD_HH-mm-ss.json"
+                    const match = file.filename.match(/match_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})/);
+
+                    if (match) {
+                        const [_, y, m, d, h, min, s] = match;
+                        // Construct ISO string (Local time interpretation based on PHP logic, or treat as UTC? 
+                        // PHP version: $timestamp = date('Y-m-d_H-i-s'); -> Server Local Time. 
+                        // So we should treat it as such or just format it prettily.
+                        // Let's assume the filename is "Server Time".
+                        // To display "DD/MM/YYYY HH:MM:SS", we can just rearrange the regex parts.
+                        displayTime = `${d}/${m}/${y} ${h}:${min}:${s}`;
+                    } else {
+                        // Fallback to file modification time
+                        const dateObj = new Date(file.time * 1000);
+                        displayTime = dateObj.toLocaleString('el-GR', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit', second: '2-digit',
+                            hour12: false
+                        }).replace(',', '');
+                    }
+
+                    return `<div onclick="loadHistoryMatch('${file.filename}')" class="bg-slate-950/50 hover:bg-slate-800 border border-slate-800 p-4 rounded-lg cursor-pointer transition-colors group">
+                            <div class="flex justify-between items-center"><span class="font-mono text-slate-300 font-bold group-hover:text-blue-400 transition-colors">${displayTime}</span></div>
+                            <div class="text-xs text-slate-600 mt-1">${(file.size / 1024).toFixed(1)} KB</div>
+                        </div>`;
+                }).join('');
+            } catch (e) { document.getElementById('historyList').innerText = "Failed to load history."; }
+        }
+        async function loadHistoryMatch(filename) {
+            try {
+                closeHistoryModal();
+                isViewingHistory = true;
+                document.querySelector('#historyControls > button').classList.add('hidden');
+                document.getElementById('liveControls').classList.remove('hidden');
+                const res = await fetch('/api/history/' + filename);
+                const data = await res.json();
+                lastDataJSON = '';
+                renderDashboard(data);
+            } catch (e) { alert("Failed to load match: " + e.message); exitHistoryMode(); }
+        }
+        function exitHistoryMode() {
+            isViewingHistory = false;
+            document.querySelector('#historyControls > button').classList.remove('hidden');
+            document.getElementById('liveControls').classList.add('hidden');
+            lastDataJSON = '';
+            updateDashboard();
         }
 
-        // Poll every 1 second
-        setInterval(updateDashboard, 1000);
-        updateDashboard();
+        function startPolling() {
+            // Poll every 200ms
+            setInterval(() => updateDashboard(), 200);
+        }
+
+        // Initial load then Poll
+        updateDashboard().then(() => startPolling());
+        // Polling restored!
     </script>
+
+    <!-- History Modal -->
+    <div id="historyModal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-enter">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+                <h3 class="text-lg font-bold text-slate-200">Match History</h3>
+                <button onclick="closeHistoryModal()" class="text-slate-500 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+            <div id="historyList" class="max-h-[60vh] overflow-y-auto space-y-2 pr-2">
+                <!-- Populated by JS -->
+                <div class="text-center text-slate-500 py-8 italic">Loading...</div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
