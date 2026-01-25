@@ -57,7 +57,7 @@
 
             <!-- History Button -->
             <div id="historyControls">
-                <button onclick="openHistoryModal()"
+                <button id="reviewMatchesBtn" onclick="openHistoryModal()"
                     class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-4 py-2 rounded transition-colors uppercase tracking-wider font-bold flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -66,7 +66,7 @@
                     Review Matches
                 </button>
                 <div id="liveControls" class="hidden flex gap-2">
-                    <button onclick="openHistoryModal()"
+                    <button id="listMatchesBtn" onclick="openHistoryModal()"
                         class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 px-4 py-2 rounded transition-colors uppercase tracking-wider font-bold flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -99,7 +99,7 @@
                 <div class="text-xs text-slate-500 uppercase tracking-widest justify-self-end">Status</div>
 
                 <!-- Reset Button -->
-                <button onclick="resetData()"
+                <button id="resetBtn" onclick="resetData()"
                     class="text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-3 py-1 rounded transition-colors uppercase tracking-wider font-bold justify-self-start">
                     RESET DATA
                 </button>
@@ -292,6 +292,31 @@
                 pingEl.className = "hidden";
             } else {
                 pingEl.className = `absolute inline-flex h-full w-full rounded-full ${bgClass} opacity-75 ${config.ping ? 'animate-ping' : 'hidden'}`;
+            }
+
+            // Button Protection (Disable controls during Live match)
+            try {
+                const isLive = (state === 'online');
+                const resetBtn = document.getElementById('resetBtn') || document.querySelector('button[onclick="resetData()"]');
+                const historyBtns = document.querySelectorAll('button[onclick="openHistoryModal()"]');
+
+                const allBtns = [];
+                if (resetBtn) allBtns.push(resetBtn);
+                historyBtns.forEach(b => allBtns.push(b));
+
+                allBtns.forEach(btn => {
+                    btn.disabled = isLive;
+                    btn.style.opacity = isLive ? '0.2' : '1';
+                    btn.style.pointerEvents = isLive ? 'none' : 'auto';
+                    btn.style.cursor = isLive ? 'not-allowed' : 'pointer';
+                    if (isLive) {
+                        btn.classList.add('cursor-not-allowed', 'grayscale');
+                    } else {
+                        btn.classList.remove('cursor-not-allowed', 'grayscale');
+                    }
+                });
+            } catch (e) {
+                console.error("Button logic error", e);
             }
         }
 
@@ -498,6 +523,8 @@
         }
 
         async function resetData() {
+            const btn = document.getElementById('resetBtn');
+            if (btn && btn.disabled) return;
             if (!confirm('Are you sure you want to clear all data?')) return;
             try {
                 await fetch('/api/data?action=clear', { method: 'POST' }); // Use POST or GET based on server implementation. Server uses Query param on Any?? Server: app.get(..., action=clear).
@@ -516,6 +543,11 @@
 
         // History Helpers
         function openHistoryModal() {
+            // Check either button
+            const btn1 = document.getElementById('reviewMatchesBtn');
+            const btn2 = document.getElementById('listMatchesBtn');
+            if ((btn1 && btn1.disabled) || (btn2 && btn2.disabled)) return;
+
             document.getElementById('historyModal').classList.remove('hidden');
             loadHistoryList();
         }
