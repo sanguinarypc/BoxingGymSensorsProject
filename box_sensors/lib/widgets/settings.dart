@@ -124,7 +124,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       roundsController.text.trim(),
       roundTimeController.text.trim(),
       breakTimeController.text.trim(),
-      breakTimeController.text.trim(),
       secondsBeforeRoundBeginsController.text.trim(),
     ];
     final webServerUrl = webServerUrlController.text.trim();
