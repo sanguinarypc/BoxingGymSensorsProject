@@ -551,6 +551,10 @@
             const historyContainer = document.getElementById('roundHistory');
             const scorecardContainer = document.getElementById('scorecardContainer');
 
+            // Auto-scroll detection: Check if user is at the end (rightmost)
+            // If the container is hidden (first load) or user receives new data, this defaults to true
+            const isAtEnd = (historyContainer.scrollWidth - historyContainer.scrollLeft - historyContainer.clientWidth) < 50;
+
             if (maxRound > 0) {
                 scorecardContainer.style.display = 'block';
                 // Generate sorted rounds 1..maxRound
@@ -573,6 +577,13 @@
                             </div>
                         `;
                 }).join('');
+
+                // Auto-scroll to end if user was already there or if it's a new appearance
+                if (isAtEnd) {
+                    setTimeout(() => {
+                        historyContainer.scrollLeft = historyContainer.scrollWidth;
+                    }, 0);
+                }
             } else {
                 scorecardContainer.style.display = 'none';
             }
