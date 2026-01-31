@@ -254,6 +254,7 @@
         let lastDataJSON = '';
         let currentMatchId = null; // Track ID for banner logic
         let lastMatchEndedState = null; // For transition detection
+        let allMatchData = []; // Store filtered or live data for popups
         const OFFLINE_THRESHOLD_MS = 10000; // 10 seconds without new data = offline
         const STATUS_UI = {
             online: { text: 'LIVE', color: 'green', ping: true, dot: true },
@@ -354,6 +355,9 @@
         function renderDashboard(data) {
             if (!Array.isArray(data)) return;
 
+            // Store for popup usage
+            allMatchData = data;
+
             const currentDataJSON = JSON.stringify(data);
             // Skip check if in history mode (always render)? 
             // Logic in loadHistoryMatch clears lastDataJSON to force render.
@@ -404,7 +408,7 @@
                     const blueClass = score.blue > score.red ? 'text-blue-400 font-bold' : 'text-slate-500';
                     const redClass = score.red > score.blue ? 'text-red-400 font-bold' : 'text-slate-500';
                     return `
-                        <div class="flex flex-col items-center bg-slate-950/50 border border-slate-800 rounded-lg p-3 min-w-[100px] shrink-0">
+                        <div onmouseenter="showRoundPopup(this, ${r})" onmouseleave="hideRoundPopup()" class="flex flex-col items-center bg-slate-950/50 border border-slate-800 rounded-lg p-3 min-w-[100px] shrink-0 hover:bg-slate-900 transition-colors cursor-pointer relative">
                             <span class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Round ${r}</span>
                             <div class="flex items-center gap-3 text-xl font-mono">
                                 <span class="${blueClass}">${score.blue}</span>
@@ -638,6 +642,67 @@
 
         setInterval(updateDashboard, 1000);
         updateDashboard();
+
+        // --- Popup Logic ---
+        function showRoundPopup(element, roundNum) {
+            const popup = document.getElementById('roundPopup');
+            const list = document.getElementById('roundPopupList');
+            const title = document.getElementById('roundPopupTitle').querySelector('span'); // First span
+            const scoreSpan = document.getElementById('roundPopupScore');
+
+            title.innerText = `ROUND ${roundNum} FEED`;
+            list.innerHTML = '';
+
+            // Filter data for this round
+            const roundPunches = allMatchData.filter(p => parseInt(p.round) === roundNum);
+
+            // Calculate Round Score
+            let blueScore = 0;
+            let redScore = 0;
+            roundPunches.forEach(p => {
+                const val = parseInt(p.count || 0);
+                if (p.punchBy === 'BlueBoxer') blueScore = Math.max(blueScore, val);
+                if (p.punchBy === 'RedBoxer') redScore = Math.max(redScore, val);
+            });
+            scoreSpan.innerHTML = `<span class="text-blue-400">${blueScore}</span> - <span class="text-red-400">${redScore}</span>`;
+
+            if (roundPunches.length === 0) {
+                list.innerHTML = '<div class="text-slate-500 text-center italic py-2">No data</div>';
+            } else {
+                list.innerHTML = roundPunches.map((p, i) => {
+                    const isBlue = p.punchBy === 'BlueBoxer';
+                    const time = p.time.split(' ')[1] || p.time; // Try to get just HH:MM:SS
+                    return `
+                        <div class="flex justify-between items-center p-1.5 border-b border-slate-800/50 ${isBlue ? 'bg-blue-900/10' : 'bg-red-900/10'}">
+                            <span class="font-mono text-slate-400 w-16">${p.time}</span>
+                            <span class="${isBlue ? 'text-blue-400' : 'text-red-400'} font-bold flex-1 text-center">${p.punchBy}</span>
+                            <span class="font-mono text-emerald-400">${p.force}</span>
+                        </div>
+                     `;
+                }).join('');
+            }
+
+            // Positioning
+            const rect = element.getBoundingClientRect();
+            // popup.style.display = 'block'; // REMOVED: Conflict with Tailwind hidden class
+
+
+            // Center horizontally above the element
+            // Assuming strict mode isn't an issue with offsetWidth
+            const left = rect.left + (rect.width / 2) - (popup.offsetWidth / 2);
+            // Position above
+            const top = rect.top - popup.offsetHeight - 10;
+
+            popup.style.left = `${left}px`;
+            popup.style.top = `${top}px`;
+            popup.classList.remove('hidden');
+        }
+
+        function hideRoundPopup() {
+            const popup = document.getElementById('roundPopup');
+            popup.classList.add('hidden');
+            popup.style.display = ''; // Clear inline block to allow class hidden to work
+        }
     </script>
 
     <!-- History Modal -->
@@ -657,6 +722,18 @@
                 <!-- Populated by JS -->
                 <div class="text-center text-slate-500 py-8 italic">Loading...</div>
             </div>
+        </div>
+    </div>
+    <!-- Round Feed Popup -->
+    <div id="roundPopup"
+        class="hidden fixed z-[60] bg-slate-950 border border-slate-700 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.8)] p-4 w-80 pointer-events-none animate-enter">
+        <h4 id="roundPopupTitle"
+            class="text-sm font-bold text-slate-300 mb-2 border-b border-slate-800 pb-2 flex justify-between">
+            <span>Round Feed</span>
+            <span id="roundPopupScore" class="font-mono text-xs"></span>
+        </h4>
+        <div id="roundPopupList" class="max-h-64 overflow-y-auto space-y-1 text-xs">
+            <!-- Content -->
         </div>
     </div>
 </body>
