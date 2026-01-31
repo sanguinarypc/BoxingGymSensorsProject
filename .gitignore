@@ -87,3 +87,7 @@ upload-keystore.jks
 # Backups
 **/*_backup/
 **/*backup*/
+
+# Backups
+**/*_backup/
+**/*backup*/
