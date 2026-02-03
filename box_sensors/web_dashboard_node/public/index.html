@@ -203,11 +203,14 @@
         <!-- Scorecard (Round History) -->
         <div class="max-w-6xl mx-auto mb-4" id="scorecardContainer" style="display: none;">
             <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-800 bg-slate-950/30 flex justify-between items-center">
-                    <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400">Match Scorecard</h3>
+                <div
+                    class="px-6 py-4 border-b border-slate-800 bg-slate-950/30 flex flex-wrap justify-between items-center gap-2">
+                    <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">Match
+                        Scorecard</h3>
                     <div class="text-xs font-mono font-bold">
-                        <span class="text-blue-400">BLUE CORNER</span> <span class="text-slate-600 px-1">VS</span> <span
-                            class="text-red-400">RED CORNER</span>
+                        <span class="text-blue-400 whitespace-nowrap">BLUE CORNER</span> <span
+                            class="text-slate-600 px-1">VS</span> <span class="text-red-400 whitespace-nowrap">RED
+                            CORNER</span>
                     </div>
                 </div>
                 <div class="p-6">
@@ -408,7 +411,7 @@
                     const blueClass = score.blue > score.red ? 'text-blue-400 font-bold' : 'text-slate-500';
                     const redClass = score.red > score.blue ? 'text-red-400 font-bold' : 'text-slate-500';
                     return `
-                        <div onmouseenter="showRoundPopup(this, ${r})" onmouseleave="hideRoundPopup()" class="flex flex-col items-center bg-slate-950/50 border border-slate-800 rounded-lg p-3 min-w-[100px] shrink-0 hover:bg-slate-900 transition-colors cursor-pointer relative">
+                        <div onclick="toggleRoundPopup(this, ${r})" class="flex flex-col items-center bg-slate-950/50 border border-slate-800 rounded-lg p-3 min-w-[100px] shrink-0 hover:bg-slate-900 transition-colors cursor-pointer select-none">
                             <span class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Round ${r}</span>
                             <div class="flex items-center gap-3 text-xl font-mono">
                                 <span class="${blueClass}">${score.blue}</span>
@@ -520,10 +523,16 @@
                 return;
             }
 
-            const displayData = data.slice(0, 50);
+            const displayData = data; // Show all history
             tbody.innerHTML = displayData.map((punch, index) => {
                 const isBlue = punch.punchBy === 'BlueBoxer';
-                const badgeClass = isBlue ? 'bg-blue-900/30 text-blue-400 border-blue-800' : 'bg-red-900/30 text-red-400 border-red-800';
+                const isRed = punch.punchBy === 'RedBoxer';
+                let badgeClass = '';
+
+                if (isBlue) badgeClass = 'bg-blue-900/30 text-blue-400 border-blue-800';
+                else if (isRed) badgeClass = 'bg-red-900/30 text-red-400 border-red-800';
+                else badgeClass = 'bg-slate-800/50 text-slate-400 border-slate-700';
+
                 const roundNum = punch.round || '-';
                 return `
                     <tr class="hover:bg-slate-800/50 transition-colors animate-enter" style="animation-delay: ${index * 0.02}s">
@@ -671,37 +680,82 @@
             } else {
                 list.innerHTML = roundPunches.map((p, i) => {
                     const isBlue = p.punchBy === 'BlueBoxer';
-                    const time = p.time.split(' ')[1] || p.time; // Try to get just HH:MM:SS
+                    const isRed = p.punchBy === 'RedBoxer';
+                    const isSystem = !isBlue && !isRed;
+
+                    let bgClass = isBlue ? 'bg-blue-900/10' : (isRed ? 'bg-red-900/10' : 'bg-slate-800/30');
+                    let textClass = isBlue ? 'text-blue-400' : (isRed ? 'text-red-400' : 'text-slate-300');
+
+                    // Simple logic to extract HH:MM:SS
+                    let time = p.time;
+                    if (time.includes(' ')) {
+                        const parts = time.split(' ');
+                        if (parts.length > 1) time = parts[1];
+                    }
+
                     return `
-                        <div class="flex justify-between items-center p-1.5 border-b border-slate-800/50 ${isBlue ? 'bg-blue-900/10' : 'bg-red-900/10'}">
-                            <span class="font-mono text-slate-400 w-16">${p.time}</span>
-                            <span class="${isBlue ? 'text-blue-400' : 'text-red-400'} font-bold flex-1 text-center">${p.punchBy}</span>
-                            <span class="font-mono text-emerald-400">${p.force}</span>
+                        <div class="flex justify-center gap-[5px] items-center p-1.5 border-b border-slate-800/50 ${bgClass}">
+                            <span class="font-mono text-slate-400 text-[10px] w-14">${time}</span>
+                            <span class="${textClass} font-bold w-28 text-center text-xs truncate px-1">${p.punchBy}</span>
+                            <span class="font-mono ${isSystem ? 'text-purple-400' : 'text-emerald-400'} text-xs w-12 text-right">${p.force}</span>
                         </div>
                      `;
                 }).join('');
             }
 
-            // Positioning
-            const rect = element.getBoundingClientRect();
-            // popup.style.display = 'block'; // REMOVED: Conflict with Tailwind hidden class
+            // Positioning Logic - ALWAYS Centralized
+            const backdrop = document.getElementById('popupBackdrop');
 
-
-            // Center horizontally above the element
-            // Assuming strict mode isn't an issue with offsetWidth
-            const left = rect.left + (rect.width / 2) - (popup.offsetWidth / 2);
-            // Position above
-            const top = rect.top - popup.offsetHeight - 10;
-
-            popup.style.left = `${left}px`;
-            popup.style.top = `${top}px`;
+            popup.style.visibility = 'hidden';
             popup.classList.remove('hidden');
+
+            // Centralized Overlay for ALL Screens
+            if (backdrop) backdrop.classList.remove('hidden');
+
+            // Ensure it's centered in the viewport
+            popup.style.position = 'fixed';
+            popup.style.left = '50%';
+            popup.style.top = '50%';
+            popup.style.transform = 'translate(-50%, -50%)';
+            popup.style.margin = '0';
+            popup.style.zIndex = '100'; // Higher than everything
+
+            // Clear any old desktop specific styles just in case
+            popup.style.bottom = '';
+            popup.style.right = '';
+
+            popup.style.visibility = 'visible';
+        }
+
+        let currentPopupRound = null;
+        function toggleRoundPopup(element, roundNum) {
+            const popup = document.getElementById('roundPopup');
+            if (!popup.classList.contains('hidden') && currentPopupRound === roundNum) {
+                hideRoundPopup();
+            } else {
+                showRoundPopup(element, roundNum);
+            }
+        }
+
+        // Wrap showRoundPopup to track current
+        const originalShow = showRoundPopup;
+        showRoundPopup = function (element, roundNum) {
+            currentPopupRound = roundNum;
+            originalShow(element, roundNum);
         }
 
         function hideRoundPopup() {
+            currentPopupRound = null;
             const popup = document.getElementById('roundPopup');
+            const backdrop = document.getElementById('popupBackdrop');
+
             popup.classList.add('hidden');
-            popup.style.display = ''; // Clear inline block to allow class hidden to work
+            if (backdrop) backdrop.classList.add('hidden');
+
+            popup.style.display = '';
+            popup.style.transform = '';
+            popup.style.left = '';
+            popup.style.top = '';
         }
     </script>
 
@@ -724,18 +778,40 @@
             </div>
         </div>
     </div>
+
     <!-- Round Feed Popup -->
     <div id="roundPopup"
-        class="hidden fixed z-[60] bg-slate-950 border border-slate-700 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.8)] p-4 w-80 pointer-events-none animate-enter">
-        <h4 id="roundPopupTitle"
-            class="text-sm font-bold text-slate-300 mb-2 border-b border-slate-800 pb-2 flex justify-between">
-            <span>Round Feed</span>
-            <span id="roundPopupScore" class="font-mono text-xs"></span>
-        </h4>
-        <div id="roundPopupList" class="max-h-64 overflow-y-auto space-y-1 text-xs">
+        class="hidden fixed z-[60] bg-slate-950 border border-slate-700 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.8)] p-4 w-[400px] max-w-[95vw] flex flex-col h-auto max-h-[320px]">
+        <div class="flex justify-between items-center mb-2 border-b border-slate-800 pb-2 flex-shrink-0">
+            <h4 id="roundPopupTitle" class="text-sm font-bold text-slate-300 flex-1 flex justify-between mr-2">
+                <span>Round Feed</span>
+                <span id="roundPopupScore" class="font-mono text-xs"></span>
+            </h4>
+            <button onclick="hideRoundPopup()" class="text-slate-500 hover:text-white transition-colors p-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Scrollable List Container with explicit height limit -->
+        <div id="roundPopupList"
+            class="overflow-y-auto space-y-1 text-xs pr-1 custom-scrollbar flex-1 min-h-0 basis-auto">
             <!-- Content -->
         </div>
+
+        <div class="pt-2 border-t border-slate-800 flex-shrink-0 mt-2">
+            <button onclick="hideRoundPopup()"
+                class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase tracking-widest rounded transition-colors shadow-lg">
+                OK
+            </button>
+        </div>
     </div>
+
+    <!-- Mobile Overlay Backdrop (visible on all screens when popup is open) -->
+    <div id="popupBackdrop" onclick="hideRoundPopup()"
+        class="hidden fixed inset-0 bg-black/50 z-[59] backdrop-blur-sm transition-opacity"></div>
 </body>
 
 </html>
