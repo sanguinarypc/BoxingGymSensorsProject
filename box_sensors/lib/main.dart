@@ -165,7 +165,7 @@ Future<void> main() async {
 
         // Κρατάω τις τωρινές σου τιμές για να μη σου αλλάξω behavior.
         options.tracesSampleRate = 1.0;
-        options.profilesSampleRate = 1.0;
+        // options.profilesSampleRate = 1.0; // Experimental in Sentry 9.x
 
         // Session Replay (όπως το είχες)
         options.replay.sessionSampleRate = 1.0;

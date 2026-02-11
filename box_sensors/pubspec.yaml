@@ -16,10 +16,10 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.38+38
+version: 1.0.40+40
 
 environment:
-  sdk: ^3.10.8
+  sdk: ^3.11.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -50,7 +50,7 @@ dependencies:
   gap: ^3.0.1
   animated_text_kit: ^4.3.0
   # Platform / Tools
-  sentry_flutter: ^9.11.0
+  sentry_flutter: ^9.12.0
   package_info_plus: ^9.0.0
   file_picker: ^10.3.10   # ">=10.3.3 <11.0.0"  ^10.3.3
   flutter_dotenv: ^6.0.0

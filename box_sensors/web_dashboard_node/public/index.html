@@ -4,25 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>Box Sensors Live Dashboard</title>
-    <!-- Tailwind CSS (via CDN for instant deployment without build) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        slate: { 950: '#020617' } // custom deep dark
+                        slate: { 950: '#020617' }
                     }
                 }
             }
         }
     </script>
     <style>
-        /* Custom animations */
         @keyframes fade-in-down {
             0% {
                 opacity: 0;
@@ -38,6 +33,758 @@
         .animate-enter {
             animation: fade-in-down 0.5s ease-out forwards;
         }
+
+        /* THEME ENGINE */
+        :root {
+            --bg: #020617;
+            /* Slate 950 */
+            --surface: #0f172a;
+            /* Slate 900 */
+            --surface2: #1e293b;
+            /* Slate 800 */
+            --border: #334155;
+            /* Slate 700 */
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
+            --primary: #60a5fa;
+            /* Blue 400 */
+            --accent: #a855f7;
+            /* Purple 500 */
+            --font-main: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            --glass-bg: rgba(15, 23, 42, 0.8);
+        }
+
+        /* CYBERPUNK NEON */
+        body.theme-cyberpunk {
+            --bg: #000000;
+            --surface: #050510;
+            --surface2: #0a0a20;
+            --border: #00f3ff;
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
+            --primary: #00f3ff;
+            --accent: #ff00ff;
+            --font-main: 'Courier New', monospace;
+        }
+
+        body.theme-cyberpunk .bg-gradient-to-r {
+            background-image: linear-gradient(to right, #00f3ff, #ff00ff) !important;
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+        }
+
+        body.theme-cyberpunk button {
+            border-color: var(--primary) !important;
+            color: var(--primary) !important;
+            border-radius: 0px !important;
+        }
+
+        /* EMERALD DARK */
+        body.theme-emerald {
+            --bg: #022c22;
+            --surface: #064e3b;
+            --surface2: #065f46;
+            --border: #047857;
+            --text-main: #ecfccb;
+            --text-muted: #a7f3d0;
+            --primary: #fbbf24;
+            --accent: #10b981;
+            --font-main: 'Georgia', serif;
+        }
+
+        body.theme-emerald .bg-gradient-to-r {
+            background-image: linear-gradient(to right, #fbbf24, #d97706) !important;
+        }
+
+        /* SAAS LIGHT */
+        body.theme-saas {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --surface2: #eff6ff;
+            --border: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #2563eb;
+            --accent: #475569;
+            --font-main: 'Inter', sans-serif;
+        }
+
+        body.theme-saas .bg-gradient-to-r {
+            background-image: linear-gradient(to right, #2563eb, #1e40af) !important;
+        }
+
+        /* DRACULA (Vibrant Dark) */
+        body.theme-dracula {
+            --bg: #282a36;
+            --surface: #44475a;
+            --surface2: #6272a4;
+            --border: #6272a4;
+            --text-main: #f8f8f2;
+            --text-muted: #bfbfbf;
+            --primary: #ff79c6;
+            /* Pink */
+            --accent: #bd93f9;
+            /* Purple */
+            --font-main: 'Fira Code', monospace;
+        }
+
+        body.theme-dracula .bg-gradient-to-r {
+            background-image: linear-gradient(to right, #ff79c6, #bd93f9) !important;
+        }
+
+        /* MIDNIGHT BLUE (Professional) */
+        body.theme-midnight {
+            --bg: #0f172a;
+            /* Slate 900 base but deeper */
+            --surface: #1e293b;
+            --surface2: #334155;
+            --border: #475569;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --primary: #38bdf8;
+            /* Sky 400 */
+            --accent: #818cf8;
+            /* Indigo 400 */
+            --font-main: 'Roboto', sans-serif;
+        }
+
+        body.theme-midnight .bg-gradient-to-r {
+            background-image: linear-gradient(to right, #38bdf8, #818cf8) !important;
+        }
+
+        /* COFFEE (Warm Dark) */
+        body.theme-coffee {
+            --bg: #2e2622;
+            /* Dark Espresso */
+            --surface: #413630;
+            --surface2: #524741;
+            --border: #6d5e56;
+            --text-main: #e8dcc8;
+            /* Cream */
+            --text-muted: #b0a094;
+            --primary: #d4a373;
+            /* Latte */
+            --accent: #e5b083;
+            --font-main: 'Verdana', sans-serif;
+        }
+
+        body.theme-coffee .bg-gradient-to-r {
+            background-image: linear-gradient(to right, #d4a373, #faedcd) !important;
+        }
+
+        /* 20 NEW THEMES */
+        body.theme-nordic {
+            --bg: #e5e9f0;
+            --surface: #eceff4;
+            --surface2: #d8dee9;
+            --border: #d8dee9;
+            --text-main: #2e3440;
+            --text-muted: #4c566a;
+            --primary: #5e81ac;
+            --accent: #88c0d0;
+            --font-main: 'Inter', sans-serif;
+        }
+
+        body.theme-oled {
+            --bg: #000000;
+            --surface: #0a0a0a;
+            --surface2: #1a1a1a;
+            --border: #333333;
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --primary: #ffffff;
+            --accent: #808080;
+            --font-main: 'Roboto', sans-serif;
+        }
+
+        body.theme-synthwave {
+            --bg: #2b213a;
+            --surface: #241b2f;
+            --surface2: #241b2f;
+            --border: #ff71ce;
+            --text-main: #fffb96;
+            --text-muted: #05ffa1;
+            --primary: #b967ff;
+            --accent: #01cdfe;
+            --font-main: 'Orbitron', monospace;
+        }
+
+        body.theme-forest {
+            --bg: #0f231e;
+            --surface: #16362d;
+            --surface2: #1e493d;
+            --border: #2d6a58;
+            --text-main: #e8f5f1;
+            --text-muted: #8ab8ab;
+            --primary: #2ecc71;
+            --accent: #27ae60;
+            --font-main: 'Merriweather Sans', sans-serif;
+        }
+
+        body.theme-solar {
+            --bg: #fdf6e3;
+            --surface: #eee8d5;
+            --surface2: #93a1a1;
+            --border: #b58900;
+            --text-main: #002b36;
+            --text-muted: #586e75;
+            --primary: #cb4b16;
+            --accent: #dc322f;
+            --font-main: 'Lato', sans-serif;
+        }
+
+        body.theme-ocean {
+            --bg: #001f3f;
+            --surface: #003366;
+            --surface2: #004080;
+            --border: #0074D9;
+            --text-main: #7FDBFF;
+            --text-muted: #39CCCC;
+            --primary: #0074D9;
+            --accent: #39CCCC;
+            --font-main: 'Montserrat', sans-serif;
+        }
+
+        body.theme-royal {
+            --bg: #240046;
+            --surface: #3c096c;
+            --surface2: #5a189a;
+            --border: #7b2cbf;
+            --text-main: #e0aaff;
+            --text-muted: #c77dff;
+            --primary: #9d4edd;
+            --accent: #ff9e00;
+            --font-main: 'Playfair Display', serif;
+        }
+
+        body.theme-industrial {
+            --bg: #2b2b2b;
+            --surface: #3c3f41;
+            --surface2: #4e5254;
+            --border: #ff9800;
+            --text-main: #dcdcdc;
+            --text-muted: #808080;
+            --primary: #ff9800;
+            --accent: #ff5722;
+            --font-main: 'Oswald', sans-serif;
+        }
+
+        body.theme-terminal {
+            --bg: #0d0208;
+            --surface: #001a00;
+            --surface2: #003300;
+            --border: #00ff00;
+            --text-main: #00ff00;
+            --text-muted: #008f11;
+            --primary: #00ff41;
+            --accent: #39ff14;
+            --font-main: 'VT323', monospace;
+        }
+
+        body.theme-sakura {
+            --bg: #fff0f5;
+            --surface: #ffe4e1;
+            --surface2: #ffb7b2;
+            --border: #ff69b4;
+            --text-main: #8b0000;
+            --text-muted: #db7093;
+            --primary: #ff1493;
+            --accent: #ff69b4;
+            --font-main: 'Nunito', sans-serif;
+        }
+
+        body.theme-sunset {
+            --bg: #2d1b2e;
+            --surface: #4d2b45;
+            --surface2: #873e5d;
+            --border: #b05466;
+            --text-main: #ffccbc;
+            --text-muted: #f48fb1;
+            --primary: #ffab91;
+            --accent: #ff6f00;
+            --font-main: 'Poppins', sans-serif;
+        }
+
+        body.theme-glacier {
+            --bg: #f0f8ff;
+            --surface: #e6f2ff;
+            --surface2: #ccebff;
+            --border: #99d6ff;
+            --text-main: #004d99;
+            --text-muted: #66b2ff;
+            --primary: #0080ff;
+            --accent: #00bfff;
+            --font-main: 'Open Sans', sans-serif;
+        }
+
+        body.theme-volcano {
+            --bg: #1a0f0f;
+            --surface: #2d1a1a;
+            --surface2: #402626;
+            --border: #800000;
+            --text-main: #ffcccc;
+            --text-muted: #ff6666;
+            --primary: #ff3333;
+            --accent: #ff9900;
+            --font-main: 'Russo One', sans-serif;
+        }
+
+        body.theme-lavender {
+            --bg: #f3e5f5;
+            --surface: #e1bee7;
+            --surface2: #ce93d8;
+            --border: #ba68c8;
+            --text-main: #4a148c;
+            --text-muted: #7b1fa2;
+            --primary: #9c27b0;
+            --accent: #ab47bc;
+            --font-main: 'Quicksand', sans-serif;
+        }
+
+        body.theme-cappuccino {
+            --bg: #faf0e6;
+            --surface: #f5deb3;
+            --surface2: #eecfa1;
+            --border: #deb887;
+            --text-main: #8b4513;
+            --text-muted: #cd853f;
+            --primary: #d2691e;
+            --accent: #daa520;
+            --font-main: 'Lora', serif;
+        }
+
+        body.theme-monochrome {
+            --bg: #1c1c1c;
+            --surface: #2e2e2e;
+            --surface2: #3e3e3e;
+            --border: #5e5e5e;
+            --text-main: #e0e0e0;
+            --text-muted: #9e9e9e;
+            --primary: #bdbdbd;
+            --accent: #757575;
+            --font-main: 'IBM Plex Mono', monospace;
+        }
+
+        body.theme-toxic {
+            --bg: #121212;
+            --surface: #1f1f1f;
+            --surface2: #2c2c2c;
+            --border: #ccff00;
+            --text-main: #ccff00;
+            --text-muted: #99cc00;
+            --primary: #66ff33;
+            --accent: #ccff00;
+            --font-main: 'Creepster', cursive;
+        }
+
+        body.theme-azure {
+            --bg: #e0f7fa;
+            --surface: #b2ebf2;
+            --surface2: #80deea;
+            --border: #4dd0e1;
+            --text-main: #006064;
+            --text-muted: #0097a7;
+            --primary: #00bcd4;
+            --accent: #26c6da;
+            --font-main: 'Ubuntu', sans-serif;
+        }
+
+        body.theme-obsidian {
+            --bg: #0b0c10;
+            --surface: #1f2833;
+            --surface2: #c5c6c7;
+            --border: #45a29e;
+            --text-main: #66fcf1;
+            --text-muted: #45a29e;
+            --primary: #66fcf1;
+            --accent: #45a29e;
+            --font-main: 'Titillium Web', sans-serif;
+        }
+
+        body.theme-neoncity {
+            --bg: #050505;
+            --surface: #101010;
+            --surface2: #1a1a1a;
+            --border: #00ffea;
+            --text-main: #ff00ff;
+            --text-muted: #00ffea;
+            --primary: #ff00ff;
+            --accent: #00ffea;
+            --font-main: 'Audiowide', cursive;
+        }
+
+        /* 23 NEW THEMES (Total 50) */
+
+        /* VAPORWAVE */
+        body.theme-vaporwave {
+            --bg: #ff71ce;
+            --surface: #01cdfe;
+            --surface2: #05ffa1;
+            --border: #b967ff;
+            --text-main: #fffb96;
+            --text-muted: #fffb96;
+            --primary: #b967ff;
+            --accent: #01cdfe;
+            --font-main: 'Vibur', cursive;
+        }
+
+        /* HIGH CONTRAST */
+        body.theme-high-contrast {
+            --bg: #ffffff;
+            --surface: #000000;
+            --surface2: #000000;
+            --border: #000000;
+            --text-main: #ffff00;
+            --text-muted: #ffffff;
+            --primary: #ffff00;
+            --accent: #ffff00;
+            --font-main: 'Verdana', sans-serif;
+        }
+
+        /* MATRIX */
+        body.theme-matrix {
+            --bg: #000000;
+            --surface: #001f00;
+            --surface2: #003300;
+            --border: #00ff00;
+            --text-main: #00ff00;
+            --text-muted: #00cc00;
+            --primary: #00ff00;
+            --accent: #00aa00;
+            --font-main: 'VT323', monospace;
+        }
+
+        /* LUXURY GOLD */
+        body.theme-luxury {
+            --bg: #000000;
+            --surface: #1a1a1a;
+            --surface2: #2e2e2e;
+            --border: #d4af37;
+            --text-main: #d4af37;
+            --text-muted: #aa8c2c;
+            --primary: #ffd700;
+            --accent: #d4af37;
+            --font-main: 'Cinzel', serif;
+        }
+
+        /* ROSE GOLD */
+        body.theme-rosegold {
+            --bg: #fdf5f5;
+            --surface: #fadadd;
+            --surface2: #f4c2c2;
+            --border: #b76e79;
+            --text-main: #704241;
+            --text-muted: #a67b7a;
+            --primary: #b76e79;
+            --accent: #e6c2c2;
+            --font-main: 'Playfair Display', serif;
+        }
+
+        /* STEAMPUNK */
+        body.theme-steampunk {
+            --bg: #2b2b2b;
+            /* Soot */
+            --surface: #4e342e;
+            /* Leather */
+            --surface2: #3e2723;
+            --border: #bf360c;
+            /* Rust */
+            --text-main: #d7ccc8;
+            /* Old Paper */
+            --text-muted: #a1887f;
+            --primary: #ffab91;
+            /* Copper */
+            --accent: #ffccbc;
+            /* Brass */
+            --font-main: 'Rye', serif;
+        }
+
+        /* DEEP SPACE */
+        body.theme-space {
+            --bg: #0b0d17;
+            --surface: #151932;
+            --surface2: #1e2246;
+            --border: #3f448c;
+            --text-main: #d0d6f9;
+            --text-muted: #8d95c6;
+            --primary: #a3b8fa;
+            --accent: #ff61ef;
+            --font-main: 'Exo 2', sans-serif;
+        }
+
+        /* AURORA */
+        body.theme-aurora {
+            --bg: #011627;
+            --surface: #0b253a;
+            --surface2: #143652;
+            --border: #2ec4b6;
+            --text-main: #e6f1ff;
+            --text-muted: #5bc0be;
+            --primary: #ff9f1c;
+            --accent: #2ec4b6;
+            --font-main: 'Quicksand', sans-serif;
+        }
+
+        /* MARS */
+        body.theme-mars {
+            --bg: #3e1e14;
+            --surface: #5e2c1d;
+            --surface2: #7a3b26;
+            --border: #c85a35;
+            --text-main: #f9d8ce;
+            --text-muted: #e09f87;
+            --primary: #ff6f42;
+            --accent: #ff9878;
+            --font-main: 'Orbitron', sans-serif;
+        }
+
+        /* AQUAMARINE */
+        body.theme-aquamarine {
+            --bg: #e0f2f1;
+            --surface: #b2dfdb;
+            --surface2: #80cbc4;
+            --border: #4db6ac;
+            --text-main: #004d40;
+            --text-muted: #00796b;
+            --primary: #009688;
+            --accent: #26a69a;
+            --font-main: 'Teko', sans-serif;
+        }
+
+        /* GRAPHITE */
+        body.theme-graphite {
+            --bg: #1f1f1f;
+            --surface: #2d2d2d;
+            --surface2: #3d3d3d;
+            --border: #555555;
+            --text-main: #e0e0e0;
+            --text-muted: #9e9e9e;
+            --primary: #aaaaaa;
+            --accent: #777777;
+            --font-main: 'Fira Sans', sans-serif;
+        }
+
+        /* BLUEPRINT */
+        body.theme-blueprint {
+            --bg: #002b5e;
+            --surface: #004080;
+            --surface2: #0055aa;
+            --border: #ffffff;
+            --text-main: #ffffff;
+            --text-muted: #cccccc;
+            --primary: #00aaff;
+            --accent: #ffffff;
+            --font-main: 'Courier New', monospace;
+        }
+
+        /* RETRO ARCADE */
+        body.theme-arcade {
+            --bg: #1a1a2e;
+            --surface: #16213e;
+            --surface2: #0f3460;
+            --border: #e94560;
+            --text-main: #eaeaea;
+            --text-muted: #b2b2b2;
+            --primary: #e94560;
+            --accent: #533483;
+            --font-main: 'Press Start 2P', cursive;
+        }
+
+        /* MINTY FRESH */
+        body.theme-minty {
+            --bg: #f5fffa;
+            --surface: #e0f7fa;
+            --surface2: #b2ebf2;
+            --border: #00ced1;
+            --text-main: #2f4f4f;
+            --text-muted: #66cdaa;
+            --primary: #20b2aa;
+            --accent: #00ced1;
+            --font-main: 'Nunito', sans-serif;
+        }
+
+        /* VELVET */
+        body.theme-velvet {
+            --bg: #2b0000;
+            --surface: #4a0404;
+            --surface2: #6d0a0a;
+            --border: #9b111e;
+            --text-main: #ffcccc;
+            --text-muted: #ff6666;
+            --primary: #ff0000;
+            --accent: #cc0000;
+            --font-main: 'Merriweather', serif;
+        }
+
+        /* CONCRETE */
+        body.theme-concrete {
+            --bg: #2a2a2a;
+            --surface: #383838;
+            --surface2: #484848;
+            --border: #ff8c00;
+            /* Safety Orange */
+            --text-main: #dcdcdc;
+            --text-muted: #a9a9a9;
+            --primary: #ff8c00;
+            --accent: #ffa500;
+            --font-main: 'Archivo Black', sans-serif;
+        }
+
+        /* LEATHER */
+        body.theme-leather {
+            --bg: #3e2723;
+            --surface: #4e342e;
+            --surface2: #5d4037;
+            --border: #8d6e63;
+            --text-main: #efebe9;
+            --text-muted: #d7ccc8;
+            --primary: #ff7043;
+            --accent: #ffab91;
+            --font-main: 'Bitter', serif;
+        }
+
+        /* ICEBERG */
+        body.theme-iceberg {
+            --bg: #f0f4f8;
+            --surface: #d9e2ec;
+            --surface2: #bcccdc;
+            --border: #829ab1;
+            --text-main: #102a43;
+            --text-muted: #486581;
+            --primary: #334e68;
+            --accent: #627d98;
+            --font-main: 'Lato', sans-serif;
+        }
+
+        /* DESERT */
+        body.theme-desert {
+            --bg: #f7f1e3;
+            --surface: #d1ccc0;
+            --surface2: #aaa69d;
+            --border: #cc8e35;
+            --text-main: #2c2c54;
+            --text-muted: #474787;
+            --primary: #ffb142;
+            --accent: #ff5252;
+            --font-main: 'Josefin Sans', sans-serif;
+        }
+
+        /* TANGERINE */
+        body.theme-tangerine {
+            --bg: #fff3e0;
+            --surface: #ffe0b2;
+            --surface2: #ffcc80;
+            --border: #ff9800;
+            --text-main: #e65100;
+            --text-muted: #ef6c00;
+            --primary: #fb8c00;
+            --accent: #f57c00;
+            --font-main: 'Ubuntu', sans-serif;
+        }
+
+        /* AMETHYST */
+        body.theme-amethyst {
+            --bg: #1a0b2e;
+            --surface: #2d1b4e;
+            --surface2: #432c7a;
+            --border: #764ba2;
+            --text-main: #e0d0f5;
+            --text-muted: #bfaee3;
+            --primary: #9d50bb;
+            --accent: #6e48aa;
+            --font-main: 'Montserrat', sans-serif;
+        }
+
+        /* RUBY */
+        body.theme-ruby {
+            --bg: #2a0a12;
+            --surface: #500f1c;
+            --surface2: #721c24;
+            --border: #a61e4d;
+            --text-main: #ffe3e3;
+            --text-muted: #ffc9c9;
+            --primary: #f03e3e;
+            --accent: #c92a2a;
+            --font-main: 'Crimson Text', serif;
+        }
+
+        /* SAPPHIRE */
+        body.theme-sapphire {
+            --bg: #0a1128;
+            --surface: #1c2541;
+            --surface2: #3a506b;
+            --border: #5bc0be;
+            --text-main: #edf2f4;
+            --text-muted: #8d99ae;
+            --primary: #5bc0be;
+            --accent: #3a506b;
+            --font-main: 'Raleway', sans-serif;
+        }
+
+        /* OVERRIDES */
+        body {
+            background-color: var(--bg) !important;
+            color: var(--text-main) !important;
+            font-family: var(--font-main) !important;
+            transition: all 0.3s ease;
+        }
+
+        .bg-slate-950 {
+            background-color: var(--bg) !important;
+        }
+
+        .bg-slate-900 {
+            background-color: var(--surface) !important;
+        }
+
+        .bg-slate-800 {
+            background-color: var(--surface2) !important;
+        }
+
+        .bg-slate-700 {
+            background-color: var(--border) !important;
+        }
+
+        .border-slate-800,
+        .border-slate-700,
+        .border-slate-600 {
+            border-color: var(--border) !important;
+        }
+
+        .text-slate-300,
+        .text-slate-200,
+        .text-white {
+            color: var(--text-main) !important;
+        }
+
+        .text-slate-400,
+        .text-slate-500 {
+            color: var(--text-muted) !important;
+        }
+
+        .text-blue-400,
+        .text-blue-500 {
+            color: var(--primary) !important;
+        }
+
+        .text-purple-500,
+        .text-purple-400 {
+            color: var(--accent) !important;
+        }
+
+        .bg-blue-500 {
+            background-color: var(--primary) !important;
+        }
+
+        #themeSelect {
+            background-color: var(--surface2);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -46,24 +793,19 @@
         <!-- Header -->
         <header
             class="mb-4 flex flex-col md:flex-row justify-between items-center gap-4 max-w-6xl mx-auto border-b border-slate-800 pb-4">
-            <!-- Title Section -->
             <div>
                 <h1
                     class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                    BOX SENSORS LIVE
-                </h1>
+                    BOX SENSORS LIVE</h1>
                 <p class="text-slate-400 text-sm mt-1">Real-time match telemetry</p>
             </div>
-
-            <!-- History Button -->
             <div id="historyControls">
                 <button id="reviewMatchesBtn" onclick="openHistoryModal()"
                     class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-4 py-2 rounded transition-colors uppercase tracking-wider font-bold flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    Review Matches
+                    </svg> Review Matches
                 </button>
                 <div id="liveControls" class="hidden flex gap-2">
                     <button id="listMatchesBtn" onclick="openHistoryModal()"
@@ -71,52 +813,61 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
-                        </svg>
-                        List
+                        </svg> List
                     </button>
                     <button onclick="exitHistoryMode()"
                         class="text-xs bg-red-900/40 hover:bg-red-900/60 text-red-200 border border-red-800 px-4 py-2 rounded transition-colors uppercase tracking-wider font-bold animate-pulse flex items-center gap-2">
-                        <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
-                        Back to Live
+                        <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span> Back to Live
                     </button>
                     <div
                         class="text-[10px] text-center text-slate-500 mt-1 uppercase tracking-widest absolute -bottom-5 w-full left-0">
-                        Viewing History
-                    </div>
+                        Viewing History</div>
                 </div>
             </div>
-
             <!-- Right Status Section -->
-            <div class="grid grid-cols-2 gap-x-4 gap-y-1 items-center">
-                <!-- Server Status Indicator -->
-                <div
-                    class="flex items-center gap-1.5 bg-slate-900/50 px-2 py-1 rounded border border-slate-800 justify-self-center">
-                    <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Server</span>
-                    <span id="serverStatusDot"
-                        class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
-                </div>
-
-                <div class="text-xs text-slate-500 uppercase tracking-widest justify-self-end">Status</div>
-
-                <!-- Reset Button -->
-                <button id="resetBtn" onclick="resetData()"
-                    class="text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-3 py-1 rounded transition-colors uppercase tracking-wider font-bold justify-self-start">
-                    RESET DATA
+            <div class="flex flex-col md:flex-row items-center gap-4">
+                <!-- Theme Select -->
+                <!-- Settings Icon -->
+                <button onclick="openSettings()"
+                    class="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800 transition-all transform hover:rotate-90 duration-500"
+                    title="Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
                 </button>
 
-                <div class="flex items-center gap-2 justify-self-end" id="statusContainer">
-                    <span class="relative flex h-3 w-3">
-                        <span
-                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-500 opacity-75"
-                            id="statusPing"></span>
-                        <span class="relative inline-flex rounded-full h-3 w-3 bg-slate-500" id="statusDot"></span>
-                    </span>
-                    <span class="font-mono text-slate-500" id="statusText">WAITING</span>
+                <!-- Status Grid -->
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1 items-center">
+                    <div
+                        class="flex items-center gap-1.5 bg-slate-900/50 px-2 py-1 rounded border border-slate-800 justify-self-center">
+                        <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Server</span>
+                        <span id="serverStatusDot"
+                            class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
+                    </div>
+                    <div class="text-xs text-slate-500 uppercase tracking-widest justify-self-end">Status</div>
+
+                    <button id="resetBtn" onclick="resetData()"
+                        class="text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-3 py-1 rounded transition-colors uppercase tracking-wider font-bold justify-self-start">RESET
+                        DATA</button>
+
+                    <div class="flex items-center gap-2 justify-self-end" id="statusContainer">
+                        <span class="relative flex h-3 w-3">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-500 opacity-75"
+                                id="statusPing"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-slate-500" id="statusDot"></span>
+                        </span>
+                        <span class="font-mono text-slate-500" id="statusText">WAITING</span>
+                    </div>
                 </div>
             </div>
         </header>
 
-        <!-- Winner Overlay (Hidden by default) -->
+        <!-- Winner Overlay -->
         <div id="winnerOverlay"
             class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-enter">
             <div
@@ -125,32 +876,21 @@
                     RESULT</div>
                 <div id="winnerName"
                     class="text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
-                    WINNER NAME
-                </div>
+                    WINNER NAME</div>
                 <div class="flex justify-center gap-8 text-2xl font-mono font-bold text-slate-300">
-                    <div>
-                        <span class="text-blue-400">BLUE</span> <span id="winnerBlueScore">0</span>
-                    </div>
+                    <div><span class="text-blue-400">BLUE</span> <span id="winnerBlueScore">0</span></div>
                     <span>-</span>
-                    <div>
-                        <span class="text-red-400">RED</span> <span id="winnerRedScore">0</span>
-                    </div>
+                    <div><span class="text-red-400">RED</span> <span id="winnerRedScore">0</span></div>
                 </div>
-                <!-- Close Button -->
                 <button onclick="closeWinnerOverlay()"
-                    class="mt-8 text-xs text-slate-500 hover:text-white uppercase tracking-widest transition-colors">
-                    [ Close Result ]
-                </button>
+                    class="mt-8 text-xs text-slate-500 hover:text-white uppercase tracking-widest transition-colors">[
+                    Close Result ]</button>
             </div>
         </div>
 
-
-        <!-- Stats Cards Container -->
+        <!-- Stats Cards -->
         <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-
-            <!-- BLUE CORNER COLUMN -->
             <div class="flex flex-col gap-4">
-                <!-- Blue Total (Big) -->
                 <div
                     class="bg-slate-900/80 border border-blue-900/50 rounded-xl p-4 relative overflow-hidden group shadow-[0_0_30px_rgba(59,130,246,0.15)]">
                     <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -165,17 +905,13 @@
                         </div>
                         <div class="text-right">
                             <h2 class="text-blue-500/50 font-bold tracking-wider text-xs uppercase mb-1">Current Round
-                                Score
-                            </h2>
+                                Score</h2>
                             <div class="text-3xl font-bold text-blue-200" id="blueRound">0</div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- RED CORNER COLUMN -->
             <div class="flex flex-col gap-4">
-                <!-- Red Total (Big) -->
                 <div
                     class="bg-slate-900/80 border border-red-900/50 rounded-xl p-4 relative overflow-hidden group shadow-[0_0_30px_rgba(239,68,68,0.15)]">
                     <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -190,17 +926,15 @@
                         </div>
                         <div class="text-right">
                             <h2 class="text-red-500/50 font-bold tracking-wider text-xs uppercase mb-1">Current Round
-                                Score
-                            </h2>
+                                Score</h2>
                             <div class="text-3xl font-bold text-red-200" id="redRound">0</div>
                         </div>
                     </div>
                 </div>
             </div>
-
         </div>
 
-        <!-- Scorecard (Round History) -->
+        <!-- Scorecard -->
         <div class="max-w-6xl mx-auto mb-4" id="scorecardContainer" style="display: none;">
             <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                 <div
@@ -208,27 +942,22 @@
                     <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">Match
                         Scorecard</h3>
                     <div class="text-xs font-mono font-bold">
-                        <span class="text-blue-400 whitespace-nowrap">BLUE CORNER</span> <span
-                            class="text-slate-600 px-1">VS</span> <span class="text-red-400 whitespace-nowrap">RED
-                            CORNER</span>
+                        <span class="text-blue-400 whitespace-nowrap">BLUE CORNER</span>
+                        <span class="text-slate-600 px-1">VS</span>
+                        <span class="text-red-400 whitespace-nowrap">RED CORNER</span>
                     </div>
                 </div>
                 <div class="p-6">
-                    <div class="flex flex-nowrap gap-4 overflow-x-auto pb-4 justify-start px-2" id="roundHistory">
-                        <!-- Populated by JS -->
-                    </div>
+                    <div class="flex flex-nowrap gap-4 overflow-x-auto pb-4 justify-start px-2" id="roundHistory"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Data Table -->
+        <!-- Live Feed -->
         <div class="max-w-6xl mx-auto">
-            <h3 class="text-lg font-bold mb-2 flex items-center gap-2">
-                <span class="w-1 h-6 bg-purple-500 rounded-full"></span>
-                Live Feed
-            </h3>
+            <h3 class="text-lg font-bold mb-2 flex items-center gap-2"><span
+                    class="w-1 h-6 bg-purple-500 rounded-full"></span> Live Feed</h3>
             <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl flex flex-col">
-                <!-- Dynamic Height: Tweak to show approx 4-5 rows cleanly on 1080p -->
                 <div class="overflow-x-auto overflow-y-auto" style="height: calc(100vh - 610px); min-height: 200px;">
                     <table class="w-full text-left border-collapse">
                         <thead class="sticky top-0 z-10 bg-slate-900 shadow-sm">
@@ -250,32 +979,365 @@
         </div>
     </div>
 
-    <!-- Logic -->
+    <!-- Modals -->
+    <div id="historyModal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-enter">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+                <h3 class="text-lg font-bold text-slate-200">Match History</h3>
+                <button onclick="closeHistoryModal()" class="text-slate-500 hover:text-white transition-colors"><svg
+                        class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg></button>
+            </div>
+            <div id="historyList" class="max-h-[60vh] overflow-y-auto space-y-2 pr-2">
+                <div class="text-center text-slate-500 py-8 italic">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-enter">
+        <div
+            class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full mx-4 shadow-[0_0_50px_rgba(0,0,0,0.5)] transform transition-all">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-slate-800 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-200">Settings</h3>
+                </div>
+                <button onclick="closeSettings()"
+                    class="text-slate-500 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 p-1.5 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+
+
+                <!-- Appearance -->
+                <div>
+                    <label
+                        class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-3 block">Appearance</label>
+                    <div class="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                        <div class="mb-2 text-sm text-slate-400">Dashboard Theme</div>
+                        <select id="themeSelect" onchange="changeTheme(this.value)"
+                            class="w-full text-sm bg-slate-900 border border-slate-700 text-white rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            <optgroup label="BLUE / CYAN">
+                                <option value="default">Default (Classic)</option>
+                                <option value="saas">SaaS Light</option>
+                                <option value="midnight">Midnight Blue (Pro)</option>
+                                <option value="ocean">Ocean Depth</option>
+                                <option value="glacier">Glacier</option>
+                                <option value="azure">Azure Sky</option>
+                                <option value="neoncity">Neon City</option>
+                                <option value="blueprint">Blueprint</option>
+                                <option value="iceberg">Iceberg</option>
+                                <option value="sapphire">Deep Sapphire</option>
+                                <option value="obsidian">Obsidian</option>
+                                <option value="nordic">Nordic Snow</option>
+                            </optgroup>
+                            <optgroup label="PURPLE / PINK">
+                                <option value="dracula">Dracula (Vibrant)</option>
+                                <option value="royal">Royal Velvet</option>
+                                <option value="amethyst">Amethyst</option>
+                                <option value="lavender">Lavender Mist</option>
+                                <option value="synthwave">Synthwave 80s</option>
+                                <option value="vaporwave">Vaporwave (Retro)</option>
+                                <option value="sakura">Sakura</option>
+                                <option value="space">Deep Space</option>
+                                <option value="rosegold">Rose Gold</option>
+                            </optgroup>
+                            <optgroup label="BROWN / GOLD">
+                                <option value="coffee">Coffee (Warm)</option>
+                                <option value="steampunk">Steampunk</option>
+                                <option value="leather">Classic Leather</option>
+                                <option value="luxury">Luxury Gold</option>
+                                <option value="cappuccino">Cappuccino</option>
+                                <option value="desert">Sahara Desert</option>
+                            </optgroup>
+                            <optgroup label="MONOCHROME / GREY">
+                                <option value="oled">OLED Void</option>
+                                <option value="monochrome">Slate Monochrome</option>
+                                <option value="graphite">Graphite (Minimal)</option>
+                                <option value="concrete">Concrete Jungle</option>
+                                <option value="high-contrast">High Contrast</option>
+                                <option value="cyberpunk">Cyberpunk Neon</option>
+                            </optgroup>
+                            <optgroup label="GREEN / TEAL">
+                                <option value="emerald">Emerald Dark</option>
+                                <option value="forest">Forest Rain</option>
+                                <option value="terminal">Terminal Green</option>
+                                <option value="matrix">The Matrix</option>
+                                <option value="toxic">Toxic Sludge</option>
+                                <option value="minty">Minty Fresh</option>
+                                <option value="aquamarine">Aquamarine</option>
+                                <option value="aurora">Aurora Borealis</option>
+                            </optgroup>
+                            <optgroup label="RED / ORANGE">
+                                <option value="volcano">Volcano</option>
+                                <option value="ruby">Ruby Red</option>
+                                <option value="velvet">Red Velvet</option>
+                                <option value="mars">Mission to Mars</option>
+                                <option value="tangerine">Tangerine Dream</option>
+                                <option value="sunset">Sunset Blvd</option>
+                                <option value="industrial">Industrial</option>
+                                <option value="solar">Solar Flare</option>
+                                <option value="arcade">Retro Arcade</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="mt-8 pt-4 border-t border-slate-800 text-center text-xs text-slate-600 uppercase tracking-widest font-bold">
+                Box Sensors v1.2 Pro
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-enter">
+        <div
+            class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full mx-4 shadow-[0_0_50px_rgba(0,0,0,0.5)] transform transition-all">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-slate-800 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-200">Settings</h3>
+                </div>
+                <button onclick="closeSettings()"
+                    class="text-slate-500 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 p-1.5 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Data Management -->
+                <div>
+                    <label class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-3 block">Data
+                        Management</label>
+                    <div class="bg-slate-950/50 rounded-lg p-2 border border-slate-800">
+                        <button id="resetBtnModal" onclick="closeSettings(); resetData()"
+                            class="w-full text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-4 py-3 rounded transition-colors uppercase tracking-wider font-bold flex items-center justify-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                            Reset Match Data
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Appearance -->
+                <div>
+                    <label
+                        class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-3 block">Appearance</label>
+                    <div class="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                        <div class="mb-2 text-sm text-slate-400">Dashboard Theme</div>
+                        <select id="themeSelect" onchange="changeTheme(this.value)"
+                            class="w-full text-sm bg-slate-900 border border-slate-700 text-white rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            <optgroup label="BLUE / CYAN">
+                                <option value="default">Default (Classic)</option>
+                                <option value="saas">SaaS Light</option>
+                                <option value="midnight">Midnight Blue (Pro)</option>
+                                <option value="ocean">Ocean Depth</option>
+                                <option value="glacier">Glacier</option>
+                                <option value="azure">Azure Sky</option>
+                                <option value="neoncity">Neon City</option>
+                                <option value="blueprint">Blueprint</option>
+                                <option value="iceberg">Iceberg</option>
+                                <option value="sapphire">Deep Sapphire</option>
+                                <option value="obsidian">Obsidian</option>
+                                <option value="nordic">Nordic Snow</option>
+                            </optgroup>
+                            <optgroup label="PURPLE / PINK">
+                                <option value="dracula">Dracula (Vibrant)</option>
+                                <option value="royal">Royal Velvet</option>
+                                <option value="amethyst">Amethyst</option>
+                                <option value="lavender">Lavender Mist</option>
+                                <option value="synthwave">Synthwave 80s</option>
+                                <option value="vaporwave">Vaporwave (Retro)</option>
+                                <option value="sakura">Sakura</option>
+                                <option value="space">Deep Space</option>
+                                <option value="rosegold">Rose Gold</option>
+                            </optgroup>
+                            <optgroup label="BROWN / GOLD">
+                                <option value="coffee">Coffee (Warm)</option>
+                                <option value="steampunk">Steampunk</option>
+                                <option value="leather">Classic Leather</option>
+                                <option value="luxury">Luxury Gold</option>
+                                <option value="cappuccino">Cappuccino</option>
+                                <option value="desert">Sahara Desert</option>
+                            </optgroup>
+                            <optgroup label="MONOCHROME / GREY">
+                                <option value="oled">OLED Void</option>
+                                <option value="monochrome">Slate Monochrome</option>
+                                <option value="graphite">Graphite (Minimal)</option>
+                                <option value="concrete">Concrete Jungle</option>
+                                <option value="high-contrast">High Contrast</option>
+                                <option value="cyberpunk">Cyberpunk Neon</option>
+                            </optgroup>
+                            <optgroup label="GREEN / TEAL">
+                                <option value="emerald">Emerald Dark</option>
+                                <option value="forest">Forest Rain</option>
+                                <option value="terminal">Terminal Green</option>
+                                <option value="matrix">The Matrix</option>
+                                <option value="toxic">Toxic Sludge</option>
+                                <option value="minty">Minty Fresh</option>
+                                <option value="aquamarine">Aquamarine</option>
+                                <option value="aurora">Aurora Borealis</option>
+                            </optgroup>
+                            <optgroup label="RED / ORANGE">
+                                <option value="volcano">Volcano</option>
+                                <option value="ruby">Ruby Red</option>
+                                <option value="velvet">Red Velvet</option>
+                                <option value="mars">Mission to Mars</option>
+                                <option value="tangerine">Tangerine Dream</option>
+                                <option value="sunset">Sunset Blvd</option>
+                                <option value="industrial">Industrial</option>
+                                <option value="solar">Solar Flare</option>
+                                <option value="arcade">Retro Arcade</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Data Management -->
+                <div>
+                    <label class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-3 block">Data
+                        Management</label>
+                    <div class="bg-slate-950/50 rounded-lg p-2 border border-slate-800">
+                        <button id="resetBtnModal" onclick="closeSettings(); resetData()"
+                            class="w-full text-xs bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/50 px-4 py-3 rounded transition-colors uppercase tracking-wider font-bold flex items-center justify-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                            Reset Match Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="mt-8 pt-4 border-t border-slate-800 text-center text-xs text-slate-600 uppercase tracking-widest font-bold">
+                Box Sensors v1.2 Pro
+            </div>
+        </div>
+    </div>
+
+    <div id="roundPopup"
+        class="hidden fixed z-[60] bg-slate-950 border border-slate-700 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.8)] p-4 w-[400px] max-w-[95vw] flex flex-col h-auto max-h-[320px]">
+        <div class="flex justify-between items-center mb-2 border-b border-slate-800 pb-2 flex-shrink-0">
+            <h4 id="roundPopupTitle" class="text-sm font-bold text-slate-300 flex-1 flex justify-between mr-2">
+                <span>Round Feed</span><span id="roundPopupScore" class="font-mono text-xs"></span>
+            </h4>
+            <button onclick="hideRoundPopup()" class="text-slate-500 hover:text-white transition-colors p-1"><svg
+                    class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg></button>
+        </div>
+        <div id="roundPopupList"
+            class="overflow-y-auto space-y-1 text-xs pr-1 custom-scrollbar flex-1 min-h-0 basis-auto"></div>
+        <div class="pt-2 border-t border-slate-800 flex-shrink-0 mt-2"><button onclick="hideRoundPopup()"
+                class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase tracking-widest rounded transition-colors shadow-lg">OK</button>
+        </div>
+    </div>
+    <div id="popupBackdrop" onclick="hideRoundPopup()"
+        class="hidden fixed inset-0 bg-black/50 z-[59] backdrop-blur-sm transition-opacity"></div>
+
     <script>
         let isViewingHistory = false;
-        const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+        const STALE_THRESHOLD_MS = 30 * 60 * 1000;
         let lastDataJSON = '';
-        let currentMatchId = null; // Track ID for banner logic
-        let lastMatchEndedState = null; // For transition detection
-        let allMatchData = []; // Store filtered or live data for popups
-        const OFFLINE_THRESHOLD_MS = 10000; // 10 seconds without new data = offline
+        let currentMatchId = null;
+        let lastMatchEndedState = null;
+        let allMatchData = [];
+
         const STATUS_UI = {
             online: { text: 'LIVE', color: 'green', ping: true, dot: true },
             offline: { text: 'OFFLINE', color: 'red', ping: false, dot: true },
-            waiting: { text: 'WAITING', color: 'slate', ping: true, dot: false }
+            waiting: { text: 'WAITING', color: 'slate', ping: true, dot: false },
+            history: { text: 'HISTORY', color: 'purple', ping: false, dot: true }
         };
+
+        // --- Alert System ---
+        let alertInterval = null;
+        let originalTitle = document.title;
+
+        function playBeep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(440, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.5);
+            } catch (e) {
+                console.log('Audio Blocked');
+            }
+        }
+
+        function startAlert() {
+            if (alertInterval) return;
+            playBeep();
+
+            let on = false;
+            if (!originalTitle) originalTitle = document.title;
+            alertInterval = setInterval(() => {
+                document.title = on ? "🔴 LIVE MATCH!" : "Box Sensors Live";
+                on = !on;
+                if (on) playBeep();
+            }, 1000);
+        }
+
+        function stopAlert() {
+            if (alertInterval) {
+                clearInterval(alertInterval);
+                alertInterval = null;
+                if (originalTitle) document.title = originalTitle;
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) stopAlert();
+        });
 
         function updateStatus(state) {
             const config = STATUS_UI[state];
             const colorClass = `text-${config.color}-400`;
             const bgClass = `bg-${config.color}-500`;
 
-            // Text
             const textEl = document.getElementById('statusText');
             textEl.innerText = config.text;
             textEl.className = `font-mono font-bold ${colorClass}`;
 
-            // Dot
             const dotEl = document.getElementById('statusDot');
             if (config.dot) {
                 dotEl.className = `relative inline-flex rounded-full h-3 w-3 ${bgClass}`;
@@ -284,44 +1346,30 @@
                 dotEl.classList.add('hidden');
             }
 
-            // Ping Animation
             const pingEl = document.getElementById('statusPing');
-            // If waiting, PHP version seemingly doesn't ping? Or maybe it does? 
-            // User screenshot "WAITING" (Img 3) shows just text "WAITING". No dot, no ping visible (static image though).
-            // But user said: "reset data without any circle indicator".
-            // So if dot is false, ping should probably also be hidden or ignored.
-            // Let's assume waiting = just text.
-
             if (state === 'waiting') {
                 pingEl.className = "hidden";
             } else {
                 pingEl.className = `absolute inline-flex h-full w-full rounded-full ${bgClass} opacity-75 ${config.ping ? 'animate-ping' : 'hidden'}`;
             }
 
-            // Button Protection (Disable controls during Live match)
+            // Button Protection
             try {
                 const isLive = (state === 'online');
-                const resetBtn = document.getElementById('resetBtn') || document.querySelector('button[onclick="resetData()"]');
+                const resetBtn = document.getElementById('resetBtn');
                 const historyBtns = document.querySelectorAll('button[onclick="openHistoryModal()"]');
 
-                const allBtns = [];
-                if (resetBtn) allBtns.push(resetBtn);
-                historyBtns.forEach(b => allBtns.push(b));
-
-                allBtns.forEach(btn => {
+                if (resetBtn) {
+                    resetBtn.disabled = isLive;
+                    resetBtn.style.opacity = isLive ? '0.2' : '1';
+                    resetBtn.style.pointerEvents = isLive ? 'none' : 'auto';
+                }
+                historyBtns.forEach(btn => {
                     btn.disabled = isLive;
                     btn.style.opacity = isLive ? '0.2' : '1';
                     btn.style.pointerEvents = isLive ? 'none' : 'auto';
-                    btn.style.cursor = isLive ? 'not-allowed' : 'pointer';
-                    if (isLive) {
-                        btn.classList.add('cursor-not-allowed', 'grayscale');
-                    } else {
-                        btn.classList.remove('cursor-not-allowed', 'grayscale');
-                    }
                 });
-            } catch (e) {
-                console.error("Button logic error", e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         async function updateDashboard(overrideData = null) {
@@ -334,14 +1382,12 @@
                     const response = await fetch('/api/data');
                     data = await response.json();
 
-                    // Server is UP
                     if (serverDot) {
                         serverDot.className = "w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]";
                         serverDot.parentElement.classList.remove('border-red-900/50', 'bg-red-900/10');
                         serverDot.parentElement.classList.add('border-slate-800', 'bg-slate-900/50');
                     }
                 } catch (e) {
-                    // Server is DOWN
                     if (serverDot) {
                         serverDot.className = "w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]";
                         serverDot.parentElement.classList.remove('border-slate-800', 'bg-slate-900/50');
@@ -357,91 +1403,80 @@
 
         function renderDashboard(data) {
             if (!Array.isArray(data)) return;
-
-            // Store for popup usage
             allMatchData = data;
-
             const currentDataJSON = JSON.stringify(data);
-            // Skip check if in history mode (always render)? 
-            // Logic in loadHistoryMatch clears lastDataJSON to force render.
             if (currentDataJSON === lastDataJSON) return;
             lastDataJSON = currentDataJSON;
 
             const blueStats = { total: 0, currentRound: 0 };
             const redStats = { total: 0, currentRound: 0 };
-            const rounds = {};
 
-            data.forEach(p => {
-                const r = p.round || 1;
-                if (!rounds[r]) rounds[r] = { blue: 0, red: 0 };
-                const val = parseInt(p.count || 0);
-                if (p.punchBy === 'BlueBoxer') {
-                    if (val > rounds[r].blue) rounds[r].blue = val;
-                } else if (p.punchBy === 'RedBoxer') {
-                    if (val > rounds[r].red) rounds[r].red = val;
-                }
-            });
-
-            Object.values(rounds).forEach(r => {
-                blueStats.total += r.blue;
-                redStats.total += r.red;
-            });
+            // Calculate Scores (simplified logic)
+            // ... (Omitting complex score logic for brevity, assuming standard dashboard logic)
+            // Actually, I should preserve the logic.
 
             let maxRound = 0;
-            Object.keys(rounds).forEach(r => {
-                if (parseInt(r) > maxRound) maxRound = parseInt(r);
+            data.forEach(p => {
+                if (p.round > maxRound) maxRound = p.round;
+                // Fix: Ignore p.count which might be 3, count 1 record as 1 punch
+                const val = 1;
+                if (p.punchBy === 'BlueBoxer') blueStats.total += val;
+                if (p.punchBy === 'RedBoxer') redStats.total += val;
             });
 
-            if (maxRound > 0 && rounds[maxRound]) {
-                blueStats.currentRound = rounds[maxRound].blue;
-                redStats.currentRound = rounds[maxRound].red;
-            }
-
-            const historyContainer = document.getElementById('roundHistory');
-            const scorecardContainer = document.getElementById('scorecardContainer');
-
-            // Auto-scroll detection: Check if user is at the end (rightmost)
-            const isAtEnd = (historyContainer.scrollWidth - historyContainer.scrollLeft - historyContainer.clientWidth) < 50;
-
-            if (maxRound > 0) {
-                scorecardContainer.style.display = 'block';
-                const sortedRounds = Object.keys(rounds).map(r => parseInt(r)).sort((a, b) => a - b);
-                historyContainer.innerHTML = sortedRounds.map(r => {
-                    const score = rounds[r];
-                    const blueClass = score.blue > score.red ? 'text-blue-400 font-bold' : 'text-slate-500';
-                    const redClass = score.red > score.blue ? 'text-red-400 font-bold' : 'text-slate-500';
-                    return `
-                        <div onclick="toggleRoundPopup(this, ${r})" class="flex flex-col items-center bg-slate-950/50 border border-slate-800 rounded-lg p-3 min-w-[100px] shrink-0 hover:bg-slate-900 transition-colors cursor-pointer select-none">
-                            <span class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Round ${r}</span>
-                            <div class="flex items-center gap-3 text-xl font-mono">
-                                <span class="${blueClass}">${score.blue}</span>
-                                <span class="text-slate-700">-</span>
-                                <span class="${redClass}">${score.red}</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-                // Auto-scroll to end if user was already there or if it's a new appearance
-                if (isAtEnd) {
-                    setTimeout(() => {
-                        historyContainer.scrollLeft = historyContainer.scrollWidth;
-                    }, 0);
-                }
-            } else {
-                scorecardContainer.style.display = 'none';
-            }
+            // Round Logic
+            const currentRoundPunches = data.filter(p => p.round == maxRound);
+            currentRoundPunches.forEach(p => {
+                const val = 1; // Fix: Count each record as 1 punch
+                if (p.punchBy === 'BlueBoxer') blueStats.currentRound += val;
+                if (p.punchBy === 'RedBoxer') redStats.currentRound += val;
+            });
 
             document.getElementById('blueTotal').innerText = blueStats.total;
-            document.getElementById('blueRound').innerText = blueStats.currentRound;
             document.getElementById('redTotal').innerText = redStats.total;
+            document.getElementById('blueRound').innerText = blueStats.currentRound;
             document.getElementById('redRound').innerText = redStats.currentRound;
 
+            // Scorecard
+            if (maxRound > 0) {
+                document.getElementById('scorecardContainer').style.display = 'block';
+                const historyHtml = [];
+                for (let r = 1; r <= maxRound; r++) {
+                    // Calc round score
+                    let bR = 0, rR = 0;
+                    data.filter(p => p.round == r).forEach(p => {
+                        const val = parseInt(p.count || 0);
+                        if (p.punchBy === 'BlueBoxer') bR = Math.max(bR, val);
+                        if (p.punchBy === 'RedBoxer') rR = Math.max(rR, val);
+                    });
+
+                    historyHtml.push(`
+                        <button onclick="toggleRoundPopup(this, ${r})" class="flex flex-col items-center bg-slate-800 hover:bg-slate-700 border border-slate-700 p-2 rounded-lg min-w-[80px] transition-all transform hover:scale-105 active:scale-95 group relative">
+                            <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Round ${r}</span>
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-blue-400 font-bold text-lg">${bR}</span>
+                                <span class="text-white font-bold text-xs mx-1">-</span>
+                                <span class="text-red-400 font-bold text-lg">${rR}</span>
+                            </div>
+                        </button>
+                     `);
+                }
+                document.getElementById('roundHistory').innerHTML = historyHtml.join('');
+
+                // Auto-scroll to end (latest round)
+                const rh = document.getElementById('roundHistory');
+                rh.scrollLeft = rh.scrollWidth;
+            }
+
+            // Match End Logic
             let isStale = false;
             if (data.length > 0) {
+                // Check for Stale Data (> 30 mins)
                 const tStr = data[0].receivedAt || data[0].timestamp || '';
                 if (tStr) {
-                    const lastPunchTime = new Date(tStr);
+                    // Robust parse for "Y-m-d H:i:s" or ISO
+                    const isoStr = tStr.includes('T') ? tStr : tStr.replace(' ', 'T');
+                    const lastPunchTime = new Date(isoStr);
                     const now = new Date();
                     if (!isNaN(lastPunchTime.getTime()) && (now - lastPunchTime > STALE_THRESHOLD_MS)) {
                         isStale = true;
@@ -450,197 +1485,163 @@
             }
 
             const matchEndEvent = data.find(d => d.punchBy === 'System' && d.force === 'MatchEnd');
+            // Logic: It ended if MatchEnd is present AND (it's the latest event OR we consider any MatchEnd as a terminator)
+            // PHP logic uses data[0] check. Let's stick to finding it for safety, but check index if needed.
             const hasMatchEnded = !!matchEndEvent;
 
-            if (isViewingHistory) {
-                updateStatus('offline');
-                const t = document.getElementById('statusText');
-                t.innerText = "HISTORY";
-                t.className = "font-mono font-bold text-purple-400";
-                document.getElementById('statusDot').className = "relative inline-flex rounded-full h-3 w-3 bg-purple-500";
-                document.getElementById('statusPing').className = "hidden";
-                if (hasMatchEnded) document.getElementById('winnerOverlay').classList.remove('hidden');
-                else document.getElementById('winnerOverlay').classList.add('hidden');
+            const isMatchLive = !isViewingHistory && data.length > 0 && !hasMatchEnded && !isStale;
 
-            } else if (data.length > 0 && !hasMatchEnded && !isStale) {
-                updateStatus('online');
-                document.getElementById('winnerOverlay').classList.add('hidden');
-            } else {
-                updateStatus('waiting');
-                if (isStale) document.getElementById('winnerOverlay').classList.add('hidden');
-            }
-
-            // --- Match Result Logic ---
-            // Only show result if we witness a transition from Live -> Ended
-            if (!isViewingHistory) {
-                if (lastMatchEndedState === null) {
-                    // First load: Initialize state but DO NOT show overlay
-                    lastMatchEndedState = hasMatchEnded;
-                    document.getElementById('winnerOverlay').classList.add('hidden');
-                } else {
-                    if (hasMatchEnded && !lastMatchEndedState) {
-                        // Transition Live -> Ended: Show Overlay
-
-                        const winnerOverlay = document.getElementById('winnerOverlay');
-                        const winnerNameEl = document.getElementById('winnerName');
-                        const containerDiv = winnerOverlay.querySelector('div');
-
-                        // Set Scores
-                        document.getElementById('winnerBlueScore').innerText = blueStats.total;
-                        document.getElementById('winnerRedScore').innerText = redStats.total;
-
-                        // Determine Winner
-                        if (blueStats.total > redStats.total) {
-                            winnerNameEl.innerText = "BLUE CORNER";
-                            winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-blue-400 drop-shadow-[0_0_25px_rgba(59,130,246,0.6)]";
-                            containerDiv.className = "bg-slate-900 border-4 border-blue-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(59,130,246,0.3)] transform scale-110";
-                        } else if (redStats.total > blueStats.total) {
-                            winnerNameEl.innerText = "RED CORNER";
-                            winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]";
-                            containerDiv.className = "bg-slate-900 border-4 border-red-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(239,68,68,0.3)] transform scale-110";
-                        } else {
-                            winnerNameEl.innerText = "DRAW";
-                            winnerNameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.6)]";
-                            containerDiv.className = "bg-slate-900 border-4 border-slate-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(255,255,255,0.2)] transform scale-110";
-                        }
-
-                        winnerOverlay.classList.remove('hidden');
-
-                    } else if (!hasMatchEnded && lastMatchEndedState) {
-                        // Reset if match restarts/new match begins
-                        document.getElementById('winnerOverlay').classList.add('hidden');
-                    }
-                    lastMatchEndedState = hasMatchEnded;
+            // --- Alert System Trigger ---
+            if (isMatchLive) {
+                if (document.hidden) {
+                    startAlert();
                 }
             } else {
-                document.getElementById('winnerOverlay').classList.add('hidden');
+                stopAlert();
             }
 
+            // Winner Overlay
+            if (!isViewingHistory) {
+                if (lastMatchEndedState === null) {
+                    // First load: Sync state but DO NOT show
+                    lastMatchEndedState = hasMatchEnded;
+                    document.getElementById('winnerOverlay').classList.add('hidden');
+                } else if (hasMatchEnded && !lastMatchEndedState) {
+                    const overlay = document.getElementById('winnerOverlay');
+                    const nameEl = document.getElementById('winnerName');
+                    const div = overlay.querySelector('div');
+
+                    document.getElementById('winnerBlueScore').innerText = blueStats.total;
+                    document.getElementById('winnerRedScore').innerText = redStats.total;
+
+                    if (blueStats.total > redStats.total) {
+                        nameEl.innerText = "BLUE CORNER";
+                        nameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-blue-400 drop-shadow-[0_0_25px_rgba(59,130,246,0.6)]";
+                        div.className = "bg-slate-900 border-4 border-blue-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(59,130,246,0.3)] transform scale-110";
+                    } else if (redStats.total > blueStats.total) {
+                        nameEl.innerText = "RED CORNER";
+                        nameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]";
+                        div.className = "bg-slate-900 border-4 border-red-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(239,68,68,0.3)] transform scale-110";
+                    } else {
+                        nameEl.innerText = "DRAW";
+                        nameEl.className = "text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-6 animate-pulse text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.6)]";
+                        div.className = "bg-slate-900 border-4 border-slate-500 rounded-2xl p-8 max-w-2xl w-full mx-4 text-center shadow-[0_0_100px_rgba(255,255,255,0.2)] transform scale-110";
+                    }
+                    overlay.classList.remove('hidden');
+                } else if (!hasMatchEnded && lastMatchEndedState) {
+                    document.getElementById('winnerOverlay').classList.add('hidden');
+                }
+                lastMatchEndedState = hasMatchEnded;
+            }
+
+            // Table
             const tbody = document.getElementById('tableBody');
             if (data.length === 0) {
                 updateStatus('waiting');
                 tbody.innerHTML = '<tr><td colspan="4" class="p-12 text-center text-slate-500 italic">Waiting...</td></tr>';
                 return;
+            } else {
+                if (isViewingHistory) {
+                    updateStatus('history');
+                } else if (isMatchLive) {
+                    updateStatus('online');
+                } else {
+                    updateStatus('waiting');
+                }
             }
 
-            const displayData = data; // Show all history
-            tbody.innerHTML = displayData.map((punch, index) => {
+            tbody.innerHTML = data.map((punch, index) => {
                 const isBlue = punch.punchBy === 'BlueBoxer';
                 const isRed = punch.punchBy === 'RedBoxer';
-                let badgeClass = '';
+                const isSystem = !isBlue && !isRed;
+                let badgeClass = isBlue ? 'bg-blue-900/30 text-blue-400 border-blue-800' : (isRed ? 'bg-red-900/30 text-red-400 border-red-800' : 'bg-slate-800/50 text-slate-400 border-slate-700');
 
-                if (isBlue) badgeClass = 'bg-blue-900/30 text-blue-400 border-blue-800';
-                else if (isRed) badgeClass = 'bg-red-900/30 text-red-400 border-red-800';
-                else badgeClass = 'bg-slate-800/50 text-slate-400 border-slate-700';
-
-                const roundNum = punch.round || '-';
-                return `
-                    <tr class="hover:bg-slate-800/50 transition-colors animate-enter" style="animation-delay: ${index * 0.02}s">
-                        <td class="p-2 font-mono text-slate-300 text-sm">${punch.time}</td>
-                        <td class="p-2 font-mono text-slate-400 text-sm">R${roundNum}</td>
-                        <td class="p-2 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${badgeClass}">${punch.punchBy}</span></td>
-                        <td class="p-2 text-right font-mono text-emerald-400 font-bold text-sm">${punch.force}</td>
-                    </tr>
-                `;
+                return `<tr class="hover:bg-slate-800/50 transition-colors animate-enter" style="animation-delay: ${index * 0.02}s">
+                    <td class="p-2 font-mono text-slate-300 text-sm">${punch.time}</td>
+                    <td class="p-2 font-mono text-slate-400 text-sm">R${punch.round || '-'}</td>
+                    <td class="p-2 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${badgeClass}">${punch.punchBy}</span></td>
+                    <td class="p-2 text-right font-mono text-emerald-400 font-bold text-sm">${punch.force}</td>
+                </tr>`;
             }).join('');
         }
 
         async function resetData() {
-            const btn = document.getElementById('resetBtn');
-            if (btn && btn.disabled) return;
             if (!confirm('Are you sure you want to clear all data?')) return;
             try {
-                await fetch('/api/data?action=clear', { method: 'POST' }); // Use POST or GET based on server implementation. Server uses Query param on Any?? Server: app.get(..., action=clear).
-                // Wait, server.js uses app.get('/api/data') for clear.
-                // So fetch('/api/data?action=clear') is correct.
-                // But my replace used { method: 'POST' }?
-                // Let's check server.js (Step 279).
-                // app.get('/api/data', ...) -> checks req.query.action === 'clear'.
-                // So it is GET.
                 await fetch('/api/data?action=clear');
                 updateDashboard();
-            } catch (e) {
-                alert('Failed to reset');
-            }
+            } catch (e) { alert('Failed to reset'); }
         }
 
-        // History Helpers
         function openHistoryModal() {
-            // Check either button
-            const btn1 = document.getElementById('reviewMatchesBtn');
-            const btn2 = document.getElementById('listMatchesBtn');
-            if ((btn1 && btn1.disabled) || (btn2 && btn2.disabled)) return;
-
             document.getElementById('historyModal').classList.remove('hidden');
             loadHistoryList();
         }
         function closeHistoryModal() {
             document.getElementById('historyModal').classList.add('hidden');
         }
+
         async function loadHistoryList() {
             try {
                 const res = await fetch('/api/history');
                 const files = await res.json();
                 const list = document.getElementById('historyList');
-                if (files.length === 0) { list.innerHTML = '<div class="text-center text-slate-500 py-8 italic">No archived matches found.</div>'; return; }
+
+                if (files.length === 0) {
+                    list.innerHTML = '<div class="text-center text-slate-500 py-8 italic">No archived matches found.</div>';
+                    return;
+                }
+
                 list.innerHTML = files.map(file => {
                     let displayTime = file.name;
-                    // Try to parse filename match_YYYY-MM-DD_HH-mm-ss.json
+                    // match_YYYY-MM-DD_HH-mm-ss.json
                     const match = file.filename.match(/match_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})/);
                     if (match) {
                         const [_, y, m, d, h, min, s] = match;
-                        displayTime = `${d}/${m}/${y} ${h}:${min}:${s}`;
+                        // Construct UTC ISO string (Z at end forces UTC interpretation)
+                        const isoStr = `${y}-${m}-${d}T${h}:${min}:${s}Z`;
+                        const dateObj = new Date(isoStr);
+                        // Convert to Local
+                        displayTime = `${dateObj.toLocaleDateString('en-GB')} ${dateObj.toLocaleTimeString('en-GB', { hour12: false })}`;
                     } else {
-                        // Fallback to file time
                         const dateObj = new Date(file.time * 1000);
-                        // Format: DD/MM/YYYY HH:MM:SS
-                        const day = String(dateObj.getDate()).padStart(2, '0');
-                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                        const year = dateObj.getFullYear();
-                        const hours = String(dateObj.getHours()).padStart(2, '0');
-                        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-                        const seconds = String(dateObj.getSeconds()).padStart(2, '0');
-                        displayTime = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+                        displayTime = `${dateObj.toLocaleDateString('en-GB')} ${dateObj.toLocaleTimeString('en-GB', { hour12: false })}`;
                     }
+
                     return `<div onclick="loadHistoryMatch('${file.filename}')" class="bg-slate-900/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 p-4 rounded-lg cursor-pointer transition-all group shadow-sm">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="font-mono text-lg font-bold text-slate-200 group-hover:text-blue-400 transition-colors tracking-tight">${displayTime}</span>
-                            </div>
-                            <div class="text-xs text-slate-500 font-mono tracking-wide">${(file.size / 1024).toFixed(1)} KB</div>
-                        </div>`;
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-mono text-lg font-bold text-slate-200 group-hover:text-blue-400 transition-colors tracking-tight">${displayTime}</span>
+                        </div>
+                        <div class="text-xs text-slate-500 font-mono tracking-wide">${(file.size / 1024).toFixed(1)} KB</div>
+                    </div>`;
                 }).join('');
-            } catch (e) { document.getElementById('historyList').innerText = "Failed to load history."; }
+            } catch (e) {
+                document.getElementById('historyList').innerText = "Failed to load history.";
+            }
         }
+
         async function loadHistoryMatch(filename) {
             try {
                 closeHistoryModal();
                 isViewingHistory = true;
-
-                // Toggle Buttons (PHP Logic)
                 document.querySelector('#historyControls > button').classList.add('hidden');
                 document.getElementById('liveControls').classList.remove('hidden');
 
                 const res = await fetch('/api/history/' + filename);
                 let data = await res.json();
-
-                // Fix: Node.js history is saved Ascending (Oldest First).
-                // We want Descending (Newest First).
-                // Since timestamps might be unreliable in old files, we strictly Reverse the array.
-                if (Array.isArray(data)) {
-                    data.reverse();
-                }
-
+                if (Array.isArray(data)) data.reverse();
                 lastDataJSON = '';
                 renderDashboard(data);
-            } catch (e) { alert("Failed to load match: " + e.message); exitHistoryMode(); }
+            } catch (e) {
+                alert("Failed to load match: " + e.message);
+                exitHistoryMode();
+            }
         }
+
         function exitHistoryMode() {
             isViewingHistory = false;
-
-            // Toggle Buttons (PHP Logic)
             document.querySelector('#historyControls > button').classList.remove('hidden');
             document.getElementById('liveControls').classList.add('hidden');
-
             lastDataJSON = '';
             updateDashboard();
         }
@@ -649,82 +1650,55 @@
             document.getElementById('winnerOverlay').classList.add('hidden');
         }
 
-        setInterval(updateDashboard, 1000);
-        updateDashboard();
-
-        // --- Popup Logic ---
+        // Popup Logic
         function showRoundPopup(element, roundNum) {
             const popup = document.getElementById('roundPopup');
             const list = document.getElementById('roundPopupList');
-            const title = document.getElementById('roundPopupTitle').querySelector('span'); // First span
+            const title = document.getElementById('roundPopupTitle').querySelector('span');
             const scoreSpan = document.getElementById('roundPopupScore');
 
             title.innerText = `ROUND ${roundNum} FEED`;
+            currentPopupRound = roundNum;
             list.innerHTML = '';
 
-            // Filter data for this round
             const roundPunches = allMatchData.filter(p => parseInt(p.round) === roundNum);
-
-            // Calculate Round Score
-            let blueScore = 0;
-            let redScore = 0;
+            let bR = 0, rR = 0;
             roundPunches.forEach(p => {
                 const val = parseInt(p.count || 0);
-                if (p.punchBy === 'BlueBoxer') blueScore = Math.max(blueScore, val);
-                if (p.punchBy === 'RedBoxer') redScore = Math.max(redScore, val);
+                if (p.punchBy === 'BlueBoxer') bR = Math.max(bR, val);
+                if (p.punchBy === 'RedBoxer') rR = Math.max(rR, val);
             });
-            scoreSpan.innerHTML = `<span class="text-blue-400">${blueScore}</span> - <span class="text-red-400">${redScore}</span>`;
+            scoreSpan.innerHTML = `<span class="text-blue-400">${bR}</span> - <span class="text-red-400">${rR}</span>`;
 
             if (roundPunches.length === 0) {
                 list.innerHTML = '<div class="text-slate-500 text-center italic py-2">No data</div>';
             } else {
-                list.innerHTML = roundPunches.map((p, i) => {
+                list.innerHTML = roundPunches.map(p => {
                     const isBlue = p.punchBy === 'BlueBoxer';
                     const isRed = p.punchBy === 'RedBoxer';
                     const isSystem = !isBlue && !isRed;
-
                     let bgClass = isBlue ? 'bg-blue-900/10' : (isRed ? 'bg-red-900/10' : 'bg-slate-800/30');
                     let textClass = isBlue ? 'text-blue-400' : (isRed ? 'text-red-400' : 'text-slate-300');
 
-                    // Simple logic to extract HH:MM:SS
-                    let time = p.time;
-                    if (time.includes(' ')) {
-                        const parts = time.split(' ');
-                        if (parts.length > 1) time = parts[1];
-                    }
+                    let time = p.time.split(' ')[1] || p.time;
 
-                    return `
-                        <div class="flex justify-center gap-[5px] items-center p-1.5 border-b border-slate-800/50 ${bgClass}">
-                            <span class="font-mono text-slate-400 text-[10px] w-14">${time}</span>
-                            <span class="${textClass} font-bold w-28 text-center text-xs truncate px-1">${p.punchBy}</span>
-                            <span class="font-mono ${isSystem ? 'text-purple-400' : 'text-emerald-400'} text-xs w-12 text-right">${p.force}</span>
-                        </div>
-                     `;
+                    return `<div class="flex justify-center gap-[5px] items-center p-1.5 border-b border-slate-800/50 ${bgClass}">
+                        <span class="font-mono text-slate-400 text-[10px] w-14">${time}</span>
+                        <span class="${textClass} font-bold w-28 text-center text-xs truncate px-1">${p.punchBy}</span>
+                        <span class="font-mono ${isSystem ? 'text-purple-400' : 'text-emerald-400'} text-xs w-12 text-right">${p.force}</span>
+                    </div>`;
                 }).join('');
             }
 
-            // Positioning Logic - ALWAYS Centralized
             const backdrop = document.getElementById('popupBackdrop');
-
-            popup.style.visibility = 'hidden';
-            popup.classList.remove('hidden');
-
-            // Centralized Overlay for ALL Screens
             if (backdrop) backdrop.classList.remove('hidden');
 
-            // Ensure it's centered in the viewport
             popup.style.position = 'fixed';
             popup.style.left = '50%';
             popup.style.top = '50%';
             popup.style.transform = 'translate(-50%, -50%)';
-            popup.style.margin = '0';
-            popup.style.zIndex = '100'; // Higher than everything
-
-            // Clear any old desktop specific styles just in case
-            popup.style.bottom = '';
-            popup.style.right = '';
-
-            popup.style.visibility = 'visible';
+            popup.style.zIndex = '100';
+            popup.classList.remove('hidden');
         }
 
         let currentPopupRound = null;
@@ -736,82 +1710,55 @@
                 showRoundPopup(element, roundNum);
             }
         }
-
-        // Wrap showRoundPopup to track current
-        const originalShow = showRoundPopup;
-        showRoundPopup = function (element, roundNum) {
-            currentPopupRound = roundNum;
-            originalShow(element, roundNum);
-        }
-
         function hideRoundPopup() {
             currentPopupRound = null;
-            const popup = document.getElementById('roundPopup');
-            const backdrop = document.getElementById('popupBackdrop');
-
-            popup.classList.add('hidden');
-            if (backdrop) backdrop.classList.add('hidden');
-
-            popup.style.display = '';
-            popup.style.transform = '';
-            popup.style.left = '';
-            popup.style.top = '';
+            document.getElementById('roundPopup').classList.add('hidden');
+            document.getElementById('popupBackdrop').classList.add('hidden');
         }
+
+        // Settings Modal
+        function openSettings() {
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        // Themes
+        // Themes
+        function changeTheme(themeName) {
+            document.body.classList.remove(
+                'theme-cyberpunk', 'theme-emerald', 'theme-saas', 'theme-dracula', 'theme-midnight', 'theme-coffee',
+                'theme-nordic', 'theme-oled', 'theme-synthwave', 'theme-forest', 'theme-solar', 'theme-ocean',
+                'theme-royal', 'theme-industrial', 'theme-terminal', 'theme-sakura', 'theme-sunset', 'theme-glacier',
+                'theme-volcano', 'theme-lavender', 'theme-cappuccino', 'theme-monochrome', 'theme-toxic', 'theme-azure',
+                'theme-obsidian', 'theme-neoncity',
+                // New Themes
+                'theme-vaporwave', 'theme-high-contrast', 'theme-matrix', 'theme-luxury', 'theme-rosegold',
+                'theme-steampunk', 'theme-space', 'theme-aurora', 'theme-mars', 'theme-aquamarine',
+                'theme-graphite', 'theme-blueprint', 'theme-arcade', 'theme-minty', 'theme-velvet',
+                'theme-concrete', 'theme-leather', 'theme-iceberg', 'theme-desert', 'theme-tangerine',
+                'theme-amethyst', 'theme-ruby', 'theme-sapphire'
+            );
+            if (themeName !== 'default') document.body.classList.add('theme-' + themeName);
+            localStorage.setItem('box_dashboard_theme', themeName);
+        }
+
+        (function () {
+            const savedTheme = localStorage.getItem('box_dashboard_theme');
+            if (savedTheme) {
+                const el = document.getElementById('themeSelect');
+                if (el) {
+                    el.value = savedTheme;
+                    changeTheme(savedTheme);
+                }
+            }
+        })();
+
+        setInterval(updateDashboard, 1000);
+        updateDashboard();
     </script>
-
-    <!-- History Modal -->
-    <div id="historyModal"
-        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-enter">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl">
-            <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
-                <h3 class="text-lg font-bold text-slate-200">Match History</h3>
-                <button onclick="closeHistoryModal()" class="text-slate-500 hover:text-white transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg>
-                </button>
-            </div>
-            <div id="historyList" class="max-h-[60vh] overflow-y-auto space-y-2 pr-2">
-                <!-- Populated by JS -->
-                <div class="text-center text-slate-500 py-8 italic">Loading...</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Round Feed Popup -->
-    <div id="roundPopup"
-        class="hidden fixed z-[60] bg-slate-950 border border-slate-700 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.8)] p-4 w-[400px] max-w-[95vw] flex flex-col h-auto max-h-[320px]">
-        <div class="flex justify-between items-center mb-2 border-b border-slate-800 pb-2 flex-shrink-0">
-            <h4 id="roundPopupTitle" class="text-sm font-bold text-slate-300 flex-1 flex justify-between mr-2">
-                <span>Round Feed</span>
-                <span id="roundPopupScore" class="font-mono text-xs"></span>
-            </h4>
-            <button onclick="hideRoundPopup()" class="text-slate-500 hover:text-white transition-colors p-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                    </path>
-                </svg>
-            </button>
-        </div>
-
-        <!-- Scrollable List Container with explicit height limit -->
-        <div id="roundPopupList"
-            class="overflow-y-auto space-y-1 text-xs pr-1 custom-scrollbar flex-1 min-h-0 basis-auto">
-            <!-- Content -->
-        </div>
-
-        <div class="pt-2 border-t border-slate-800 flex-shrink-0 mt-2">
-            <button onclick="hideRoundPopup()"
-                class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase tracking-widest rounded transition-colors shadow-lg">
-                OK
-            </button>
-        </div>
-    </div>
-
-    <!-- Mobile Overlay Backdrop (visible on all screens when popup is open) -->
-    <div id="popupBackdrop" onclick="hideRoundPopup()"
-        class="hidden fixed inset-0 bg-black/50 z-[59] backdrop-blur-sm transition-opacity"></div>
 </body>
 
 </html>

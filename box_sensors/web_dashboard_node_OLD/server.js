@@ -139,37 +139,6 @@ app.post('/api/data', (req, res) => {
     }
 
     const currentData = readData();
-
-    // Noise Filter: Ignore very weak signals
-    if (parseInt(newData.force) < 50) {
-        console.log("Ignored Low Force/Noise:", newData.force);
-        return res.json({ success: true, message: "Ignored low force" });
-    }
-
-
-    // Deduping / Ghost Punch Filter
-    // Check if the latest punch is identical in device/action and received very recently (< 500ms)
-    // Or if the timestamp from Flutter is identical.
-    if (currentData.length > 0) {
-        const last = currentData[currentData.length - 1]; // Append mode (last is new)? No, usually push adds to end.
-        // Wait, currentData.push adds to end. So [length-1] is the last one.
-        // BUT my readData returns raw list.
-        const lastPunch = currentData[currentData.length - 1];
-
-        // 1. Duplicate Request Check (Identical Timestamp from Source)
-        if (lastPunch.time === newData.time && lastPunch.device === newData.device && lastPunch.punchBy === newData.punchBy) {
-            console.log("Ignored Duplicate (Source Timestamp match):", newData.id);
-            return res.json({ success: true, message: "Ignored duplicate" });
-        }
-
-        // 2. Debounce Check (Hardware Bounce < 250ms)
-        const timeDiff = new Date(newData.receivedAt).getTime() - new Date(lastPunch.receivedAt).getTime();
-        if (lastPunch.punchBy === newData.punchBy && timeDiff < 250) {
-            console.log("Ignored Ghost Punch (Debounce < 250ms):", timeDiff);
-            return res.json({ success: true, message: "Ignored ghost punch" });
-        }
-    }
-
     currentData.push(newData);
 
     // Keep file size manageable (optional, matching generic safety)

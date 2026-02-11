@@ -95,8 +95,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'time' => $data['timestamp'] ?? date('H:i:s'),
             'force' => $data['sensorValue'] ?? '0',
             'round' => $data['roundId'] ?? '1',
-            'receivedAt' => date('c')
+            'receivedAt' => date('c') // ISO 8601
         ];
+
+        // Noise Filter
+        if (intval($newRecord['force']) < 50) {
+            echo json_encode(["status" => "success", "message" => "Ignored low force"]);
+            exit;
+        }
+
+        // Ghost Punch Check (Debounce)
+        if (count($currentData) > 0) {
+            $lastPunch = $currentData[0]; // Assuming shift order (newest first)
+
+            // Time Diff Check
+            $lastTime = strtotime($lastPunch['receivedAt'] ?? 0); // Convert to timestamp
+            $currTime = time(); // Current time in seconds. Precise? No.
+            // Better: use DateTime if possible or microtime, but strict deduping might need receivedAt string comparison
+            // Or assume Flutter timestamp
+
+            // Better Check: Source Timestamp
+            if (
+                ($lastPunch['time'] === $newRecord['time']) &&
+                ($lastPunch['punchBy'] === $newRecord['punchBy'])
+            ) {
+                echo json_encode(["status" => "success", "message" => "Ignored duplicate"]);
+                exit;
+            }
+        }
 
         // Add to TOP of list
         array_unshift($currentData, $newRecord);
