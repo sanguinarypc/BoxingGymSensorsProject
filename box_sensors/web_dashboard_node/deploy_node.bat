@@ -24,11 +24,13 @@ if errorlevel 1 (echo ERROR: tar failed & exit /b 1)
 
 echo.
 echo [2/6] Uploading dashboard.tgz to %SERVER_HOST%:%REMOTE_PATH%/ ...
-scp -o StrictHostKeyChecking=accept-new dashboard.tgz %SERVER_HOST%:%REMOTE_PATH%/ || (echo ERROR: scp failed & exit /b 1)
+echo scp -o StrictHostKeyChecking=accept-new dashboard.tgz %SERVER_HOST%:%REMOTE_PATH%/ || (echo ERROR: scp failed & exit /b 1)
+scp -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new dashboard.tgz %SERVER_HOST%:%REMOTE_PATH%/ || (echo ERROR: scp failed & exit /b 1)
 
 echo.
 echo [3/6] Running server-side deploy script...
-ssh -o StrictHostKeyChecking=accept-new %SERVER_HOST% "/usr/local/bin/dashboard-deploy-run" || (echo ERROR: remote deploy failed & exit /b 1)
+echo ssh -o StrictHostKeyChecking=accept-new %SERVER_HOST% "/usr/local/bin/dashboard-deploy-run" || (echo ERROR: remote deploy failed & exit /b 1)
+ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new %SERVER_HOST% "/usr/local/bin/dashboard-deploy-run" || (echo ERROR: remote deploy failed & exit /b 1)
 
 echo.
 echo [4/6] External (Cloudflare) health check: %PUBLIC_HEALTH_URL%
