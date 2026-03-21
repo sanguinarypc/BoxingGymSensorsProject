@@ -91,3 +91,9 @@ upload-keystore.jks
 # Backups
 **/*_backup/
 **/*backup*/
+
+# -----------------------
+# other files
+# -----------------------
+/box_sensors/ant-skills/
+/box_sensors/docs/
