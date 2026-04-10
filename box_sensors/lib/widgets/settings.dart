@@ -259,7 +259,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
         // 4️⃣ Εμφάνισε τον διάλογο "Save As..." του συστήματος μέσω SAF
         debugPrint("SAF Export: Showing system 'Save As...' dialog.");
-        final String? savedPath = await FilePicker.platform.saveFile(
+        final String? savedPath = await FilePicker.saveFile(
           dialogTitle:
               'Save Database As…', // Τίτλος του διαλόγου του συστήματος
           fileName: suggestedFinalFileName, // Προτεινόμενο όνομα αρχείου
@@ -455,7 +455,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
   Future<void> _showImportDatabaseDialog() async {
     // 1️⃣ Let the user pick *any* file, then filter for “.db”
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       dialogTitle: 'Select a database file to import',
       type: FileType.any,
     );
