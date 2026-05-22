@@ -1,7 +1,7 @@
 // android/build.gradle.kts (root)
 plugins {
-    id("com.android.application") version "8.13.0" apply false
-    id("org.jetbrains.kotlin.android") version "2.2.0" apply false
+    id("com.android.application") version "8.13.2" apply false
+    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
     id("dev.flutter.flutter-gradle-plugin") apply false // Δεν χρειάζεται version εδώ — το φέρνει το Flutter SDK
 }
 
