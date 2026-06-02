@@ -666,9 +666,9 @@ class BluetoothManager with ChangeNotifier {
     }
 
     try {
-      // 🔧 FBP 2.0.0 requires a license argument (free or commercial) Attempts to connect to the device with a timeout.
+      // FBP requires a license argument. Attempts to connect to the device with a timeout.
       await device.connect(
-        license: License.free,
+        license: License.nonprofit,
         timeout: const Duration(seconds: 5),
       );
       connectedBluetoothDevices[deviceKey] =
