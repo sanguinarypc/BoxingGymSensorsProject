@@ -164,12 +164,14 @@ Future<void> main() async {
         options.environment = appEnv;
 
         // Κρατάω τις τωρινές σου τιμές για να μη σου αλλάξω behavior.
-        options.tracesSampleRate = 1.0;
+        // options.tracesSampleRate = 1.0;
         // options.profilesSampleRate = 1.0; // Experimental in Sentry 9.x
-
         // Session Replay (όπως το είχες)
-        options.replay.sessionSampleRate = 1.0;
-        options.replay.onErrorSampleRate = 1.0;
+        // options.replay.sessionSampleRate = 1.0;
+        // options.replay.onErrorSampleRate = 1.0;
+        options.tracesSampleRate = 0.1;
+        options.replay.sessionSampleRate = 0.0;
+        options.replay.onErrorSampleRate = 0.0;
 
         if (!kReleaseMode) {
           debugPrint(
