@@ -3,9 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const { rateLimit } = require('express-rate-limit');
 
 const app = express();
 app.disable('x-powered-by');
+// The public server is reached through the local Linux reverse proxy.
+// Trust forwarded client IPs only when they come from that loopback proxy.
+app.set('trust proxy', 'loopback');
 const PORT = process.env.PORT || 3000;
 
 // Update Paths to use separated data directory
@@ -23,6 +27,14 @@ if (!fs.existsSync(HISTORY_DIR)) {
 
 // Middleware
 app.use(cors()); // Allow cross-origin requests (for Flutter app)
+const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 300,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again shortly' }
+});
+app.use('/api', apiLimiter);
 app.use(bodyParser.json({ limit: '1mb' }));
 app.use(express.static('public')); // Serve static files (dashboard)
 
@@ -93,15 +105,20 @@ app.get('/api/history', (req, res) => {
 
 // API: Get History File
 app.get('/api/history/:filename', (req, res) => {
-    const filename = req.params.filename;
-    // Security check: simple alphanumeric + dots + dashes
-    if (!/^[a-zA-Z0-9_.-]+$/.test(filename)) return res.status(400).send('Invalid filename');
+    const requestedFilename = req.params.filename;
 
-    const filepath = path.join(HISTORY_DIR, filename);
-    if (fs.existsSync(filepath)) {
-        res.sendFile(filepath);
-    } else {
-        res.status(404).send('Not found');
+    // Only serve a history file whose exact name came from our own directory.
+    // Request-controlled text is never used directly to construct a path.
+    try {
+        const safeFilename = fs.readdirSync(HISTORY_DIR)
+            .filter(f => f.startsWith('match_') && f.endsWith('.json'))
+            .find(f => f === requestedFilename);
+
+        if (!safeFilename) return res.status(404).send('Not found');
+
+        res.sendFile(safeFilename, { root: HISTORY_DIR });
+    } catch (e) {
+        res.status(500).send('Failed to read history');
     }
 });
 
