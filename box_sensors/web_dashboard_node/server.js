@@ -23,7 +23,7 @@ if (!fs.existsSync(HISTORY_DIR)) {
 
 // Middleware
 app.use(cors()); // Allow cross-origin requests (for Flutter app)
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '1mb' }));
 app.use(express.static('public')); // Serve static files (dashboard)
 
 // Helper to read data
