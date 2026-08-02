@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.46+46
+version: 1.0.47+47
 
 environment:
   sdk: ^3.12.2
@@ -33,16 +33,16 @@ dependencies:
   # Core
   async: 2.13.1
   intl: 0.20.3
-  uuid: ^4.5.3
+  uuid: ^4.6.0
   sqflite: ^2.4.3
   shared_preferences: 2.5.5
   path: ^1.9.1
   path_provider: ^2.1.6
   # State management
-  flutter_riverpod: ^3.3.2   # Riverpod 3 (Flutter)
+  flutter_riverpod: ^3.4.2   # Riverpod 3 (Flutter)
   # BLE / Permissions / Audio
   flutter_blue_plus: 2.3.11  # ">=2.0.1 <3.0.0"
-  permission_handler: ^12.0.3
+  permission_handler: ^13.0.0  # ^13.0.0  ^12.0.3
   audioplayers: 6.8.1  # ^6.5.1  ">=6.5.1 <7.0.0"
   # UI / Theming
   flex_color_scheme: ^8.4.0
@@ -50,7 +50,7 @@ dependencies:
   gap: ^3.0.1
   animated_text_kit: ^4.3.0
   # Platform / Tools
-  sentry_flutter: 9.25.0
+  sentry_flutter: 9.26.0
   package_info_plus: 10.2.1
   file_picker: ^12.0.0-beta.7   # ">=10.3.3 <11.0.0"  ^10.3.3
   flutter_dotenv: ^6.0.1
