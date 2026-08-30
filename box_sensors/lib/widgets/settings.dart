@@ -259,26 +259,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
         // 4️⃣ Εμφάνισε τον διάλογο "Save As..." του συστήματος μέσω SAF
         debugPrint("SAF Export: Showing system 'Save As...' dialog.");
-        final String? savedPath = await FilePicker.saveFile(
-          dialogTitle:
-              'Save Database As…', // Τίτλος του διαλόγου του συστήματος
-          fileName: suggestedFinalFileName, // Προτεινόμενο όνομα αρχείου
-          type: FileType.custom, // Ορίζουμε ότι είναι custom τύπος
-          allowedExtensions: ['db'], // (Προαιρετικό) Βοηθά τον χρήστη
-          bytes: bytes, // Τα δεδομένα προς εγγραφή
+        // final String? savedPath = await FilePicker.saveFile(
+        //   dialogTitle:
+        //       'Save Database As…', // Τίτλος του διαλόγου του συστήματος
+        //   fileName: suggestedFinalFileName, // Προτεινόμενο όνομα αρχείου
+        //   type: FileType.custom, // Ορίζουμε ότι είναι custom τύπος
+        //   allowedExtensions: ['db'], // (Προαιρετικό) Βοηθά τον χρήστη
+        //   bytes: bytes, // Τα δεδομένα προς εγγραφή
+        // );
+        final Uri? savedUri = await FilePicker.saveFile(
+          dialogTitle: 'Save Database As…',
+          fileName: suggestedFinalFileName,
+          type: FileType.custom,
+          allowedExtensions: ['db'],
+          bytes: bytes,
         );
 
         if (!mounted) {
           return;
         } // Έλεγχος μετά το saveFile
 
-        if (savedPath != null) {
-          // final trimmedPath = savedPath.substring(0, savedPath.lastIndexOf('/'));
-          // final trimmedPath = savedPath.replaceAll(RegExp(r'/\d+$'), '');
-          // messageToShow = 'Database exported successfully to: $savedPath';
-          // messageToShow = 'Database exported successfully to: $trimmedPath';
+        if (savedUri != null) {
           messageToShow = 'Database exported successfully';
-          debugPrint("SAF Export: File saved to: $savedPath");
+          debugPrint("SAF Export: File saved to: $savedUri");
         } else {
           messageToShow = 'Export cancelled by user.';
           debugPrint("SAF Export: User cancelled the save dialog.");
@@ -308,298 +311,153 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     }
   }
 
-  // Future<void> _showExportDatabaseDialog2() async {
-  //   // 1️⃣ Build a safe default filename final defaultName = 'messages.db';
-  //   final now = DateTime.now();
-  //   final safeDate = '${now.day}_${now.month}_${now.year}';
-  //   final defaultName = 'BoxSensors_$safeDate.db';
-
-  //   // 2️⃣ Ask for storage permission
-  //   // if (!await requestStoragePermissionIfNeeded()) return;
-
-  //   // 2️⃣ 3️⃣ Create a temporary copy of your live DB
-  //   final tempPath = await dbHelper.exportDatabaseToFile(defaultName);
-  //   if (!mounted || tempPath == null) {
-  //     _showSnackBar('Unable to create temporary export file.');
-  //     return;
-  //   }
-  //   final tempFile = File(tempPath);
-
-  //   // 4️⃣ Show a custom dialog so you can style everything
-  //   String? pickedDir;
-
-  //   filenameController.text = defaultName;
-  //   if (!mounted) {
-  //     return;
-  //   }
-  //   await showDialog(
-  //     context: context,
-  //     builder: (BuildContext dialogCtx) {
-  //       return AlertDialog(
-  //         title: const Text('Export Database'),
-  //         content: StatefulBuilder(
-  //           builder: (BuildContext sbCtx, void Function(VoidCallback) sbSet) {
-  //             return Column(
-  //               mainAxisSize: MainAxisSize.min,
-  //               children: [
-  //                 // Filename field
-  //                 TextField(
-  //                   controller: filenameController,
-  //                   decoration: const InputDecoration(labelText: 'Filename'),
-  //                 ),
-  //                 const SizedBox(height: 16),
-  //                 // Folder picker row
-  //                 Row(
-  //                   children: [
-  //                     Expanded(
-  //                       child: Text(
-  //                         pickedDir ?? 'No folder selected',
-  //                         style: TextStyle(
-  //                           fontSize: 12,
-  //                           color: Colors.grey[700],
-  //                         ),
-  //                       ),
-  //                     ),
-  //                     TextButton(
-  //                       onPressed: () async {
-  //                         final dir = await FilePicker.platform
-  //                             .getDirectoryPath(
-  //                               dialogTitle: 'Choose export folder',
-  //                             );
-  //                         if (dir != null) {
-  //                           sbSet(() => pickedDir = dir);
-  //                         }
-  //                       },
-  //                       child: const Text('Browse…'),
-  //                     ),
-  //                   ],
-  //                 ),
-  //               ],
-  //             );
-  //           },
-  //         ),
-  //         actions: [
-  //           TextButton(
-  //             onPressed: () => Navigator.of(dialogCtx).pop(),
-  //             child: const Text('Cancel'),
-  //           ),
-  //           ElevatedButton(
-  //             onPressed: () async {
-  //               final folder = pickedDir;
-  //               final name = filenameController.text.trim();
-
-  //               if (folder == null || name.isEmpty) {
-  //                 if (!mounted) {
-  //                   return; // Έλεγχos mounted της _SettingsScreenState
-  //                 }
-  //                 ScaffoldMessenger.of(dialogCtx).showSnackBar(
-  //                   const SnackBar(
-  //                     content: Text('Please pick folder and filename'),
-  //                   ),
-  //                 );
-  //                 return;
-  //               }
-
-  //               // Κράτα μια αναφορά στο Navigator και ScaffoldMessenger *πριν* το await
-  //               // αν και για το SnackBar θα χρησιμοποιήσουμε το _showSnackBar της _SettingsScreenState
-  //               final navigator = Navigator.of(dialogCtx);
-
-  //               String messageToShow = ''; // Για το τελικό SnackBar
-
-  //               try {
-  //                 // 1️⃣ Read your temp DB bytes
-  //                 final bytes = await tempFile.readAsBytes();
-
-  //                 // 2️⃣ Let SAF show the “Save As…” UI & do the write for you
-  //                 final savedPath = await FilePicker.platform.saveFile(
-  //                   dialogTitle: 'Save Database As…',
-  //                   fileName: name, // e.g. 'BoxSensors_16_5_2025.db'
-  //                   type: FileType.custom,
-  //                   allowedExtensions: ['db'],
-  //                   bytes: bytes,
-  //                 );
-
-  //                 // 3️⃣ Prepare the SnackBar message
-  //                 if (savedPath != null) {
-  //                   messageToShow =
-  //                       'Database exported successfully to: $savedPath';
-  //                 } else {
-  //                   messageToShow = 'Export cancelled';
-  //                 }
-  //               } catch (e) {
-  //                 messageToShow = 'Export failed: $e';
-  //               }
-
-  //               // Έλεγχος mounted της _SettingsScreenState πριν από UI operations
-  //               if (!mounted) return;
-
-  //               navigator.pop(); // Κλείσε τον διάλογο ΠΡΩΤΑ
-
-  //               _showSnackBar(
-  //                 messageToShow,
-  //               ); // Μετά δείξε το SnackBar χρησιμοποιώντας τη μέθοδο της _SettingsScreenState
-  //               // η οποία έχει τον δικό της έλεγχο mounted και χρησιμοποιεί το this.context.
-  //             },
-  //             child: const Text('Save'),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-
-  //   // 5️⃣ Clean up the temp file
-  //   if (await tempFile.exists()) {
-  //     await tempFile.delete();
-  //   }
-  // }
-
   Future<void> _showImportDatabaseDialog() async {
-    // 1️⃣ Let the user pick *any* file, then filter for “.db”
-    final result = await FilePicker.pickFiles(
-      dialogTitle: 'Select a database file to import',
-      type: FileType.any,
-    );
-    // Έλεγχος mounted μετά από το πρώτο await
+  // 1️⃣ Let the user pick *any* file, then filter for “.db”
+  final PlatformFile? selectedFile = await FilePicker.pickFile(
+    dialogTitle: 'Select a database file to import',
+    type: FileType.any,
+  );
+
+  // Έλεγχος mounted μετά από το πρώτο await
+  if (!mounted) return;
+
+  // 2️⃣ Handle cancel / no selection
+  if (selectedFile == null || selectedFile.path == null) {
+    _showSnackBar('Import cancelled.');
+    return;
+  }
+
+  final path = selectedFile.path!;
+
+  // 3️⃣ Ensure it’s a .db
+  if (!path.toLowerCase().endsWith('.db')) {
+    _showSnackBar('Please pick a .db file');
+    return;
+  }
+
+  final file = File(path);
+
+  // 4️⃣ Pre-flight checks
+  if (!await file.exists()) {
     if (!mounted) return;
+    _showSnackBar('Selected file does not exist.');
+    return;
+  }
 
-    // 2️⃣ Handle cancel / no selection
-    if (result == null ||
-        result.files.isEmpty ||
-        result.files.single.path == null) {
-      _showSnackBar('Import cancelled.');
-      return;
-    }
+  final int fileLength = await file.length();
+  if (!mounted) return;
 
-    final path = result.files.single.path!;
-    // 3️⃣ Ensure it’s a .db
-    if (!path.toLowerCase().endsWith('.db')) {
-      _showSnackBar('Please pick a .db file');
-      return;
-    }
+  if (fileLength == 0) {
+    _showSnackBar('Selected file is empty.');
+    return;
+  }
 
-    final file = File(path);
-    // 4️⃣ Pre-flight checks
-    if (!await file.exists()) {
-      // Έλεγχος mounted μετά από το πρώτο await
-      if (!mounted) return;
-      _showSnackBar('Selected file does not exist.');
-      return;
-    }
-
-    int fileLength = await file.length();
-    if (!mounted) return;
-
-    if (fileLength == 0) {
-      _showSnackBar('Selected file is empty.');
-      return;
-    }
-
-    // 5️⃣ Warn the user that they’re about to overwrite
-    // don't show dialog if widget disposed
-    if (!mounted) return;
-    final really = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext ctx) => AlertDialog(
-        title: const Text('Overwrite Existing Data?'),
-        content: const Text(
-          'Importing this database will replace all your current data. Continue?',
+  // 5️⃣ Warn the user that they’re about to overwrite
+  if (!mounted) return;
+  final really = await showDialog<bool>(
+    context: context,
+    builder:
+        (BuildContext ctx) => AlertDialog(
+          title: const Text('Overwrite Existing Data?'),
+          content: const Text(
+            'Importing this database will replace all your current data. Continue?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('No'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Yes'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('No'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Yes'),
-          ),
-        ],
-      ),
-    );
+  );
 
-    if (!mounted) return;
-    // you can now safely check `really`
-    if (really != true) {
-      _showSnackBar('Database import canceled by user.');
+  if (!mounted) return;
+
+  if (really != true) {
+    _showSnackBar('Database import canceled by user.');
+    return;
+  }
+
+  // 6️⃣ Do the import
+  _safeSetState(() => isLoading = true);
+  String importMessage = 'Import failed: Unknown error.';
+
+  try {
+    await dbHelper.close();
+    if (!mounted) {
+      _safeSetState(() => isLoading = false);
       return;
     }
 
-    // 6️⃣ Do the import
-    _safeSetState(() => isLoading = true);
-    String importMessage =
-        'Import failed: Unknown error.'; // Default error message
+    await DatabaseImporter.instance.importFromFile(file);
+    if (!mounted) {
+      _safeSetState(() => isLoading = false);
+      return;
+    }
 
-    try {
-      await dbHelper.close();
-      if (!mounted) {
-        _safeSetState(() => isLoading = false);
-        return;
-      }
+    final docs = await getApplicationDocumentsDirectory();
+    if (!mounted) {
+      _safeSetState(() => isLoading = false);
+      return;
+    }
 
-      await DatabaseImporter.instance.importFromFile(file);
-      if (!mounted) {
-        _safeSetState(() => isLoading = false);
-        return;
-      }
-
-      final docs = await getApplicationDocumentsDirectory();
-      if (!mounted) {
-        _safeSetState(() => isLoading = false);
-        return;
-      }
-
-      final testDbPath = p.join(docs.path, 'messages.db');
-      final testDb = await openDatabase(testDbPath);
-      if (!mounted) {
-        await testDb.close();
-        _safeSetState(() => isLoading = false);
-        return;
-      }
-
-      final userV =
-          Sqflite.firstIntValue(await testDb.rawQuery('PRAGMA user_version')) ??
-          0;
+    final testDbPath = p.join(docs.path, 'messages.db');
+    final testDb = await openDatabase(testDbPath);
+    if (!mounted) {
       await testDb.close();
-      if (!mounted) {
-        _safeSetState(() => isLoading = false);
-        return;
-      }
+      _safeSetState(() => isLoading = false);
+      return;
+    }
 
-      const expectedVersion = 1;
-      if (userV < expectedVersion) {
-        throw FormatException(
-          'Incompatible DB schema (found v$userV, need ≥ v$expectedVersion).',
-        );
-      }
+    final userV =
+        Sqflite.firstIntValue(await testDb.rawQuery('PRAGMA user_version')) ??
+        0;
+    await testDb.close();
+    if (!mounted) {
+      _safeSetState(() => isLoading = false);
+      return;
+    }
 
-      await dbHelper.database;
+    const expectedVersion = 1;
+    if (userV < expectedVersion) {
+      throw FormatException(
+        'Incompatible DB schema (found v$userV, need ≥ v$expectedVersion).',
+      );
+    }
 
-      if (!mounted) {
-        _safeSetState(() => isLoading = false);
-        return;
-      }
-      importMessage = 'Database imported successfully.';
-      ref.invalidate(matchesFutureProvider);
-      widget.onTabChange(1);
-    } on PlatformException catch (pe) {
-      debugPrint('Platform error during import: $pe');
-      importMessage = 'Import failed (platform error): ${pe.message}';
-    } on FileSystemException catch (fs) {
-      debugPrint('I/O error during import: $fs');
-      importMessage = 'Import failed (I/O error): ${fs.message}';
-    } on FormatException catch (fe) {
-      debugPrint('Schema error: $fe');
-      importMessage = 'Import failed: ${fe.message}';
-    } catch (e) {
-      debugPrint('Unexpected error during import: $e');
-      importMessage = 'Import failed: $e';
-    } finally {
-      if (mounted) {
-        _safeSetState(() => isLoading = false);
-        _showSnackBar(importMessage);
-      }
+    await dbHelper.database;
+
+    if (!mounted) {
+      _safeSetState(() => isLoading = false);
+      return;
+    }
+
+    importMessage = 'Database imported successfully.';
+    ref.invalidate(matchesFutureProvider);
+    widget.onTabChange(1);
+  } on PlatformException catch (pe) {
+    debugPrint('Platform error during import: $pe');
+    importMessage = 'Import failed (platform error): ${pe.message}';
+  } on FileSystemException catch (fs) {
+    debugPrint('I/O error during import: $fs');
+    importMessage = 'Import failed (I/O error): ${fs.message}';
+  } on FormatException catch (fe) {
+    debugPrint('Schema error: $fe');
+    importMessage = 'Import failed: ${fe.message}';
+  } catch (e) {
+    debugPrint('Unexpected error during import: $e');
+    importMessage = 'Import failed: $e';
+  } finally {
+    if (mounted) {
+      _safeSetState(() => isLoading = false);
+      _showSnackBar(importMessage);
     }
   }
+}
 
   @override
   void dispose() {
@@ -687,45 +545,3 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     );
   }
 }
-
-
-
-  // Future<void> _showImportDatabaseDialog() async {
-  //   // 1️⃣ Let the user pick *any* file, then filter for “.db”
-  //   final result = await FilePicker.platform.pickFiles(
-  //     dialogTitle: 'Select a database file to import',
-  //     type: FileType.any, // allow all file types
-  //   );
-
-  //   // 2️⃣ If they cancelled, bail out
-  //   if (result == null ||
-  //       result.files.isEmpty ||
-  //       result.files.single.path == null) {
-  //     _showSnackBar('Import cancelled.');
-  //     return;
-  //   }
-
-  //   final pickedPath = result.files.single.path!;
-  //   if (!pickedPath.toLowerCase().endsWith('.db')) {
-  //     _showSnackBar('Please pick a .db file');
-  //     return;
-  //   }
-
-  //   // 3️⃣ We’ve got a .db — proceed with import
-  //   final pickedFile = File(pickedPath);
-
-  //   _safeSetState(() => isLoading = true);
-  //   try {
-  //     await dbHelper.close();
-  //     await DatabaseImporter.instance.importFromFile(pickedFile);
-  //     await dbHelper.database;
-  //     _showSnackBar('Database imported successfully.');
-  //     ref.invalidate(matchesFutureProvider);
-  //     widget.onTabChange(1);
-  //   } catch (e) {
-  //     debugPrint('Import failed: $e');
-  //     _showSnackBar('Import failed: $e');
-  //   } finally {
-  //     if (mounted) _safeSetState(() => isLoading = false);
-  //   }
-  // }

@@ -8,8 +8,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins { // (χωρίς version στο plugins block εδώ)
     id("com.android.application")
-    id("org.jetbrains.kotlin.android") // Μπορεί clsνα μείνει έτσι. Εναλλακτικά: id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin") // Το Flutter plugin ΜΕΤΑ τα Android/Kotlin plugins
+    // id("org.jetbrains.kotlin.android") // Μπορεί clsνα μείνει έτσι. Εναλλακτικά: id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
 }
 
@@ -23,7 +23,7 @@ android {
     namespace = "com.sanguinarypc.box_sensors"
 
     // Χρησιμοποιούμε τα versions που δίνει το Flutter plugin (καλό για συντήρηση)
-    compileSdk = 36 // flutter.compileSdkVersion // π.χ. 35
+    compileSdk = 37 // flutter.compileSdkVersion // π.χ.  36  35
     // (when Android 16/API 36 is finalized) // compileSdk = 36
 
     // Σταθερό NDK: χρησιμοποίησε αυτό που έχεις εγκατεστημένο.
