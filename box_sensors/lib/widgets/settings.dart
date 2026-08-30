@@ -33,6 +33,10 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen>
     with SettingsReloadable {
+  static const MethodChannel _databaseExportChannel = MethodChannel(
+    'app.database.export.channel',
+  );
+
   // Controllers
   final fsrSensitivityController = TextEditingController(text: '800');
   final fsrThresholdController = TextEditingController(text: '200');
@@ -252,11 +256,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         tempFile = File(tempPath);
         debugPrint("SAF Export: Temporary file created at: $tempPath");
 
-        final bytes = await tempFile.readAsBytes();
-        if (!mounted) {
-          return;
-        } // Έλεγχος μετά την ανάγνωση των bytes
-
         // 4️⃣ Εμφάνισε τον διάλογο "Save As..." του συστήματος μέσω SAF
         debugPrint("SAF Export: Showing system 'Save As...' dialog.");
         // final String? savedPath = await FilePicker.saveFile(
@@ -267,13 +266,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         //   allowedExtensions: ['db'], // (Προαιρετικό) Βοηθά τον χρήστη
         //   bytes: bytes, // Τα δεδομένα προς εγγραφή
         // );
-        final Uri? savedUri = await FilePicker.saveFile(
-          dialogTitle: 'Save Database As…',
-          fileName: suggestedFinalFileName,
-          type: FileType.custom,
-          allowedExtensions: ['db'],
-          bytes: bytes,
-        );
+        final Uri? savedUri;
+        if (Platform.isAndroid) {
+          final savedUriString = await _databaseExportChannel
+              .invokeMethod<String>('exportDatabase', {
+                'sourcePath': tempPath,
+                'fileName': suggestedFinalFileName,
+              });
+          savedUri = savedUriString == null ? null : Uri.parse(savedUriString);
+        } else {
+          // Keep the existing FilePicker behavior as a fallback on non-Android.
+          final bytes = await tempFile.readAsBytes();
+          if (!mounted) {
+            return;
+          }
+          savedUri = await FilePicker.saveFile(
+            dialogTitle: 'Save Database As…',
+            fileName: suggestedFinalFileName,
+            type: FileType.custom,
+            allowedExtensions: ['db'],
+            bytes: bytes,
+          );
+        }
 
         if (!mounted) {
           return;

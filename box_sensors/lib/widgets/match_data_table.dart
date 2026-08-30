@@ -33,14 +33,13 @@ class MatchDataTable extends StatelessWidget {
                   if (rows.isEmpty) {
                     return const Center(child: Text('No Sensor(s) data.'));
                   }
-                  final reversed = rows.reversed.toList();
                   return Scrollbar(
                     child: ListView.separated(
-                      itemCount: reversed.length,
+                      itemCount: rows.length,
                       separatorBuilder: (_, _) =>
                           const Divider(height: 1, thickness: 1),
                       itemBuilder: (ctx, i) =>
-                          _buildRow(reversed[i], cellWidth),
+                          _buildRow(rows[rows.length - 1 - i], cellWidth),
                     ),
                   );
                 },

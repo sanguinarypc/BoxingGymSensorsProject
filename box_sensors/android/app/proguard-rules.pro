@@ -1,6 +1,6 @@
 # Keep this file intentionally minimal.
 #
-# Flutter supplies targeted rules for FlutterPlugin implementations. Android
-# components declared in the manifest are retained by AAPT2, and current
-# plugins (including Sentry and the BLE plugins) package their own consumer
-# rules. Add a narrow app rule here only for a verified reflective/JNI access.
+# Flutter supplies a targeted rule for FlutterPlugin implementations, including
+# flutter_blue_plus. Standard Android components are covered by the optimized
+# default Android rules, and Sentry packages its required consumer rules.
+# Add a narrow app rule here only for verified reflective or JNI access.

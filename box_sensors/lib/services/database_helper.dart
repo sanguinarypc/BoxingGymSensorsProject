@@ -50,7 +50,7 @@ class DatabaseHelper {
     return await openDatabase(
       path,
       // Set the database version. Used for schema migrations if the schema changes in future versions.
-      version: 2,
+      version: 3,
       // Callback executed when the database is opened.
       onOpen: (db) async {
         // Ensure foreign key constraints are enabled every time the database is opened.
@@ -64,6 +64,9 @@ class DatabaseHelper {
           await db.execute(
             "ALTER TABLE settings ADD COLUMN webServerUrl TEXT DEFAULT '${DeviceConfig.webServerUrl}'",
           );
+        }
+        if (oldVersion < 3) {
+          await _createMessageIndexes(db);
         }
       },
       // Callback executed only when the database is first created (i.e., the db file doesn't exist).
@@ -128,6 +131,8 @@ class DatabaseHelper {
           )
         ''');
 
+        await _createMessageIndexes(db);
+
         // Create the 'settings' table to store application-wide configurations.
         await db.execute(''' 
           CREATE TABLE settings(
@@ -155,6 +160,17 @@ class DatabaseHelper {
         });
       },
     );
+  }
+
+  Future<void> _createMessageIndexes(Database db) async {
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_messages_round_id
+      ON messages(roundId, id DESC)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_messages_match_id
+      ON messages(matchId, id DESC)
+    ''');
   }
 
   /// Closes the underlying SQLite database.
@@ -228,6 +244,54 @@ class DatabaseHelper {
       whereArgs: [roundId], // Arguments for the WHERE clause.
       orderBy: 'id DESC', // Order results by ID, newest first.
     );
+  }
+
+  /// Fetches one newest-first page for a round without using OFFSET.
+  ///
+  /// Pass the oldest visible message ID as [beforeId] to fetch the next page.
+  /// Existing full-history queries remain available for callers that need them.
+  Future<List<Map<String, dynamic>>> fetchMessagesPageByRoundId(
+    int roundId, {
+    int limit = 200,
+    int? beforeId,
+  }) async {
+    if (limit <= 0) {
+      throw ArgumentError.value(limit, 'limit', 'Must be greater than zero.');
+    }
+
+    final db = await database;
+    return await db.query(
+      'messages',
+      where: beforeId == null ? 'roundId = ?' : 'roundId = ? AND id < ?',
+      whereArgs: beforeId == null ? [roundId] : [roundId, beforeId],
+      orderBy: 'id DESC',
+      limit: limit,
+    );
+  }
+
+  /// Returns the exact number of messages stored for a round.
+  Future<int> getMessageCountByRoundId(int roundId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) FROM messages WHERE roundId = ?',
+      [roundId],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  /// Counts punches per boxer for a round inside SQLite.
+  Future<Map<String, int>> getRoundPunchCounts(int roundId) async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      '''
+      SELECT punchBy, COUNT(*) AS total
+      FROM messages
+      WHERE roundId = ?
+      GROUP BY punchBy
+      ''',
+      [roundId],
+    );
+    return _boxerPunchCountsFromRows(rows);
   }
 
   /// Clears all messages from the 'messages' table.
@@ -618,48 +682,39 @@ class DatabaseHelper {
     return null; // Otherwise, if no match is found with that ID, return null.
   }
 
-  /// Calculates and returns a map of total punches per boxer for a given `eventId`.
-  /// This method performs the aggregation in Dart by:
-  /// 1. Fetching all rounds.
-  /// 2. Filtering rounds by the given `eventId`.
-  /// 3. For each of these rounds, fetching all associated messages.
-  /// 4. Iterating through messages and tallying counts based on the 'punchBy' field.
+  /// Calculates and returns total punches per boxer for a given `eventId`.
   /// Note: The interpretation of 'punchBy' is critical. If 'punchBy' is who RECEIVED the punch,
   /// this counts punches received. If the intention is to count punches THROWN by each boxer,
   /// the logic might need to consider the 'device' field or an inverse relation.
   /// The current implementation counts based on the 'punchBy' field as it appears in the data.
   Future<Map<String, int>> getEventPunchCounts(String eventId) async {
-    // 1️⃣ Fetch all rounds from the database, then filter them to get only rounds belonging to the specified eventId.
-    final allRounds =
-        await fetchRounds(); // Assumes fetchRounds() gets all rounds from the DB.
-    final myRounds = allRounds.where((r) => r['eventId'] == eventId).toList();
+    final db = await database;
+    final rows = await db.rawQuery(
+      '''
+      SELECT messages.punchBy, COUNT(*) AS total
+      FROM messages
+      INNER JOIN rounds ON rounds.id = messages.roundId
+      WHERE rounds.eventId = ?
+      GROUP BY messages.punchBy
+      ''',
+      [eventId],
+    );
+    return _boxerPunchCountsFromRows(rows);
+  }
 
-    // 2️⃣ Initialize punch counters for BlueBoxer and RedBoxer.
-    //    Iterate through each round of the event.
-    //    For each round, fetch all associated messages.
-    //    For each message, identify the 'punchBy' value (who received the punch) and increment the respective counter.
-    int blue = 0, red = 0; // Initialize counters.
-    for (final round in myRounds) {
-      // ✔️ Ensure 'id' from the round map is correctly cast to 'int' for `fetchMessagesByRoundId`.
-      final roundId = round['id'] as int;
-      final messages = await fetchMessagesByRoundId(
-        roundId,
-      ); // Fetch messages for the current round.
-      for (final msg in messages) {
-        final who =
-            msg['punchBy']
-                as String?; // Get the value of 'punchBy' from the message.
-        if (who == DeviceConfig.blueBoxer) {
-          // If 'punchBy' is DeviceConfig.blueBoxer, increment 'blue' counter.
-          blue++;
-        } else if (who == DeviceConfig.redBoxer) {
-          // If 'punchBy' is DeviceConfig.redBoxer, increment 'red' counter.
-          red++;
-        }
+  Map<String, int> _boxerPunchCountsFromRows(List<Map<String, dynamic>> rows) {
+    final counts = <String, int>{
+      DeviceConfig.blueBoxer: 0,
+      DeviceConfig.redBoxer: 0,
+    };
+
+    for (final row in rows) {
+      final punchBy = row['punchBy'] as String?;
+      if (counts.containsKey(punchBy)) {
+        counts[punchBy!] = row['total'] as int;
       }
     }
-    // Returns a map with the aggregated counts for DeviceConfig.blueBoxer and DeviceConfig.redBoxer based on the 'punchBy' field.
-    return {DeviceConfig.blueBoxer: blue, DeviceConfig.redBoxer: red};
+    return counts;
   }
 
   // Exports the current SQLite database to a file with the given `fileName` in a temporary directory.

@@ -24,10 +24,6 @@ void _captureSentryException(Object error, {StackTrace? stackTrace}) {
 // data transmission, and state management for connected devices.
 // It uses ChangeNotifier to notify UI elements of state changes.
 class BluetoothManager with ChangeNotifier {
-  /// Buffer the raw maps for each notification + history row
-  // This list stores raw data messages (as maps) received from BLE devices or loaded from history.
-  final List<Map<String, dynamic>> _rawMsgs = [];
-
   // Reference to the TimerState, used to interact with match and round timing logic.
   TimerState? _timerState;
 
@@ -49,21 +45,9 @@ class BluetoothManager with ChangeNotifier {
   // Flag indicating that a multi-device scan was stopped prematurely (e.g., all target devices found).
   bool _didStopScan = false;
 
-  // Stream controllers.
-  // Broadcast stream controller for lists of SensorData.
-  final StreamController<List<SensorData>> _messageStreamController =
-      StreamController<List<SensorData>>.broadcast();
   // Broadcast stream controller for device disconnection events, emitting the name of the disconnected device.
   final StreamController<String?> _disconnectionStreamController =
       StreamController<String?>.broadcast();
-
-  /// In BluetoothManager:
-  // Broadcast stream controller for raw message data (list of maps).
-  final _rawController =
-      StreamController<List<Map<String, dynamic>>>.broadcast();
-  // Public stream exposing raw messages.
-  Stream<List<Map<String, dynamic>>> get rawMessageStream =>
-      _rawController.stream;
 
   // Bluetooth properties.
   // Holds the specific BluetoothCharacteristic that can be written to for sending data to a connected device.
@@ -130,8 +114,6 @@ class BluetoothManager with ChangeNotifier {
   int? get currentRoundId => _currentRoundId;
   // Provides read-only access to the current match ID.
   int? get currentMatchId => _currentMatchId;
-  // Provides read-only access to the stream of formatted messages (SensorData list).
-  Stream<List<SensorData>> get messageStream => _messageStreamController.stream;
   // Provides read-only access to the stream of device disconnection events.
   Stream<String?> get disconnectionStream =>
       _disconnectionStreamController.stream;
@@ -181,24 +163,9 @@ class BluetoothManager with ChangeNotifier {
       _extractValue(message, _sensorValueRegex);
 
   /// Clears the internal table data. In bluetooth_manager.dart
-  // Clears all message data from internal lists and streams, effectively resetting the displayed message table.
+  // Clears all SensorData, effectively resetting the displayed message table.
   void clearTable() {
-    // 1) clear the SensorData list and push an empty list
     sensorDataList.clear(); // Empties the list of SensorData objects.
-    if (!_messageStreamController.isClosed) {
-      // Checks if the stream controller is active.
-      _messageStreamController.add([]); // Pushes an empty list to update UI.
-    }
-
-    // 2) clear the raw‐map stream
-    _rawMsgs.clear(); // Empties the list of raw message maps.
-    if (!_rawController.isClosed) {
-      // Checks if the raw data stream controller is active.
-      _rawController.sink.add(
-        <Map<String, dynamic>>[],
-      ); // Pushes an empty list to the raw data stream.
-    }
-
     _safeNotifyListeners(); // Notifies listeners of the change.
   }
 
@@ -949,29 +916,7 @@ class BluetoothManager with ChangeNotifier {
         );
 
         sensorDataList.add(newData); // Adds the new data to the internal list.
-        if (!_messageStreamController.isClosed) {
-          // Checks if the message stream controller is still active.
-          _messageStreamController.add(
-            List.from(sensorDataList),
-          ); // Adds the updated list to the message stream.
-        }
         _scheduleUIUpdate(); // ← debounce rapid‐fire notifications
-
-        // Creates a map of the raw message data.
-        final msgMap = {
-          'device': deviceStr,
-          'punchBy': oppositeDevice,
-          'punchCount': punchCount.toString(),
-          'timestamp': timestamp,
-          'sensorValue': sensorValue,
-        };
-        _rawMsgs.add(msgMap); // Adds the raw message map to the internal list.
-        if (!_rawController.isClosed) {
-          // Checks if the raw message stream controller is still active.
-          _rawController.sink.add(
-            List.from(_rawMsgs),
-          ); // Adds the updated list to the raw message stream.
-        }
 
         final localRoundId = _currentRoundId; // Gets the current round ID.
         final localMatchId = _currentMatchId; // Gets the current match ID.
@@ -1057,14 +1002,12 @@ class BluetoothManager with ChangeNotifier {
     Future.wait(futures); // Executes all operations in the list concurrently.
   }
 
-  /// Bulk‑load a bunch of historical rows from the 'messages' table.
+  /// Bulk-load a bunch of historical rows from the 'messages' table.
   ///
-  /// Internally converts each DB row into a DataRow, pushes it
-  /// to the stream, and *debounces* the UI rebuilds to at most
-  /// one every 300 ms.
+  /// Internally converts each DB row into SensorData and *debounces* the UI
+  /// rebuilds to at most one every 300 ms.
   // Loads message history from the database, optionally filtered by match ID.
   Future<void> loadHistory({int? matchId}) async {
-    _rawMsgs.clear(); // Clears existing raw messages.
     // 1) Read the raw message maps from SQLite.
     //    If you want *all* messages, call fetchMessages();
     //    if only for a match, call fetchMessagesByMatchId(matchId).
@@ -1082,21 +1025,8 @@ class BluetoothManager with ChangeNotifier {
       // Creates a SensorData object from the message data.
       final data = SensorData.fromMap(msg);
 
-      // Add to your internal list and stream
+      // Add to the internal list used by the UI.
       sensorDataList.add(data); // Adds the SensorData to the internal list.
-      if (!_messageStreamController.isClosed) {
-        _messageStreamController.add(
-          List.from(sensorDataList),
-        ); // Adds the updated list to the message stream.
-      }
-
-      // Record raw msg and emit
-      _rawMsgs.add(msg); // Adds the raw message map to the internal list.
-      if (!_rawController.isClosed) {
-        _rawController.sink.add(
-          List.from(_rawMsgs),
-        ); // Adds the updated list to the raw message stream.
-      }
 
       // ← instead of notifyListeners(), debounce via your existing helper
       _scheduleUIUpdate(); // Schedules a debounced UI update.
@@ -1396,14 +1326,12 @@ class BluetoothManager with ChangeNotifier {
 
   @override
   // Called when the BluetoothManager instance is being disposed.
-  // Cleans up resources like timers, stream controllers, and subscriptions.
+  // Cleans up resources like timers, the stream controller, and subscriptions.
   void dispose() {
     _notifyDebounce?.cancel(); // Cancels any active UI debounce timer.
     try {
-      _messageStreamController.close(); // Closes the message stream controller.
       _disconnectionStreamController
           .close(); // Closes the disconnection stream controller.
-      _rawController.close(); // Closes the raw message stream controller.
       // Cancels all active notification subscriptions.
       _notificationSubscriptions.forEach((_, subscription) {
         subscription.cancel();
