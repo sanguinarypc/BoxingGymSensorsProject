@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.52+52
+version: 1.0.53+53
 
 environment:
   sdk: ^3.13.5
@@ -39,6 +39,8 @@ dependencies:
   shared_preferences: 2.5.6
   path: ^1.9.1
   path_provider: ^2.1.6
+  # Use one consistent JNI implementation for both Dart and Android builds.
+  path_provider_android: 2.3.1
   # State management
   flutter_riverpod: ^3.4.3   # Riverpod 3 (Flutter)
   # BLE / Permissions / Audio
@@ -55,7 +57,7 @@ dependencies:
   gap: ^3.0.1
   animated_text_kit: ^4.3.0
   # Platform / Tools
-  sentry_flutter: 9.30.1
+  sentry_flutter: 10.0.0
   package_info_plus: 10.2.2
   file_picker: ^13.1.0   # file_picker 13.1.0  ^12.2.0 
   flutter_dotenv: ^6.0.1
@@ -107,6 +109,10 @@ flutter_launcher_icons:
 
 # The following section is specific to Flutter packages.
 flutter:
+
+  # Sentry 10 supports Apple platforms through Swift Package Manager only.
+  config:
+    enable-swift-package-manager: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

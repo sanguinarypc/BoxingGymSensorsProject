@@ -163,9 +163,12 @@ Future<void> main() async {
         // Βοηθάει να ξεχωρίζεις prod/staging στο Sentry UI.
         options.environment = appEnv;
 
+        // Preserve the Sentry 9 transaction lifecycle and native HTTP errors.
+        options.traceLifecycle = SentryTraceLifecycle.static;
+        options.captureNativeFailedRequests = true;
+
         // Κρατάω τις τωρινές σου τιμές για να μη σου αλλάξω behavior.
         // options.tracesSampleRate = 1.0;
-        // options.profilesSampleRate = 1.0; // Experimental in Sentry 9.x
         // Session Replay (όπως το είχες)
         // options.replay.sessionSampleRate = 1.0;
         // options.replay.onErrorSampleRate = 1.0;

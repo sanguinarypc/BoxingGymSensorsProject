@@ -49,7 +49,8 @@ android {
 
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion // 28
+        // Sentry 10 requires Android 8.0 (API 26) or newer. minSdk = flutter.minSdkVersion // 28
+        minSdk = maxOf(flutter.minSdkVersion, 26)
         targetSdk = 36 // flutter.targetSdkVersion  // 35
         versionCode = flutter.versionCode // 2
         versionName = flutter.versionName // "1.0.1"
