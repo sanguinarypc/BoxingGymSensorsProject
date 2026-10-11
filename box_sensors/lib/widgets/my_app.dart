@@ -1,5 +1,5 @@
 // lib/widgets/my_app.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 // ⚠️ services.dart ΔΕΝ χρειάζεται πια, το αφαιρούμε
 import 'package:box_sensors/services/riverpod_imports.dart';
 import 'package:box_sensors/services/providers.dart';
@@ -161,7 +161,12 @@ class MyApp extends ConsumerWidget {
 
         return MediaQuery(
           data: mq.copyWith(textScaler: scaler),
-          child: child ?? const SizedBox.shrink(),
+          // flutter_slidable still uses the SDK Material theme/localizations.
+          // Keep this bridge until that dependency migrates to material_ui.
+          // ignore: deprecated_member_use
+          child: MaterialUiCompatibilityBridge(
+            child: child ?? const SizedBox.shrink(),
+          ),
         );
       },
 

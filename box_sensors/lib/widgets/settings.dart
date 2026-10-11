@@ -1,5 +1,5 @@
 // lib/widgets/settings.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'dart:io';
 import 'package:box_sensors/services/riverpod_imports.dart';
 import 'package:box_sensors/widgets/android_battery_setting_card.dart';

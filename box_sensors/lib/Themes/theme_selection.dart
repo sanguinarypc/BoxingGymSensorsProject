@@ -1,5 +1,5 @@
 // lib/Themes/theme_selection.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:box_sensors/services/providers.dart';
 import 'package:box_sensors/services/riverpod_imports.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
@@ -11,9 +11,11 @@ class ThemeSelection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeProvider = ref.watch(themeProviderProvider);
     final theme = Theme.of(context);
+    final schemeData = FlexColor.schemes[themeProvider.currentScheme] ??
+        FlexColor.schemes[FlexScheme.deepPurple]!;
     return Column(
       children: [
-        // FlexThemeModeSwitch with centered title above icons.
+        // Theme mode options with centered title above icons.
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Column(
@@ -33,18 +35,32 @@ class ThemeSelection extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 0),
-              // Row #2: The FlexThemeModeSwitch.
-              FlexThemeModeSwitch(
-                hasTitle: false,
-                labelAbove: true,
-                showSystemMode: true,
-                buttonOrder: FlexThemeModeButtonOrder.systemLightDark,
-                themeMode: themeProvider.themeMode,
-                onThemeModeChanged: (mode) {
-                  themeProvider.setThemeMode(mode);
-                },
-                flexSchemeData: (FlexColor.schemes[themeProvider.currentScheme] ??
-                    FlexColor.schemes[FlexScheme.deepPurple])!,
+              // FCS 9 removed systemLightDark. Use its public option buttons
+              // to preserve the existing SYSTEM / LIGHT / DARK order and style.
+              Row(
+                children: [
+                  for (final mode in ThemeMode.values)
+                    FlexThemeModeOptionButton(
+                      flexSchemeColor: switch (mode) {
+                        ThemeMode.system => FlexSchemeColor(
+                            primary: schemeData.light.primary,
+                            primaryContainer: schemeData.dark.primary,
+                            secondary: schemeData.light.secondary,
+                            secondaryContainer: schemeData.dark.secondary,
+                          ),
+                        ThemeMode.light => schemeData.light,
+                        ThemeMode.dark => schemeData.dark,
+                      },
+                      backgroundColor: switch (mode) {
+                        ThemeMode.system => Colors.grey[500],
+                        ThemeMode.light => Colors.white,
+                        ThemeMode.dark => Colors.grey[850],
+                      },
+                      label: mode.name.toUpperCase(),
+                      selected: themeProvider.themeMode == mode,
+                      onSelect: () => themeProvider.setThemeMode(mode),
+                    ),
+                ],
               ),
             ],
           ),

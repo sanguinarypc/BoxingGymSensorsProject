@@ -16,10 +16,11 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.50+50
+version: 1.0.52+52
 
 environment:
-  sdk: ^3.13.2
+  sdk: ^3.13.5
+  flutter: '>=3.47.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -34,32 +35,33 @@ dependencies:
   async: 2.13.1
   intl: 0.20.3
   uuid: ^4.6.0
-  sqflite: ^2.4.3
-  shared_preferences: 2.5.5
+  sqflite: ^2.4.4+1
+  shared_preferences: 2.5.6
   path: ^1.9.1
   path_provider: ^2.1.6
   # State management
-  flutter_riverpod: ^3.4.2   # Riverpod 3 (Flutter)
+  flutter_riverpod: ^3.4.3   # Riverpod 3 (Flutter)
   # BLE / Permissions / Audio
-  flutter_blue_plus: 2.3.12  # ">=2.0.1 <3.0.0"
-  permission_handler: 13.0.1 # 12.0.3 #  13.0.1
+  flutter_blue_plus: 2.3.14  # ">=2.0.1 <3.0.0"
+  permission_handler: 13.0.2 # 12.0.3 #  13.0.1
   # Keep the Android implementation used by the verified release 46.
   # 14.x requires compileSdk 37 and the AGP 9 generation of the toolchain.
-  permission_handler_android:  ^14.0.0 # 13.0.1
+  permission_handler_android:  ^14.1.0 # 13.0.1
   audioplayers: 6.8.1  # ^6.5.1  ">=6.5.1 <7.0.0"
   # UI / Theming
-  flex_color_scheme: ^8.4.0
+  flex_color_scheme: ^9.0.0
+  material_ui: ^1.6.0
   flutter_slidable: ^4.0.3
   gap: ^3.0.1
   animated_text_kit: ^4.3.0
   # Platform / Tools
-  sentry_flutter: 9.28.0
-  package_info_plus: 10.2.1
-  file_picker: ^12.1.2   # ">=10.3.3 <11.0.0"  ^10.3.3
+  sentry_flutter: 9.30.1
+  package_info_plus: 10.2.2
+  file_picker: ^13.1.0   # file_picker 13.1.0  ^12.2.0 
   flutter_dotenv: ^6.0.1
-  jni: ^0.14.2   # ^1.0.0
+  # jni: ^0.14.2   # ^1.0.0
   http: ^1.6.0
-  url_launcher: ^6.3.2
+  url_launcher: ^6.3.3
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -86,8 +88,6 @@ dependency_overrides: {}
   # meta: ^1.17.0
   # vector_math: ^2.2.0
   # characters: ^1.4.1
-  # Πατάμε το transitive 'jni' στο νεότερο (διορθώσεις/συμβατότητες Gradle/AGP)
-  # jni: ^0.15.2
   
 flutter_launcher_icons:
   android: true

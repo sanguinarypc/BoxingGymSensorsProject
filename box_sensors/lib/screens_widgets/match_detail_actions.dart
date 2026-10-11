@@ -1,5 +1,5 @@
 // lib/screens_widgets/match_detail_actions.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class MatchDetailActions extends StatelessWidget {
   final VoidCallback onEdit;

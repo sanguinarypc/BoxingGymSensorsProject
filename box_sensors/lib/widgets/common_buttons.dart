@@ -1,5 +1,5 @@
 // lib/widgets/common_buttons.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class CommonButtons {
   /// Builds a “round control” button with fixed or responsive sizing.

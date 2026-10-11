@@ -1,5 +1,5 @@
 // lib/widgets/status_bar_indicator.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:box_sensors/utils/device_config.dart';
 import 'bluetooth_indicator.dart';
 
@@ -70,7 +70,7 @@ class _StatusBarIndicatorState extends State<StatusBarIndicator> {
 
 
 // // lib/widgets/status_bar_indicator.dart
-// import 'package:flutter/material.dart';
+// import 'package:material_ui/material_ui.dart';
 // import 'bluetooth_indicator.dart'; 
 
 // class StatusBarIndicator extends StatefulWidget {

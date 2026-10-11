@@ -2,7 +2,7 @@
 // The “Export Database” card
 // The “Insert Sample Data” card
 // The “Import Database” card
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:gap/gap.dart';
 
 /// A generic card that takes a title, description and button text.

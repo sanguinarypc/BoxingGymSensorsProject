@@ -1,5 +1,5 @@
 // lib/screens_widgets/edit_match_info_card.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 
 class MatchDetailInfoCard extends StatelessWidget {

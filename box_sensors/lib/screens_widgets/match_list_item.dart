@@ -1,5 +1,5 @@
 // lib/screens_widgets/match_list_item.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:box_sensors/services/database_helper.dart';
 import 'package:box_sensors/screens/edit_match_screen.dart';

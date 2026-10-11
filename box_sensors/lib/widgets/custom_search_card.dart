@@ -1,5 +1,5 @@
 // lib/widgets/custom_search_card.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A Card wrapping your custom-search TextField.
 class CustomSearchCard extends StatelessWidget {

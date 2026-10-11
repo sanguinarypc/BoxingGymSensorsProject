@@ -1,6 +1,6 @@
 // lib/widgets/navbar.dart
 import 'package:box_sensors/widgets/exit_confirmation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:box_sensors/widgets/about_dialog_animation.dart';
 import 'package:box_sensors/widgets/about_dialog_app.dart';
 import 'package:box_sensors/Themes/theme_selection.dart';

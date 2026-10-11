@@ -1,6 +1,6 @@
 // lib/widgets/exit_confirmation.dart
 import 'dart:ui'; // For BackdropFilter
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 enum _ExitAction { exit, minimizeKeepAlive, minimizeCloseBT, cancel }

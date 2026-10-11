@@ -1,5 +1,5 @@
 // lib/widgets/match_data_table.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:box_sensors/models/sensor_data.dart';
 
 class MatchDataTable extends StatelessWidget {

@@ -1,6 +1,6 @@
 // lib/widgets/about_dialog_animation.dart
 import 'dart:ui'; // For BackdropFilter
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 
 /// A reusable dialog widget that shows an animated "About" screen for the Box Sensors app.

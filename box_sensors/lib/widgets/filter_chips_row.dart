@@ -1,5 +1,5 @@
 // lib/widgets/filter_chips_row.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The two “Boxer Devices” / “Nearby Devices” chips.
 class FilterChipsRow extends StatelessWidget {

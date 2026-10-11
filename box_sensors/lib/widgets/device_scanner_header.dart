@@ -1,5 +1,5 @@
 // lib/widgets/device_scanner_header.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:box_sensors/widgets/display_row.dart';
 import 'package:box_sensors/widgets/animated_bluetooth_scan_indicator.dart';
 

@@ -1,6 +1,6 @@
 
 // lib/screens/settings_header.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:box_sensors/widgets/display_row.dart';
 
 /// Top bar with title + back button

@@ -1,5 +1,5 @@
 // lib/widgets/display_row.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class DisplayRow extends StatelessWidget {
   final String title;

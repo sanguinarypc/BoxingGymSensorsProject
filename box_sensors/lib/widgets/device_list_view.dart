@@ -1,5 +1,5 @@
 // lib/widgets/device_list_view.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:gap/gap.dart';
 import 'package:box_sensors/utils/device_config.dart';
 

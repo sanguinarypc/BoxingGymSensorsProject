@@ -1,5 +1,5 @@
 // lib/widgets/footer.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class Footer extends StatefulWidget {
   final ValueChanged<int> onTabTapped;

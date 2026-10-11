@@ -1,5 +1,5 @@
 // lib/widgets/adaptive_safe_bottom.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Puts bottom-aligned content above the system nav bar (Android 3-button)
 /// without changing the look on gesture mode or older Android.
@@ -44,7 +44,7 @@ class AdaptiveSafeBottom extends StatelessWidget {
 
 
 // import 'dart:math' as math;
-// import 'package:flutter/material.dart';
+// import 'package:material_ui/material_ui.dart';
 
 // /// Ensures bottom-aligned content sits above the system navigation bar
 // /// (Android 15+) while looking identical on older versions.

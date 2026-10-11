@@ -1,5 +1,5 @@
 // lib/widgets/bluetooth_indicator.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class BluetoothIndicator extends StatelessWidget {
   final bool isConnected;

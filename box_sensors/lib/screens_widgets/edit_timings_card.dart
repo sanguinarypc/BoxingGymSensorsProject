@@ -1,5 +1,5 @@
 // lib/screens_widgets/edit_timings_card.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:box_sensors/widgets/custom_text_form_field.dart';
 

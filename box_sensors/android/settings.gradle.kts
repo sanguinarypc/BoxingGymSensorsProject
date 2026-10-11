@@ -19,7 +19,7 @@ pluginManagement {
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
 
-    id("com.android.application") version "9.2.0" apply false
+    id("com.android.application") version "9.2.1" apply false
 
     // Declare Kotlin version only.
     // Do NOT apply the plugin in app/build.gradle.kts.
