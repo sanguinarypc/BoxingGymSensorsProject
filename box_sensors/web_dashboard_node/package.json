@@ -7,7 +7,7 @@
         "start": "node server.js"
     },
     "dependencies": {
-        "body-parser": "^1.20.6",
+        "body-parser": "1.20.9",
         "cors": "^2.8.5",
         "express": "^4.22.2",
         "express-rate-limit": "^8.6.0"
