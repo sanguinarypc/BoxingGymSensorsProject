@@ -161,12 +161,7 @@ class MyApp extends ConsumerWidget {
 
         return MediaQuery(
           data: mq.copyWith(textScaler: scaler),
-          // flutter_slidable still uses the SDK Material theme/localizations.
-          // Keep this bridge until that dependency migrates to material_ui.
-          // ignore: deprecated_member_use
-          child: MaterialUiCompatibilityBridge(
-            child: child ?? const SizedBox.shrink(),
-          ),
+          child: child ?? const SizedBox.shrink(),
         );
       },
 

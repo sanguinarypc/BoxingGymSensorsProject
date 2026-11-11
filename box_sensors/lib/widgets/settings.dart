@@ -283,8 +283,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
           savedUri = await FilePicker.saveFile(
             dialogTitle: 'Save Database As…',
             fileName: suggestedFinalFileName,
-            type: FileType.custom,
-            allowedExtensions: ['db'],
             bytes: bytes,
           );
         }

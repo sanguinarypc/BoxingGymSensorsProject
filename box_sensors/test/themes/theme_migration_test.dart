@@ -6,7 +6,6 @@ import 'package:box_sensors/services/providers.dart';
 import 'package:box_sensors/services/riverpod_imports.dart';
 import 'package:box_sensors/widgets/my_app.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
-import 'package:flutter/material.dart' as legacy;
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -116,7 +115,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('system brightness, typography and legacy theme stay in sync', (
+  testWidgets('system brightness, typography and localizations stay in sync', (
     tester,
   ) async {
     final dispatcher = tester.binding.platformDispatcher;
@@ -133,14 +132,8 @@ void main() {
       await tester.pumpAndSettle();
       final context = tester.element(find.byKey(probe));
       final theme = Theme.of(context);
-      final legacyTheme = legacy.Theme.of(context);
       expect(theme.brightness, brightness);
-      expect(legacyTheme.brightness, brightness);
-      expect(legacyTheme.colorScheme.primary, theme.colorScheme.primary);
-      expect(
-        legacy.MaterialLocalizations.of(context).okButtonLabel,
-        isNotEmpty,
-      );
+      expect(MaterialLocalizations.of(context).okButtonLabel, isNotEmpty);
       expect(theme.textTheme.bodySmall?.fontSize, 12);
       expect(theme.textTheme.bodyMedium?.fontSize, 14);
       expect(theme.textTheme.bodyLarge?.fontSize, 16);
@@ -194,12 +187,42 @@ void main() {
       expect(find.text('Events').hitTestable(), findsOneWidget);
       expect(find.text('Edit').hitTestable(), findsOneWidget);
       expect(find.text('Delete').hitTestable(), findsOneWidget);
-      final context = tester.element(find.byType(SlidableAction).first);
-      expect(legacy.Theme.of(context).brightness, Theme.of(context).brightness);
+      final actions = find.byType(SlidableAction);
+      final expectedBrightness = mode == ThemeMode.light
+          ? Brightness.light
+          : Brightness.dark;
+      final expectedColors = [Colors.green, Colors.blue, Colors.red];
+      final expectedIcons = [Icons.event, Icons.edit, Icons.delete];
+      expect(actions, findsNWidgets(3));
+      for (var index = 0; index < 3; index++) {
+        final buttonFinder = find.descendant(
+          of: actions.at(index),
+          matching: find.byType(OutlinedButton),
+        );
+        expect(buttonFinder.hitTestable(), findsOneWidget);
+        final button = tester.widget<OutlinedButton>(buttonFinder);
+        final context = tester.element(buttonFinder);
+        expect(Theme.of(context).brightness, expectedBrightness);
+        expect(
+          button.style!.backgroundColor!.resolve({}),
+          expectedColors[index],
+        );
+        expect(button.style!.foregroundColor!.resolve({}), Colors.white);
+        expect(
+          find.descendant(
+            of: actions.at(index),
+            matching: find.byIcon(expectedIcons[index]),
+          ),
+          findsOneWidget,
+        );
+      }
       expect(tester.takeException(), isNull);
       final actionContext = tester.element(find.byType(SlidableAction).first);
       Slidable.of(actionContext)!.close();
       await tester.pumpAndSettle();
+      expect(find.text('Events').hitTestable(), findsNothing);
+      expect(find.text('Edit').hitTestable(), findsNothing);
+      expect(find.text('Delete').hitTestable(), findsNothing);
     }
   });
 }
