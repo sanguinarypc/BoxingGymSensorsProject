@@ -56,7 +56,9 @@
 - [☁️ Κώδικας για Arduino Uno R4 WiFi](#arduino)
 - [📺 Βίντεο & Live Dashboard](#youtube)
 - [🛠️ Πώς να Χρησιμοποιήσετε τους Κώδικες](#how-to-use)
-- [🚀 Εκτέλεση σε Debug & Release Mode](#run-debug)
+- [🚀 Εκτέλεση σε Debug mode](#run-debug)
+- [🔄 Αναβάθμιση πακέτων & έλεγχος κώδικα](#run-upgrade)
+- [🚀 Εκτέλεση σε Release Mode](#run-release)
 - [🗂️ Δομή Φακέλων](#structure)
 
 </details>
@@ -610,50 +612,198 @@ _Για τον πηγαίο κώδικα κάθε υποσυστήματος, α
 - **Flutter Android app (Box Sensors)**: [`box_sensors/`](./box_sensors/)
 
 > [!IMPORTANT]
-> Πριν προχωρήσεις, βεβαιώσου ότι έχεις εγκαταστήσει όλα τα πακέτα και τις βιβλιοθήκες που αναφέρονται σε αυτό το κείμενο. Στη συνέχεια, τρέξε τις εντολές που ακολουθούν μέσα στον φάκελο `box_sensors/`.
+> Πριν προχωρήσεις, βεβαιώσου ότι έχεις εγκαταστήσει όλα τα πακέτα και τις βιβλιοθήκες που αναφέρονται σε αυτό το κείμενο. Όλες οι εντολές που ακολουθούν τρέχουν **μέσα στον φάκελο `box_sensors/`** (Bash ή PowerShell). Αναλυτικότερες σημειώσεις υπάρχουν στο [`box_sensors/commands.md`](./box_sensors/commands.md).
+
+**🧭 Ποια εντολή για ποιον σκοπό**
+
+| Θέλω να… | Εντολή | Τι παράγει |
+|---|---|---|
+| Τρέξω την εφαρμογή για ανάπτυξη | `flutter run` | Debug έκδοση στο συνδεδεμένο κινητό, με hot reload |
+| Δοκιμάσω την τελική ταχύτητα | `flutter run --release` | Release έκδοση στο κινητό, χωρίς αρχείο για διανομή |
+| Βάλω την εφαρμογή **απευθείας** σε κινητό | `flutter build apk --release` → `flutter install` | Αρχείο **`.apk`** που εγκαθίσταται με USB |
+| Ανεβάσω νέα έκδοση στο **Google Play** | `flutter build appbundle --release` | Αρχείο **`.aab`** για το Google Play Console |
 
 <a id="run-debug"></a>
 
 ## 🚀 Εκτέλεση σε Debug mode
 
-Ακολουθούν οι βασικές εντολές για build, run και debug της Flutter εφαρμογής, στο τερματικό (Bash / PowerShell):
+**Φάση Α — Ανάπτυξη.** Ακολουθούν οι βασικές εντολές για build, run και debug της Flutter εφαρμογής, με τη σειρά που εκτελούνται:
+
+### 0. Έλεγχος περιβάλλοντος (προαιρετικό)
+```powershell
+flutter doctor -v
+```
+Ελέγχει ότι Flutter SDK, Android SDK/toolchain, Java και συσκευές είναι σωστά εγκατεστημένα. Χρήσιμο την πρώτη φορά, αν κάτι δεν χτίζει ή μετά από αναβάθμιση του Flutter.
 
 ### 1. Καθαρισμός προηγούμενων builds
-```bash
+```powershell
 flutter clean
 ```
+Σβήνει τους φακέλους `build/` και `.dart_tool/`, ώστε να μη μείνουν παλιά κομμάτια από προηγούμενο build.
+
 ### 2. Εγκατάσταση (ή ενημέρωση) των dependencies
-```bash
+```powershell
 flutter pub get
 ```
-### 3. Εκτέλεση σε debug mode (προεπιλογή είναι το debug) — ισοδυναμεί με `flutter run --debug`
-```bash
+Κατεβάζει τα πακέτα ακριβώς όπως γράφει το `pubspec.lock`. Δεν αναβαθμίζει τίποτα.
+
+### 3. Έλεγχος συνδεδεμένης συσκευής
+```powershell
+flutter devices
+```
+Δείχνει αν το Flutter «βλέπει» το κινητό (USB, developer mode και USB debugging ενεργά) ή κάποιον emulator.
+
+### 4. Εκτέλεση σε debug mode (προεπιλογή είναι το debug) — ισοδυναμεί με `flutter run --debug`
+```powershell
 flutter run
 ```
+Χτίζει και τρέχει την εφαρμογή στη συσκευή. Όσο τρέχει: `r` = hot reload, `R` = hot restart, `q` = έξοδος.
+
+<a id="run-upgrade"></a>
+
+## 🔄 Αναβάθμιση πακέτων & έλεγχος κώδικα
+
+**Φάση Β — Αναβάθμιση (όταν χρειάζεται).** Δεν είναι απαραίτητη σε κάθε build· γίνεται όταν θέλουμε νεότερες εκδόσεις πακέτων.
+
+### 1. Έλεγχος για νεότερες εκδόσεις
+```powershell
+flutter pub outdated
+```
+Δείχνει για κάθε πακέτο την τρέχουσα (**Current**), αυτή που επιτρέπεται χωρίς αλλαγή στο `pubspec.yaml` (**Upgradable**) και την πιο πρόσφατη (**Latest**). Δεν αλλάζει τίποτα.
+
+### 2. Αναβάθμιση πακέτων (διάλεξε **μία** από τις δύο)
+```powershell
+flutter pub upgrade --tighten
+```
+**Προτεινόμενο:** αναβαθμίζει μέσα στα όρια `^` και γράφει τις νέες εκδόσεις και στο `pubspec.yaml`, ώστε το YAML να δείχνει ό,τι χρησιμοποιείται πραγματικά.
+```powershell
+flutter pub upgrade
+```
+Εναλλακτικά: ίδια αναβάθμιση, αλλά αλλάζει **μόνο** το `pubspec.lock`.
+
+> Καμία από τις δύο δεν κάνει **major** αναβάθμιση (π.χ. 13.x → 14.x). Αυτή γίνεται με `flutter pub upgrade --major-versions` ή με το χέρι και μπορεί να χρειαστεί αλλαγές στον κώδικα.
+
+### 3. Έλεγχος του τι άλλαξε
+```powershell
+git diff pubspec.yaml
+flutter pub deps --style=compact
+```
+Το `git diff` δείχνει γραμμή-γραμμή τις αλλαγές στο `pubspec.yaml`. Το `flutter pub deps` (προαιρετικό) δείχνει ποιο πακέτο φέρνει ποιο, χρήσιμο όταν κάποιο δεν αναβαθμίζεται.
+
+**Φάση Γ — Έλεγχος κώδικα (πριν από κάθε release).**
+
+### 4. Στατικός έλεγχος
+```powershell
+flutter analyze
+```
+Βρίσκει σφάλματα, warnings και deprecated APIs. Πρέπει να βγάλει `No issues found!` πριν συνεχίσεις.
+
+### 5. Tests
+```powershell
+flutter test
+```
+Τρέχει τα tests του φακέλου `test/`. Αν κάποιο αποτύχει, διορθώνεται πριν το build.
 
 <a id="run-release"></a>
 
 ## 🚀 Εκτέλεση σε Release Mode
 
-Ακολουθούν οι βασικές εντολές για build, run και Release της Flutter εφαρμογής:
+**Φάση Δ — Release.** Ακολουθούν οι εντολές για build, run και Release της Flutter εφαρμογής, με τη σειρά που εκτελούνται:
 
-### 1. Καθαρισμός προηγούμενων builds
-```bash
+### 1. Αλλαγή έκδοσης (μόνο αν θα βγει νέο release)
+Στο `pubspec.yaml` άλλαξε με το χέρι τη γραμμή `version`:
+```yaml
+version: 1.0.54+54   →   version: 1.0.55+55
+```
+Το `1.0.55` είναι το `versionName` που βλέπει ο χρήστης. Το `+55` είναι το `versionCode` και **πρέπει να μεγαλώνει** σε κάθε ανέβασμα στο Google Play.
+
+### 2. Καθαρισμός προηγούμενων builds
+```powershell
 flutter clean
 ```
-### 2. Εγκατάσταση (ή ενημέρωση) των dependencies
-```bash
+
+### 3. Εγκατάσταση (ή ενημέρωση) των dependencies
+```powershell
 flutter pub get
 ```
-### 3. Δημιουργία release APK
-```bash
+
+### 4. Δοκιμή σε release mode στο κινητό
+```powershell
+flutter run --release
+```
+Χτίζει και τρέχει την εφαρμογή όπως θα τη δει ο χρήστης (ταχύτερη, χωρίς debug). Δοκίμασε σύνδεση με τους αισθητήρες BLE, επιλογή αρχείου και ότι τα σφάλματα φτάνουν στο Sentry.
+
+### 5α. Δρόμος Α — APK για απευθείας εγκατάσταση στο κινητό
+
+**Δημιουργία release APK**
+```powershell
 flutter build apk --release
 ```
-### 4. Εγκατάσταση του APK στο κινητό
+Φτιάχνει το `build\app\outputs\flutter-apk\app-release.apk`, που εγκαθίσταται απευθείας σε κινητό χωρίς Google Play.
+
+**Εγκατάσταση του APK στο κινητό**
+
 Προϋποθέτει το κινητό να είναι συνδεδεμένο σε κάποια θύρα USB του υπολογιστή και να βρίσκεται σε developer mode.
-```bash
+```powershell
 flutter install
 ```
+
+### 5β. Δρόμος Β — App Bundle (AAB) για το Google Play Store
+```powershell
+flutter build appbundle --release
+```
+Φτιάχνει το `build\app\outputs\bundle\release\app-release.aab`. Αυτό το αρχείο ανεβαίνει στο **Google Play Console** (Release → Testing ή Production) για να φτάσει στο Google Play Store. Το `.aab` **δεν** εγκαθίσταται απευθείας σε κινητό.
+
+**Ή όλα μαζί με το script του project:**
+```powershell
+.\full_release_build.ps1
+```
+Εκτελεί στη σειρά: σταμάτημα Gradle daemons → `gradlew clean` → `flutter clean` → `flutter pub get` → `flutter pub upgrade` → `flutter pub outdated` → `flutter analyze` → `flutter build appbundle --release`.
+
+> [!WARNING]
+> Το script τρέχει και `flutter pub upgrade`, οπότε **μπορεί να αλλάξει το `pubspec.lock`**. Έλεγξε με `git diff` πριν το commit. Και οι δύο δρόμοι χρειάζονται το κλειδί υπογραφής (`android/key.properties` + keystore), το οποίο **δεν** ανεβαίνει στο GitHub.
+
+### 6. Commit των αλλαγών
+```powershell
+git add pubspec.yaml pubspec.lock
+git commit -m "chore(release): 1.0.55+55"
+```
+Αποθηκεύει στο git τις αλλαγές εκδόσεων. Άλλαξε το μήνυμα ανάλογα με το τι έγινε (αναβάθμιση πακέτων, νέα έκδοση κ.λπ.).
+
+<details>
+<summary><b>📋 Όλες οι εντολές στη σειρά (copy-paste)</b></summary>
+
+<br>
+
+```powershell
+# Φάση Α — Debug (ανάπτυξη)
+flutter doctor -v
+flutter clean
+flutter pub get
+flutter devices
+flutter run
+
+# Φάση Β — Αναβάθμιση πακέτων (όταν χρειάζεται)
+flutter pub outdated
+flutter pub upgrade --tighten
+git diff pubspec.yaml
+
+# Φάση Γ — Έλεγχος κώδικα
+flutter analyze
+flutter test
+
+# Φάση Δ — Release (πρώτα άλλαξε το version στο pubspec.yaml)
+flutter clean
+flutter pub get
+flutter run --release
+flutter build apk --release        # Δρόμος Α: APK για απευθείας εγκατάσταση
+flutter install
+flutter build appbundle --release  # Δρόμος Β: AAB για το Google Play Console
+git add pubspec.yaml pubspec.lock
+git commit -m "chore(release): 1.0.55+55"
+```
+
+</details>
 
 <p align="right"><a href="#top">⬆️ Επιστροφή στην αρχή</a></p>
 

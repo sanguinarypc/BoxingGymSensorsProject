@@ -56,7 +56,9 @@
 - [☁️ Code for Arduino Uno R4 WiFi](#arduino)
 - [📺 Videos & Live Dashboard](#youtube)
 - [🛠️ How to Use the Code](#how-to-use)
-- [🚀 Run in Debug & Release Mode](#run-debug)
+- [🚀 Run in Debug Mode](#run-debug)
+- [🔄 Package Upgrades & Code Checks](#run-upgrade)
+- [🚀 Run in Release Mode](#run-release)
 - [🗂️ Folder Structure](#structure)
 
 </details>
@@ -610,50 +612,198 @@ _For the source code of each subsystem, simply navigate to the corresponding dir
 - **Flutter Android app (Box Sensors)**: [`box_sensors/`](./box_sensors/)
 
 > [!IMPORTANT]
-> Before proceeding, make sure you have installed all the packages and libraries mentioned in this document. Then run the commands below inside the `box_sensors/` folder.
+> Before proceeding, make sure you have installed all the packages and libraries mentioned in this document. All the commands below run **inside the `box_sensors/` folder** (Bash or PowerShell). More detailed notes are in [`box_sensors/commands_en.md`](./box_sensors/commands_en.md).
+
+**🧭 Which command for which goal**
+
+| I want to… | Command | Output |
+|---|---|---|
+| Run the app during development | `flutter run` | Debug build on the connected phone, with hot reload |
+| Check real-world speed | `flutter run --release` | Release build on the phone, no distributable file |
+| Install the app **directly** on a phone | `flutter build apk --release` → `flutter install` | An **`.apk`** file installed over USB |
+| Publish a new version on **Google Play** | `flutter build appbundle --release` | An **`.aab`** file for the Google Play Console |
 
 <a id="run-debug"></a>
 
 ## 🚀 Run in Debug Mode
 
-Below are the basic commands to build, run and debug the Flutter app, in the terminal (Bash / PowerShell):
+**Phase A — Development.** Below are the basic commands to build, run and debug the Flutter app, in the order they are executed:
+
+### 0. Check the environment (optional)
+```powershell
+flutter doctor -v
+```
+Checks that the Flutter SDK, Android SDK/toolchain, Java and devices are set up correctly. Useful the first time, when something won't build, or after upgrading Flutter.
 
 ### 1. Clean previous builds
-```bash
+```powershell
 flutter clean
 ```
+Deletes the `build/` and `.dart_tool/` folders so no stale pieces from a previous build remain.
+
 ### 2. Install (or update) dependencies
-```bash
+```powershell
 flutter pub get
 ```
-### 3. Run in debug mode (debug is the default) — equivalent to `flutter run --debug`
-```bash
+Downloads the packages exactly as listed in `pubspec.lock`. It upgrades nothing.
+
+### 3. Check the connected device
+```powershell
+flutter devices
+```
+Shows whether Flutter "sees" the phone (USB, developer mode and USB debugging enabled) or an emulator.
+
+### 4. Run in debug mode (debug is the default) — equivalent to `flutter run --debug`
+```powershell
 flutter run
 ```
+Builds and runs the app on the device. While it runs: `r` = hot reload, `R` = hot restart, `q` = quit.
+
+<a id="run-upgrade"></a>
+
+## 🔄 Package Upgrades & Code Checks
+
+**Phase B — Upgrades (when needed).** Not required for every build; done when we want newer package versions.
+
+### 1. Check for newer versions
+```powershell
+flutter pub outdated
+```
+Shows, for each package, the current version (**Current**), the version allowed without editing `pubspec.yaml` (**Upgradable**) and the newest one (**Latest**). It changes nothing.
+
+### 2. Upgrade packages (pick **one** of the two)
+```powershell
+flutter pub upgrade --tighten
+```
+**Recommended:** upgrades within the `^` constraints and also writes the new versions into `pubspec.yaml`, so the YAML shows what is actually in use.
+```powershell
+flutter pub upgrade
+```
+Alternatively: the same upgrade, but it changes **only** `pubspec.lock`.
+
+> Neither performs a **major** upgrade (e.g. 13.x → 14.x). That is done with `flutter pub upgrade --major-versions` or by hand, and it may require code changes.
+
+### 3. Review what changed
+```powershell
+git diff pubspec.yaml
+flutter pub deps --style=compact
+```
+`git diff` shows line by line what changed in `pubspec.yaml`. `flutter pub deps` (optional) shows which package pulls in which, useful when a package won't upgrade.
+
+**Phase C — Code checks (before every release).**
+
+### 4. Static analysis
+```powershell
+flutter analyze
+```
+Finds errors, warnings and deprecated APIs. It should report `No issues found!` before you continue.
+
+### 5. Tests
+```powershell
+flutter test
+```
+Runs the tests in the `test/` folder. Fix any failure before building.
 
 <a id="run-release"></a>
 
 ## 🚀 Run in Release Mode
 
-Below are the basic commands to build, run and release the Flutter app:
+**Phase D — Release.** Below are the commands to build, run and release the Flutter app, in the order they are executed:
 
-### 1. Clean previous builds
-```bash
+### 1. Bump the version (only if releasing)
+In `pubspec.yaml`, edit the `version` line by hand:
+```yaml
+version: 1.0.54+54   →   version: 1.0.55+55
+```
+`1.0.55` is the `versionName` users see. `+55` is the `versionCode`, which **must increase** with every Google Play upload.
+
+### 2. Clean previous builds
+```powershell
 flutter clean
 ```
-### 2. Install (or update) dependencies
-```bash
+
+### 3. Install (or update) dependencies
+```powershell
 flutter pub get
 ```
-### 3. Create a release APK
-```bash
+
+### 4. Test in release mode on the phone
+```powershell
+flutter run --release
+```
+Builds and runs the app as users will see it (faster, no debugging). Test the BLE sensor connection, file picking, and that errors reach Sentry.
+
+### 5a. Path A — APK for direct installation on a phone
+
+**Create a release APK**
+```powershell
 flutter build apk --release
 ```
-### 4. Install the APK on the phone
+Builds `build\app\outputs\flutter-apk\app-release.apk`, which installs directly on a phone without Google Play.
+
+**Install the APK on the phone**
+
 Requires the phone to be connected to a USB port of the computer and to be in developer mode.
-```bash
+```powershell
 flutter install
 ```
+
+### 5b. Path B — App Bundle (AAB) for the Google Play Store
+```powershell
+flutter build appbundle --release
+```
+Builds `build\app\outputs\bundle\release\app-release.aab`. This file is uploaded to the **Google Play Console** (Release → Testing or Production) to reach the Google Play Store. An `.aab` **cannot** be installed directly on a phone.
+
+**Or everything at once with the project script:**
+```powershell
+.\full_release_build.ps1
+```
+Runs in order: stop Gradle daemons → `gradlew clean` → `flutter clean` → `flutter pub get` → `flutter pub upgrade` → `flutter pub outdated` → `flutter analyze` → `flutter build appbundle --release`.
+
+> [!WARNING]
+> The script also runs `flutter pub upgrade`, so it **may change `pubspec.lock`**. Check with `git diff` before committing. Both paths need the signing key (`android/key.properties` + keystore), which is **not** uploaded to GitHub.
+
+### 6. Commit the changes
+```powershell
+git add pubspec.yaml pubspec.lock
+git commit -m "chore(release): 1.0.55+55"
+```
+Saves the version changes to git. Adjust the message to what was done (package upgrades, new version, etc.).
+
+<details>
+<summary><b>📋 All commands in order (copy-paste)</b></summary>
+
+<br>
+
+```powershell
+# Phase A — Debug (development)
+flutter doctor -v
+flutter clean
+flutter pub get
+flutter devices
+flutter run
+
+# Phase B — Package upgrades (when needed)
+flutter pub outdated
+flutter pub upgrade --tighten
+git diff pubspec.yaml
+
+# Phase C — Code checks
+flutter analyze
+flutter test
+
+# Phase D — Release (bump the version in pubspec.yaml first)
+flutter clean
+flutter pub get
+flutter run --release
+flutter build apk --release        # Path A: APK for direct installation
+flutter install
+flutter build appbundle --release  # Path B: AAB for the Google Play Console
+git add pubspec.yaml pubspec.lock
+git commit -m "chore(release): 1.0.55+55"
+```
+
+</details>
 
 <p align="right"><a href="#top">⬆️ Back to top</a></p>
 
