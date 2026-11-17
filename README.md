@@ -840,6 +840,7 @@ git commit -m "chore(release): 1.0.55+55"
 ├── box_sensors/          # Κώδικας της εφαρμογής Flutter
 ├── ESP32_Beetle_C6_FSR/  # Κώδικας για τον ESP32
 ├── BoxServerThing/       # Κώδικας για το Arduino Uno R4 WiFi (IoT Cloud)
+├── tools/                # Εργαλεία: διαγράμματα και PDF των README
 ├── pictures/             # Εικόνες, poster, διαγράμματα και έγγραφα (PDF) της πτυχιακής
 ├── README.md             # Ελληνικά
 ├── README.en.md          # English
@@ -851,6 +852,7 @@ Links:
 - 📁 [box_sensors](./box_sensors/)
 - 📁 [ESP32_Beetle_C6_FSR](./ESP32_Beetle_C6_FSR/)
 - 📁 [BoxServerThing](./BoxServerThing/)
+- 📁 [tools](./tools/)
 - 📁 [pictures](./pictures/)
 - 📄 [README.md](./README.md) · [README.en.md](./README.en.md)
 - 📕 [README.pdf](./README.pdf) · [README.en.pdf](./README.en.pdf)
@@ -905,6 +907,11 @@ Links:
 │   ├── arduino_secrets.h         # Wi-Fi credentials (κενά στο repo)
 │   ├── sketch.json               # Ρυθμίσεις sketch του Arduino Cloud
 │   └── ReadMe.adoc               # Επιπλέον τεκμηρίωση σε AsciiDoc
+│
+├── tools/                        # Εργαλεία για τα README
+│   ├── render_diagrams.py        # .mmd → διαγράμματα PNG (σκούρο φόντο)
+│   ├── build_readme_pdf.py       # README.md / README.en.md → README.pdf / README.en.pdf
+│   └── README.md                 # Οδηγίες και λίστα ελέγχου για νέα έκδοση
 │
 ├── pictures/                     # Εικόνες README, poster PACET 2026, PDF πτυχιακής
 │   └── diagrams/                 # Διαγράμματα (PNG) και οι πηγές τους (.mmd)
@@ -965,6 +972,12 @@ Links:
 - 📄 [BoxServerThing/arduino_secrets.h](./BoxServerThing/arduino_secrets.h)
 - 📄 [BoxServerThing/sketch.json](./BoxServerThing/sketch.json)
 - 📄 [BoxServerThing/ReadMe.adoc](./BoxServerThing/ReadMe.adoc)
+
+### tools
+- 📁 [tools](./tools/)
+- 📄 [tools/render_diagrams.py](./tools/render_diagrams.py)
+- 📄 [tools/build_readme_pdf.py](./tools/build_readme_pdf.py)
+- 📄 [tools/README.md](./tools/README.md)
 
 ### pictures
 - 📁 [pictures](./pictures/)
