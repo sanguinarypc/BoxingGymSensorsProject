@@ -1,5 +1,5 @@
 [![EL](https://img.shields.io/badge/Language-Ελληνικά-informational?style=flat-square)](./README.md)
-[![EN](https://img.shields.io/badge/Language-English-informational?style=flat-square)](./README.en.md) &nbsp; [🇬🇷 Ελληνικά](./README.md) | [🇬🇧 English](./README.en.md) &nbsp;·&nbsp; 📕 **PDF:** [Ελληνικά](./README.pdf) | [English](./README.en.pdf)
+[![EN](https://img.shields.io/badge/Language-English-informational?style=flat-square)](./README.en.md) &nbsp; [<img src="pictures/flags/gr.svg" height="14" alt="GR" /> Ελληνικά](./README.md) | [<img src="pictures/flags/gb.svg" height="14" alt="GB" /> English](./README.en.md) &nbsp;·&nbsp; 📕 **PDF:** [Ελληνικά](./README.pdf) | [English](./README.en.pdf)
 
 <a id="top"></a>
 
@@ -222,8 +222,8 @@
 | | |
 |---|---|
 | 👤 **Πτυχιακή εργασία** | Νικόλαος Δημητρακαράκος · std083899@ac.eap.gr |
-| 🇬🇷 **Τίτλος** | Ανάπτυξη συστήματος στο χώρο της αθλητικής πυγμαχίας για την παρακολούθηση της έντασης και πλήθους χτυπημάτων κατά τη διάρκεια αγώνα |
-| 🇬🇧 **English title** | Development of a System for Monitoring Punch Intensity and Count During Boxing Matches |
+| <img src="pictures/flags/gr.svg" height="14" alt="GR" /> **Τίτλος** | Ανάπτυξη συστήματος στο χώρο της αθλητικής πυγμαχίας για την παρακολούθηση της έντασης και πλήθους χτυπημάτων κατά τη διάρκεια αγώνα |
+| <img src="pictures/flags/gb.svg" height="14" alt="GB" /> **English title** | Development of a System for Monitoring Punch Intensity and Count During Boxing Matches |
 | 🏛️ **Αποθετήριο Ε.Α.Π.** | [![ΕΑΠ Αποθετήριο](https://img.shields.io/badge/ΕΑΠ-Αποθετήριο-blue?style=flat-square&logo=bookstack)](https://apothesis.eap.gr/archive/item/222407) <a href="https://apothesis.eap.gr/archive/item/222407" target="_blank" rel="noopener noreferrer">https://apothesis.eap.gr/archive/item/222407</a> |
 | 📥 **Έγγραφο πτυχιακής** | [📄 Plh40_Ptixiaki_N_Dimitrakarakos_PE470 (PDF)](pictures/Plh40_Ptixiaki_N_Dimitrakarakos_PE470.pdf) [![PDF](https://img.shields.io/badge/PDF-Download-red?style=flat-square)](pictures/Plh40_Ptixiaki_N_Dimitrakarakos_PE470.pdf) |
 | 👨‍🏫 **Επιβλέπων καθηγητής** | Ιωάννης Κουρέτας · kouretas@upatras.gr, kouretas.ioannis@ac.eap.gr |
@@ -914,7 +914,8 @@ Links:
 │   └── README.md                 # Οδηγίες και λίστα ελέγχου για νέα έκδοση
 │
 ├── pictures/                     # Εικόνες README, poster PACET 2026, PDF πτυχιακής
-│   └── diagrams/                 # Διαγράμματα (PNG) και οι πηγές τους (.mmd)
+│   ├── diagrams/                 # Διαγράμματα (PNG) και οι πηγές τους (.mmd)
+│   └── flags/                    # Σημαίες (SVG) για την επιλογή γλώσσας
 ├── README.md                     # Κύριο README (αυτό το αρχείο)
 ├── README.en.md                  # Αγγλική έκδοση
 ├── README.pdf                    # Το ελληνικό README σε PDF
@@ -982,6 +983,7 @@ Links:
 ### pictures
 - 📁 [pictures](./pictures/)
 - 📁 [pictures/diagrams](./pictures/diagrams/)
+- 📁 [pictures/flags](./pictures/flags/)
 
 </details>
 
