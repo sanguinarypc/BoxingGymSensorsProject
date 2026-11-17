@@ -1,5 +1,5 @@
 [![EL](https://img.shields.io/badge/Language-Ελληνικά-informational?style=flat-square)](./README.md)
-[![EN](https://img.shields.io/badge/Language-English-informational?style=flat-square)](./README.en.md) &nbsp; [🇬🇷 Ελληνικά](./README.md) | [🇬🇧 English](./README.en.md)
+[![EN](https://img.shields.io/badge/Language-English-informational?style=flat-square)](./README.en.md) &nbsp; [🇬🇷 Ελληνικά](./README.md) | [🇬🇧 English](./README.en.md) &nbsp;·&nbsp; 📕 **PDF:** [Ελληνικά](./README.pdf) | [English](./README.en.pdf)
 
 <a id="top"></a>
 
@@ -26,11 +26,17 @@
 <a href="https://doi.org/10.1109/PACET68758.2026.11498282"><img src="https://img.shields.io/static/v1?label=DOI&message=10.1109/PACET68758.2026.11498282&color=00629B&style=for-the-badge" alt="DOI" /></a>
 <br>
 <a href="https://play.google.com/store/apps/details?id=com.sanguinarypc.box_sensors"><img src="https://img.shields.io/badge/Google%20Play-Box%20Sensors-414141?style=for-the-badge&logo=googleplay&logoColor=white" alt="Google Play" /></a>
-<a href="https://boxing-dashboard.ndimitrakarakos.gr/"><img src="https://img.shields.io/badge/Live-Dashboard-F97316?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Live Dashboard" /></a>
+<a href="https://boxing-dashboard.ndimitrakarakos.gr/"><img src="https://img.shields.io/badge/Node.js-Live%20Dashboard-F97316?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js Live Dashboard" /></a>
 <a href="https://www.youtube.com/@ΝΙΚΟΛΑΟΣ_ΔΗΜΗΤΡΑΚΑΡΑΚΟΣ"><img src="https://img.shields.io/badge/YouTube-Videos-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" /></a>
 <a href="https://apothesis.eap.gr/archive/item/222407"><img src="https://img.shields.io/badge/H.O.U.-Thesis-1E40AF?style=for-the-badge&logo=bookstack&logoColor=white" alt="H.O.U. Repository" /></a>
 
 <br>
+
+<a href="https://boxing-dashboard.ndimitrakarakos.gr/"><img src="https://img.shields.io/badge/%E2%96%B6%20BOX%20SENSORS%20LIVE-Watch%20the%20match%20live-F97316?style=for-the-badge&logo=nodedotjs&logoColor=white&labelColor=1F2937" height="46" alt="BOX SENSORS LIVE — Watch the match live" /></a>
+<br>
+<sub>🌐 <a href="https://boxing-dashboard.ndimitrakarakos.gr/">boxing-dashboard.ndimitrakarakos.gr</a> — live score, rounds and punches from any browser</sub>
+
+<br><br>
 
 **[📰 IEEE Paper](#paper)** &nbsp;·&nbsp; **[🏗️ Architecture](#architecture)** &nbsp;·&nbsp; **[📱 App](#android-app)** &nbsp;·&nbsp; **[🔌 ESP32](#esp32)** &nbsp;·&nbsp; **[☁️ Arduino Cloud](#arduino)** &nbsp;·&nbsp; **[🛠️ Setup](#how-to-use)**
 
@@ -79,9 +85,21 @@ The project consists of three main parts:
 | 2 | 🔌 **Code for Microcontroller ESP32 Beetle C6** | Runs on the ESP32, which is connected to FSR (Force Sensitive Resistor) sensors to detect punches. |
 | 3 | ☁️ **Code for Arduino Uno R4 WiFi** | Receives JSON data via Bluetooth from the Android application and uploads them to Arduino Cloud over Wi-Fi. |
 
-> 🌐 Optionally, the app also sends the events over HTTP to a **Node.js Web Server** for [live match monitoring](https://boxing-dashboard.ndimitrakarakos.gr/) from any browser.
+> 🌐 **Newer addition:** the app also sends the events over HTTP to a **Node.js Web Server** for [live match monitoring](https://boxing-dashboard.ndimitrakarakos.gr/) from any browser.
 
-![Box Sensors](pictures/BoxSensorsCloud.png)
+**🕒 Project timeline**
+
+| Stage | What it included |
+|---|---|
+| 🎓 **Undergraduate thesis** · presented July 12, 2025 | FSR sensors + ESP32-C6, Flutter app, Arduino UNO R4 WiFi → Arduino IoT Cloud dashboard |
+| 🌐 **After the thesis** | Live Dashboard in Node.js / Express, with a friendlier look for users |
+| 📰 **IEEE PACET 2026** · April 23, 2026 | Presentation of the complete system, including the Node.js dashboard |
+
+<p align="center">
+  <img src="pictures/BoxSensorsCloud.png" width="100%" alt="Box Sensors" />
+  <br>
+  <sub><i>The information system as designed in the undergraduate thesis, with Arduino IoT Cloud.</i></sub>
+</p>
 
 <a id="architecture"></a>
 
@@ -133,7 +151,7 @@ The project consists of three main parts:
 <p align="center">
   <a href="pictures/InformationSystem.png"><img src="pictures/InformationSystem_web.jpg" width="100%" alt="The Box Sensors information system" /></a>
   <br>
-  <sub><i>Overview of the information system, as presented in the paper. © 2026 IEEE. Click for full resolution.</i></sub>
+  <sub><i>Overview of the Box Sensors information system: FSR sensors, ESP32-C6 nodes, Flutter app with SQLite, Arduino UNO R4 WiFi and Arduino IoT Cloud. Click for full resolution.</i></sub>
 </p>
 
 #### 🖼️ The conference poster
@@ -473,7 +491,7 @@ This firmware targets the **Arduino Uno R4 WiFi** platform. Its main purpose is 
 
 <a id="youtube"></a>
 
-## 📺 Check the YouTube Channel
+## 📺 Videos & Live Dashboard
 
 [![Subscribe on YouTube](https://img.shields.io/badge/YouTube-Subscribe-red?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@ΝΙΚΟΛΑΟΣ_ΔΗΜΗΤΡΑΚΑΡΑΚΟΣ)
 
@@ -499,6 +517,8 @@ This firmware targets the **Arduino Uno R4 WiFi** platform. Its main purpose is 
 ![Box Sensors Live Dashboard](pictures/WebServerDashboard.png)
 
 *Box Sensors Live Dashboard — live match telemetry and scores from the boxing sensor system.*
+
+> 🌐 **Newer addition:** the Live Dashboard was built after the thesis and presented at IEEE PACET 2026.
 
 **Live Dashboard:** https://boxing-dashboard.ndimitrakarakos.gr/
 *Server-hosted web dashboard for real-time match monitoring (scores, rounds and event feed). The app sends each punch (device, timestamp, punch count, intensity) as JSON via HTTP POST, while also storing it in the local SQLite database.*
@@ -562,7 +582,7 @@ _The Uno R4 Wi-Fi acts as an intermediate node: it receives BLE data from the Fl
 2. **Configure Wi-Fi**
    - In the Thing settings: enter the SSID & password (stored in `arduino_secrets.h`)
 3. **Upload the Code**
-   - In the Thing's **Sketch** tab: open/edit the `.ino` (Appendix A)
+   - In the Thing's **Sketch** tab: open/edit the `.ino`. The code is in the repo's [`BoxServerThing`](./BoxServerThing/) folder → `BoxServerThing.ino`
    - Compile & Upload
 4. **Create a Dashboard**
    - In the Cloud: New Dashboard → add widgets and bind them to the Cloud Variables
@@ -610,6 +630,7 @@ _For the source code of each subsystem, simply navigate to the corresponding dir
 - **ESP32 Beetle C6 FSR firmware**: [`ESP32_Beetle_C6_FSR/`](./ESP32_Beetle_C6_FSR/)
 - **Arduino IoT Cloud (Uno R4 Wi-Fi)**: [`BoxServerThing/`](./BoxServerThing/)
 - **Flutter Android app (Box Sensors)**: [`box_sensors/`](./box_sensors/)
+- **Node.js Live Dashboard**: [`box_sensors/web_dashboard_node/`](./box_sensors/web_dashboard_node/)
 
 > [!IMPORTANT]
 > Before proceeding, make sure you have installed all the packages and libraries mentioned in this document. All the commands below run **inside the `box_sensors/` folder** (Bash or PowerShell). More detailed notes are in [`box_sensors/commands_en.md`](./box_sensors/commands_en.md).
@@ -819,9 +840,11 @@ git commit -m "chore(release): 1.0.55+55"
 ├── box_sensors/          # Flutter app code
 ├── ESP32_Beetle_C6_FSR/  # ESP32 code
 ├── BoxServerThing/       # Arduino Uno R4 WiFi code (IoT Cloud)
-├── pictures/             # Images, poster and thesis documents (PDF)
+├── pictures/             # Images, poster, diagrams and thesis documents (PDF)
 ├── README.md             # Ελληνικά
-└── README.en.md          # English
+├── README.en.md          # English
+├── README.pdf            # Ελληνικά (PDF)
+└── README.en.pdf         # English (PDF)
 ```
 
 Links:
@@ -830,6 +853,7 @@ Links:
 - 📁 [BoxServerThing](./BoxServerThing/)
 - 📁 [pictures](./pictures/)
 - 📄 [README.md](./README.md) · [README.en.md](./README.en.md)
+- 📕 [README.pdf](./README.pdf) · [README.en.pdf](./README.en.pdf)
 
 <details>
 <summary><b>🔎 Detailed Structure</b></summary>
@@ -850,7 +874,13 @@ Links:
 │   │   ├── utils/                # BLE permissions, device config, orientation, system UI
 │   │   └── widgets/              # Reusable widgets (settings, web server, navbar, etc.)
 │   ├── assets/                   # Images, icons and sounds
+│   ├── test/                     # Tests (flutter test)
+│   ├── web_dashboard_node/       # Live Dashboard in Node.js / Express (server.js, public/)
+│   ├── web_dashboard_php/        # Alternative PHP version of the Live Dashboard
 │   ├── pubspec.yaml
+│   ├── commands.md               # Package upgrade & release commands (Greek)
+│   ├── commands_en.md            # Package upgrade & release commands (English)
+│   ├── full_release_build.ps1    # Script for a full release build (.aab for Google Play)
 │   └── README.md                 # README specific to the Flutter module
 │
 ├── ESP32_Beetle_C6_FSR/          # ESP32 Beetle C6 + FSR (Arduino IDE)
@@ -877,8 +907,11 @@ Links:
 │   └── ReadMe.adoc               # Additional documentation in AsciiDoc
 │
 ├── pictures/                     # README images, PACET 2026 poster, thesis PDFs
+│   └── diagrams/                 # Diagrams (PNG) and their sources (.mmd)
 ├── README.md                     # Main README (Greek)
-└── README.en.md                  # English version (this file)
+├── README.en.md                  # English version (this file)
+├── README.pdf                    # The Greek README as PDF
+└── README.en.pdf                 # The English README as PDF
 ```
 
 </details>
@@ -899,7 +932,13 @@ Links:
 - 📁 [box_sensors/lib/utils](./box_sensors/lib/utils/)
 - 📁 [box_sensors/lib/widgets](./box_sensors/lib/widgets/)
 - 📁 [box_sensors/assets](./box_sensors/assets/)
+- 📁 [box_sensors/test](./box_sensors/test/)
+- 📁 [box_sensors/web_dashboard_node](./box_sensors/web_dashboard_node/)
+- 📁 [box_sensors/web_dashboard_php](./box_sensors/web_dashboard_php/)
 - 📄 [box_sensors/pubspec.yaml](./box_sensors/pubspec.yaml)
+- 📄 [box_sensors/commands.md](./box_sensors/commands.md)
+- 📄 [box_sensors/commands_en.md](./box_sensors/commands_en.md)
+- 📄 [box_sensors/full_release_build.ps1](./box_sensors/full_release_build.ps1)
 - 📄 [box_sensors/README.md](./box_sensors/README.md)
 
 ### ESP32_Beetle_C6_FSR
@@ -926,6 +965,10 @@ Links:
 - 📄 [BoxServerThing/arduino_secrets.h](./BoxServerThing/arduino_secrets.h)
 - 📄 [BoxServerThing/sketch.json](./BoxServerThing/sketch.json)
 - 📄 [BoxServerThing/ReadMe.adoc](./BoxServerThing/ReadMe.adoc)
+
+### pictures
+- 📁 [pictures](./pictures/)
+- 📁 [pictures/diagrams](./pictures/diagrams/)
 
 </details>
 
