@@ -25,6 +25,20 @@ REPO_URL = "https://github.com/sanguinarypc/BoxingGymSensorsProject"
 CSS = "https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown-light.min.css"
 TARGETS = [("README.md", "README.pdf", "el", "Box Sensors — README"),
            ("README.en.md", "README.en.pdf", "en", "Box Sensors — README (English)")]
+# Emoji are drawn as small Twemoji SVG images (CC-BY 4.0). Printing colour emoji as text makes Chrome
+# embed "Type 3" fonts, which Adobe Acrobat reports as "Cannot extract the embedded font 'T3Font_0'".
+TWEMOJI = "https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/{}.svg"
+EMOJI_RE = re.compile(
+    "[\U0001F1E6-\U0001F1FF]{2}"                                   # flags, e.g. GR / GB
+    "|[0-9#*]️?⃣"                                         # keycaps, e.g. 1️⃣
+    "|(?:[\U0001F000-\U0001FAFF]"
+    "|[©®‼⁉™ℹ←-⇿⌀-⏿①-➿⤀-⥿⬀-⯿"
+    "〰〽㊗㊙]️"
+    "|[☔☕⚡⚪⚫⚽⚾⛄⛅⛎⛔⛪⛲⛳⛵⛺"
+    "⛽✅✊✋✨❌❎❓-❕❗➕-➗➰➿⭐⭕])"
+    "[\U0001F3FB-\U0001F3FF]?️?"
+    "(?:‍(?:[\U0001F000-\U0001FAFF]|[☀-➿])️?)*"  # ZWJ sequences, e.g. 👨‍🏫
+)
 ALERT_TITLES = {"NOTE": "ℹ️ Note", "TIP": "💡 Tip", "IMPORTANT": "❗ Important",
                 "WARNING": "⚠️ Warning", "CAUTION": "🛑 Caution"}
 CHROME_CANDIDATES = [
@@ -50,6 +64,7 @@ STYLE = """
   .markdown-alert-caution { border-left-color: #d1242f; }
   .markdown-alert-title { font-weight: 600; margin: 0 0 4px; }
   summary { font-weight: 600; }
+  img.emoji { height: 1.1em; width: 1.1em; margin: 0 .05em; vertical-align: -0.18em; display: inline; }
 """
 
 
@@ -66,6 +81,48 @@ def markdown_to_html(text):
         data=json.dumps({"text": text, "mode": "markdown"}).encode(),
         headers={"Accept": "application/vnd.github+json", "User-Agent": "box-sensors-readme-pdf"})
     return urllib.request.urlopen(request, timeout=60).read().decode("utf8")
+
+
+def twemoji_code(emoji):
+    """Twemoji file name: code points in hex, without U+FE0F unless the emoji is a ZWJ sequence."""
+    points = [ord(ch) for ch in emoji]
+    if 0x200D not in points:
+        points = [p for p in points if p != 0xFE0F]
+    return "-".join(f"{p:x}" for p in points)
+
+
+def replace_emoji(body):
+    """Swap emoji in text (never inside tags, <pre> or <code>) for Twemoji images."""
+    parts = re.split(r"(<[^>]+>)", body)
+    found, depth = {}, 0
+    for i, part in enumerate(parts):
+        if part.startswith("<"):
+            tag = re.match(r"</?\s*(\w+)", part)
+            if tag and tag.group(1).lower() in ("pre", "code"):
+                depth += -1 if part.startswith("</") else 1
+            continue
+        if depth == 0:
+            for match in EMOJI_RE.finditer(part):
+                found[match.group(0)] = twemoji_code(match.group(0))
+    available = {}
+    for emoji, code in found.items():                     # keep the character if Twemoji lacks it
+        try:
+            urllib.request.urlopen(urllib.request.Request(TWEMOJI.format(code), method="HEAD"), timeout=20)
+            available[emoji] = code
+        except Exception:
+            print(f"   (no Twemoji image for U+{code}; kept as text)")
+    depth = 0
+    for i, part in enumerate(parts):
+        if part.startswith("<"):
+            tag = re.match(r"</?\s*(\w+)", part)
+            if tag and tag.group(1).lower() in ("pre", "code"):
+                depth += -1 if part.startswith("</") else 1
+            continue
+        if depth == 0:
+            parts[i] = EMOJI_RE.sub(
+                lambda m: (f'<img class="emoji" alt="{m.group(0)}" src="{TWEMOJI.format(available[m.group(0)])}">'
+                           if m.group(0) in available else m.group(0)), part)
+    return "".join(parts), len(available)
 
 
 def prepare(body):
@@ -98,6 +155,10 @@ def prepare(body):
             return match.group(0)
         return f'href="{REPO_URL}/blob/main/{url.lstrip("./")}"'
     body = re.sub(r'href="([^"]+)"', fix_href, body)
+
+    # colour emoji -> images (avoids Type 3 fonts / Acrobat warning); after the alert titles were added
+    body, emoji_kinds = replace_emoji(body)
+    print(f"   {emoji_kinds} different emoji drawn as images")
     return body, alerts
 
 
