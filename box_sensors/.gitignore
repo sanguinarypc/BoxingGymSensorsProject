@@ -93,3 +93,13 @@ upload-keystore.jks
 # -----------------------
 /box_sensors/ant-skills/
 /box_sensors/docs/
+
+# -----------------------
+# Same extra rules as the repository root .gitignore
+# (root-relative entries have no effect here; kept for consistency)
+# -----------------------
+# Local-only files (kept on disk, not uploaded to GitHub)
+/README_backup.md
+/README.en_backup.md
+/pictures/Pcet2026_Poster.pptx
+/CLAUDE.md
