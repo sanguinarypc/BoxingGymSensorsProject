@@ -1,0 +1,27 @@
+flowchart TB
+    subgraph W["🥊 Αισθητήρες FSR"]
+        direction LR
+        B1["🔵 BlueBoxer<br/>ESP32-C6"]
+        R1["🔴 RedBoxer<br/>ESP32-C6"]
+    end
+    B1 -- "BLE" --> APP["📱 Box Sensors App<br/>Flutter · Riverpod"]
+    R1 -- "BLE" --> APP
+    APP <--> DB[("💾 SQLite")]
+    APP -- "BLE · JSON" --> UNO["📡 BoxerServer<br/>Arduino UNO R4 WiFi"]
+    APP -- "HTTP POST · Wi-Fi" --> WEB["🌐 Node.js / Express<br/>Live Dashboard"]
+    UNO -- "Wi-Fi" --> CLOUD["☁️ Arduino IoT Cloud<br/>Thing + Dashboard"]
+    CLOUD --> REM["📲 IoT Remote / Web"]
+    WEB --> BR["🖥️ Browser /<br/>οθόνη γυμναστηρίου"]
+
+    classDef blue fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A
+    classDef red fill:#FEE2E2,stroke:#DC2626,color:#7F1D1D
+    classDef app fill:#EDE9FE,stroke:#7C3AED,color:#3B0764
+    classDef cloud fill:#CCFBF1,stroke:#0F766E,color:#134E4A
+    classDef web fill:#FFEDD5,stroke:#EA580C,color:#7C2D12
+    classDef db fill:#F1F5F9,stroke:#475569,color:#0F172A
+    class B1 blue
+    class R1 red
+    class APP app
+    class UNO,CLOUD,REM cloud
+    class WEB,BR web
+    class DB db

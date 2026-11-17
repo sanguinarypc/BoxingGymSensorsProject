@@ -1,0 +1,17 @@
+flowchart TB
+    subgraph R1[" "]
+        direction LR
+        A["1️⃣ Ενεργοποίηση<br/>BlueBoxer & RedBoxer"] --> B["2️⃣ Ενεργοποίηση<br/>BoxerServer"] --> C["3️⃣ Σύνδεση από<br/>την εφαρμογή"]
+    end
+    subgraph R2[" "]
+        direction LR
+        D["4️⃣ Ρυθμίσεις<br/>ευαισθησίας & γύρων"] --> E["5️⃣ Add Game →<br/>Start Game"] --> F["6️⃣ Live<br/>δεδομένα"]
+    end
+    R1 --> R2
+
+    classDef step fill:#EDE9FE,stroke:#7C3AED,color:#3B0764
+    classDef live fill:#DCFCE7,stroke:#16A34A,color:#14532D
+    class A,B,C,D,E step
+    class F live
+    style R1 fill:transparent,stroke:transparent
+    style R2 fill:transparent,stroke:transparent

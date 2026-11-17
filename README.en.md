@@ -85,21 +85,9 @@ The project consists of three main parts:
 
 ### 🏗️ System Architecture
 
-```mermaid
-flowchart LR
-    subgraph W["🥊 Wearable sensors"]
-        F1["FSR pads<br/>(industrial or e-textile)"] --> B1["BlueBoxer<br/>ESP32-C6"]
-        F2["FSR pads<br/>(industrial or e-textile)"] --> R1["RedBoxer<br/>ESP32-C6"]
-    end
-    B1 -- "BLE" --> APP
-    R1 -- "BLE" --> APP
-    APP["📱 Box Sensors App<br/>Flutter · Riverpod"] <--> DB[("SQLite")]
-    APP -- "BLE · JSON" --> UNO["BoxerServer<br/>Arduino UNO R4 WiFi"]
-    UNO -- "Wi-Fi" --> CLOUD["☁️ Arduino IoT Cloud<br/>Thing + Dashboard"]
-    CLOUD --> REM["IoT Remote / Web"]
-    APP -- "HTTP POST · Wi-Fi" --> WEB["🌐 Node.js / Express<br/>Live Dashboard"]
-    WEB --> BR["🖥️ Browser / gym display"]
-```
+<p align="center">
+  <img src="pictures/diagrams/architecture_en.png" width="620" alt="Box Sensors system architecture" />
+</p>
 
 <p align="right"><a href="#top">⬆️ Back to top</a></p>
 
@@ -125,9 +113,9 @@ flowchart LR
 
 | | |
 |---|---|
-| 🏛️ **Conference** | 8th Panhellenic Conference on Electronics & Telecommunications (PACET 2026) |
+| 🏛️ **Conference** | [8th Panhellenic Conference on Electronics & Telecommunications (PACET 2026)](https://sites.google.com/g.upatras.gr/pacet2026) |
 | 📍 **Venue** | Conference & Cultural Center, University of Patras |
-| 🗓️ **Presentation** | Poster Session P1 · ID 35 · April 23, 2026 |
+| 🗓️ **Presentation** | Poster Session P1 · ID 35 · April 23, 2026 — [📋 Conference program](https://sites.google.com/g.upatras.gr/pacet2026/program) |
 | 🎓 **Institutions** | Hellenic Open University · University of Patras · University of Peloponnese |
 | 📚 **Publication** | Conference proceedings in the IEEE Xplore Digital Library |
 
@@ -604,14 +592,9 @@ _The Android app (Flutter/Dart) is the central control and data-collection unit.
 
 ### ▶️ System Run Procedure
 
-```mermaid
-flowchart LR
-    A["1 · Power on<br/>BlueBoxer & RedBoxer"] --> B["2 · Power on<br/>BoxerServer"]
-    B --> C["3 · Connect from<br/>the app"]
-    C --> D["4 · Sensitivity &<br/>round settings"]
-    D --> E["5 · Add Game →<br/>Start Game"]
-    E --> F["6 · Live data"]
-```
+<p align="center">
+  <img src="pictures/diagrams/run_flow_en.png" width="760" alt="System run procedure" />
+</p>
 
 1. Power on "BlueBoxer" & "RedBoxer" (ESP32-C6) → they start advertising over BLE
 2. Power on "BoxerServer" (Uno R4 Wi-Fi) → it connects to Wi-Fi & IoT Cloud and advertises over BLE

@@ -85,21 +85,9 @@
 
 ### 🏗️ Αρχιτεκτονική Συστήματος
 
-```mermaid
-flowchart LR
-    subgraph W["🥊 Φορητοί αισθητήρες"]
-        F1["FSR pads<br/>(βιομηχανικά ή e-textile)"] --> B1["BlueBoxer<br/>ESP32-C6"]
-        F2["FSR pads<br/>(βιομηχανικά ή e-textile)"] --> R1["RedBoxer<br/>ESP32-C6"]
-    end
-    B1 -- "BLE" --> APP
-    R1 -- "BLE" --> APP
-    APP["📱 Box Sensors App<br/>Flutter · Riverpod"] <--> DB[("SQLite")]
-    APP -- "BLE · JSON" --> UNO["BoxerServer<br/>Arduino UNO R4 WiFi"]
-    UNO -- "Wi-Fi" --> CLOUD["☁️ Arduino IoT Cloud<br/>Thing + Dashboard"]
-    CLOUD --> REM["IoT Remote / Web"]
-    APP -- "HTTP POST · Wi-Fi" --> WEB["🌐 Node.js / Express<br/>Live Dashboard"]
-    WEB --> BR["🖥️ Browser / οθόνη γυμναστηρίου"]
-```
+<p align="center">
+  <img src="pictures/diagrams/architecture_el.png" width="620" alt="Αρχιτεκτονική του συστήματος Box Sensors" />
+</p>
 
 <p align="right"><a href="#top">⬆️ Επιστροφή στην αρχή</a></p>
 
@@ -125,9 +113,9 @@ flowchart LR
 
 | | |
 |---|---|
-| 🏛️ **Συνέδριο** | 8th Panhellenic Conference on Electronics & Telecommunications (PACET 2026) |
+| 🏛️ **Συνέδριο** | [8th Panhellenic Conference on Electronics & Telecommunications (PACET 2026)](https://sites.google.com/g.upatras.gr/pacet2026) |
 | 📍 **Τόπος** | Συνεδριακό & Πολιτιστικό Κέντρο, Πανεπιστήμιο Πατρών |
-| 🗓️ **Παρουσίαση** | Poster Session P1 · ID 35 · 23 Απριλίου 2026 |
+| 🗓️ **Παρουσίαση** | Poster Session P1 · ID 35 · 23 Απριλίου 2026 — [📋 Πρόγραμμα του συνεδρίου](https://sites.google.com/g.upatras.gr/pacet2026/program) |
 | 🎓 **Φορείς** | Ελληνικό Ανοικτό Πανεπιστήμιο · Πανεπιστήμιο Πατρών · Πανεπιστήμιο Πελοποννήσου |
 | 📚 **Δημοσίευση** | Πρακτικά του συνεδρίου στην ψηφιακή βιβλιοθήκη IEEE Xplore |
 
@@ -604,14 +592,9 @@ _Η εφαρμογή Android (Flutter/Dart) είναι η κεντρική μο�
 
 ### ▶️ Διαδικασία Εκτέλεσης του Συστήματος
 
-```mermaid
-flowchart LR
-    A["1 · Ενεργοποίηση<br/>BlueBoxer & RedBoxer"] --> B["2 · Ενεργοποίηση<br/>BoxerServer"]
-    B --> C["3 · Σύνδεση από<br/>την εφαρμογή"]
-    C --> D["4 · Ρυθμίσεις<br/>ευαισθησίας & γύρων"]
-    D --> E["5 · Add Game →<br/>Start Game"]
-    E --> F["6 · Live δεδομένα"]
-```
+<p align="center">
+  <img src="pictures/diagrams/run_flow_el.png" width="760" alt="Διαδικασία εκτέλεσης του συστήματος" />
+</p>
 
 1. Ενεργοποίησε τα «BlueBoxer» & «RedBoxer» (ESP32-C6) → αρχίζουν να διαφημίζονται μέσω BLE
 2. Ενεργοποίησε το «BoxerServer» (Uno R4 Wi-Fi) → συνδέεται στο Wi-Fi & στο IoT Cloud και διαφημίζεται μέσω BLE
