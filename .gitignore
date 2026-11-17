@@ -97,3 +97,10 @@ upload-keystore.jks
 # -----------------------
 /box_sensors/ant-skills/
 /box_sensors/docs/
+
+# -----------------------
+# Local-only files (kept on disk, not uploaded to GitHub)
+# -----------------------
+/README_backup.md
+/README.en_backup.md
+/pictures/Pcet2026_Poster.pptx
